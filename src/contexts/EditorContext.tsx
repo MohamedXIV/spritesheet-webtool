@@ -14,6 +14,7 @@ import { OutlineOptions } from '@/lib/outlineGenerator';
 interface EditorContextValue {
   // Editor state
   editorState: 'idle' | 'extracting' | 'ready';
+  extractionProgress: { current: number; total: number; percentage: number } | null;
   
   // Frames
   frameState: FrameState | null;

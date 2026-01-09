@@ -45,33 +45,33 @@ const defaultLayout = {
         ],
       },
       {
-        type: 'tabset',
-        weight: 40,
-        children: [
-          { type: 'tab', name: 'Preview', component: 'preview' },
-        ],
-      },
-      {
         type: 'row',
-        weight: 35,
+        weight: 45,
         children: [
+          {
+            type: 'tabset',
+            weight: 70,
+            children: [
+              { type: 'tab', name: 'Preview', component: 'preview' },
+            ],
+          },
           {
             type: 'tabset',
             weight: 30,
             children: [
               { type: 'tab', name: 'Timeline', component: 'timeline' },
-              { type: 'tab', name: 'Export', component: 'export' },
             ],
           },
-          {
-            type: 'tabset',
-            weight: 70,
-            children: [
-              { type: 'tab', name: 'Background Removal', component: 'bg-removal' },
-              { type: 'tab', name: 'Outline', component: 'outline' },
-              { type: 'tab', name: 'Watermark', component: 'watermark' },
-            ],
-          },
+        ],
+      },
+      {
+        type: 'tabset',
+        weight: 30,
+        children: [
+          { type: 'tab', name: 'Background Removal', component: 'bg-removal' },
+          { type: 'tab', name: 'Outline', component: 'outline' },
+          { type: 'tab', name: 'Watermark', component: 'watermark' },
+          { type: 'tab', name: 'Export', component: 'export' },
         ],
       },
     ],
@@ -117,6 +117,22 @@ export function DockLayout() {
         return (
           <div className={styles.panelContent}>
             <VideoLoader onVideoSelect={ctx.handleVideoLoad} />
+            {ctx.editorState === 'extracting' && ctx.extractionProgress && (
+              <div className={styles.extractionOverlay}>
+                <div className={styles.extractionContent}>
+                  <div className={styles.spinner}></div>
+                  <div className={styles.extractionText}>
+                    Extracting frame {ctx.extractionProgress.current} of {ctx.extractionProgress.total}
+                  </div>
+                  <div className={styles.progressBar}>
+                    <div 
+                      className={styles.progressFill} 
+                      style={{ width: `${ctx.extractionProgress.percentage}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
         

@@ -199,6 +199,7 @@ export default function EditorPage() {
   // Context value for all dock panels
   const editorContextValue = useMemo(() => ({
     editorState,
+    extractionProgress: progress,
     frameState,
     orderedFrames,
     selectedFrames,
@@ -225,6 +226,7 @@ export default function EditorPage() {
     handleVideoLoad,
   }), [
     editorState,
+    progress,
     frameState,
     orderedFrames,
     selectedFrames,
