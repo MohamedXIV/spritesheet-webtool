@@ -1,20 +1,15 @@
 'use client';
 
 /**
- * Editor Page - Main spritesheet creation workspace
+ * Editor Page - VS Code-style dock layout with draggable panels
  */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
-import { VideoLoader } from '@/components/VideoLoader';
-import { FrameGrid } from '@/components/FrameGrid';
-import { Timeline, LoopMode } from '@/components/Timeline';
-import { PreviewPlayer, BackgroundMode } from '@/components/PreviewPlayer';
-import { ExportPanel } from '@/components/ExportPanel';
-import { ProgressBar } from '@/components/ProgressBar';
-import { BackgroundRemovalPanel } from '@/components/BackgroundRemovalPanel';
-import { WatermarkRemovalPanel } from '@/components/WatermarkRemovalPanel';
-import { OutlinePanel } from '@/components/OutlinePanel';
+import { LoopMode } from '@/components/Timeline';
+import { BackgroundMode } from '@/components/PreviewPlayer';
+import { DockLayout } from '@/components/DockLayout';
+import { EditorProvider } from '@/contexts/EditorContext';
 import { OutlineOptions } from '@/lib/outlineGenerator';
 import { extractFrames } from '@/lib/videoDecoder';
 import { 
@@ -24,7 +19,7 @@ import {
   getSelectedFrames,
   disposeFrames 
 } from '@/lib/frameStore';
-import { ExtractionProgress, FrameData } from '@/types';
+import { FrameData, ExtractionProgress } from '@/types';
 import styles from './page.module.css';
 
 type EditorState = 'idle' | 'extracting' | 'ready';
@@ -54,7 +49,7 @@ export default function EditorPage() {
   // Store original bitmaps for revert functionality
   const originalFramesRef = useRef<Map<string, ImageBitmap>>(new Map());
 
-  // Cleanup on unmount only (empty dependency array)
+  // Cleanup on unmount only
   useEffect(() => {
     return () => {
       if (frameStateRef.current) {
@@ -63,7 +58,7 @@ export default function EditorPage() {
     };
   }, []);
 
-  const handleVideoSelect = useCallback(async (file: File) => {
+  const handleVideoLoad = useCallback(async (file: File) => {
     // Clean up previous frames
     if (frameState) {
       disposeFrames(frameState);
@@ -83,7 +78,6 @@ export default function EditorPage() {
       setCurrentFrame(0);
       setEditorState('ready');
       
-      // Show warning if too many frames
       if (result.frames.length > FRAME_WARNING_THRESHOLD) {
         setShowFrameWarning(true);
       }
@@ -101,7 +95,7 @@ export default function EditorPage() {
     setFrameState({ ...frameState, selectedIds });
   }, [frameState]);
 
-  const handleReorder = useCallback((newOrder: string[]) => {
+  const handleOrderChange = useCallback((newOrder: string[]) => {
     if (!frameState) return;
     setFrameState({ ...frameState, orderedIds: newOrder });
   }, [frameState]);
@@ -109,7 +103,6 @@ export default function EditorPage() {
   const handleDeleteSelected = useCallback(() => {
     if (!frameState) return;
     
-    // Close bitmaps of deleted frames
     frameState.frames
       .filter(f => frameState.selectedIds.has(f.id))
       .forEach(f => f.bitmap.close());
@@ -123,71 +116,19 @@ export default function EditorPage() {
       orderedIds: remainingIds
     });
     
-    // Adjust current frame if needed
     if (currentFrame >= remainingFrames.length) {
       setCurrentFrame(Math.max(0, remainingFrames.length - 1));
     }
   }, [frameState, currentFrame]);
 
-  // Generate unique ID for duplicated frames
-  let duplicateCounter = useRef(0);
-  
-  const handleDuplicateSelected = useCallback(async () => {
-    if (!frameState) return;
-    
-    const selectedFrames = frameState.frames.filter(f => frameState.selectedIds.has(f.id));
-    if (selectedFrames.length === 0) return;
-    
-    // Create duplicates with new IDs
-    const duplicatedFrames: FrameData[] = [];
-    const newOrderedIds = [...frameState.orderedIds];
-    
-    for (const frame of selectedFrames) {
-      try {
-        // Create a new bitmap by drawing the old one to a canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = frame.bitmap.width;
-        canvas.height = frame.bitmap.height;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(frame.bitmap, 0, 0);
-        const newBitmap = await createImageBitmap(canvas);
-        
-        const newId = `dup-${Date.now()}-${duplicateCounter.current++}`;
-        duplicatedFrames.push({
-          ...frame,
-          id: newId,
-          bitmap: newBitmap
-        });
-        
-        // Insert after original in order
-        const originalIndex = newOrderedIds.indexOf(frame.id);
-        if (originalIndex !== -1) {
-          newOrderedIds.splice(originalIndex + 1, 0, newId);
-        } else {
-          newOrderedIds.push(newId);
-        }
-      } catch (error) {
-        console.error('Failed to duplicate frame:', error);
-      }
-    }
-    
-    setFrameState({
-      frames: [...frameState.frames, ...duplicatedFrames],
-      selectedIds: new Set(duplicatedFrames.map(f => f.id)), // Select duplicates
-      orderedIds: newOrderedIds
-    });
-  }, [frameState]);
-
   const handleFramesProcessed = useCallback((processedFrames: Map<string, ImageBitmap>) => {
     if (!frameState) return;
     
-    // Store original bitmaps before processing (if not already stored)
     const updatedFrames = frameState.frames.map(frame => {
       const processed = processedFrames.get(frame.id);
       if (processed) {
         // Save original if not already saved
         if (!originalFramesRef.current.has(frame.id)) {
-          // Clone the original bitmap before replacing
           const canvas = document.createElement('canvas');
           canvas.width = frame.bitmap.width;
           canvas.height = frame.bitmap.height;
@@ -197,7 +138,7 @@ export default function EditorPage() {
             originalFramesRef.current.set(frame.id, clone);
           });
         }
-        frame.bitmap.close(); // Close old bitmap
+        frame.bitmap.close();
         return { ...frame, bitmap: processed };
       }
       return frame;
@@ -209,8 +150,7 @@ export default function EditorPage() {
     });
   }, [frameState]);
 
-  // Revert selected frames to original
-  const handleRevertFrames = useCallback(async () => {
+  const handleRevertSelected = useCallback(async () => {
     if (!frameState) return;
     
     const framesToRevert = frameState.selectedIds.size > 0
@@ -222,7 +162,6 @@ export default function EditorPage() {
     for (const frame of framesToRevert) {
       const original = originalFramesRef.current.get(frame.id);
       if (original) {
-        // Clone the original to restore
         const canvas = document.createElement('canvas');
         canvas.width = original.width;
         canvas.height = original.height;
@@ -238,7 +177,6 @@ export default function EditorPage() {
       return;
     }
     
-    // Replace current bitmaps with originals
     const updatedFrames = frameState.frames.map(frame => {
       const reverted = revertedFrames.get(frame.id);
       if (reverted) {
@@ -254,14 +192,60 @@ export default function EditorPage() {
     });
   }, [frameState]);
 
-  // Check if any frames can be reverted
   const canRevert = !!(frameState && originalFramesRef.current.size > 0);
-
   const orderedFrames = frameState ? getOrderedFrames(frameState) : [];
   const selectedFrames = frameState ? getSelectedFrames(frameState) : [];
 
+  // Context value for all dock panels
+  const editorContextValue = useMemo(() => ({
+    editorState,
+    frameState,
+    orderedFrames,
+    selectedFrames,
+    processingFrameIds,
+    fps,
+    currentFrame,
+    loopMode,
+    previewBgMode,
+    previewBgColor,
+    previewOutline,
+    setFps,
+    setCurrentFrame,
+    setLoopMode,
+    setPreviewBgMode,
+    setPreviewBgColor,
+    setPreviewOutline,
+    setProcessingFrameIds,
+    handleFramesProcessed,
+    handleSelectionChange,
+    handleOrderChange,
+    handleDeleteSelected,
+    handleRevertSelected,
+    canRevert,
+    handleVideoLoad,
+  }), [
+    editorState,
+    frameState,
+    orderedFrames,
+    selectedFrames,
+    processingFrameIds,
+    fps,
+    currentFrame,
+    loopMode,
+    previewBgMode,
+    previewBgColor,
+    previewOutline,
+    handleFramesProcessed,
+    handleSelectionChange,
+    handleOrderChange,
+    handleDeleteSelected,
+    handleRevertSelected,
+    canRevert,
+    handleVideoLoad,
+  ]);
+
   return (
-    <div className={styles.container}>
+    <div className={styles.dockContainer}>
       {/* Header */}
       <header className={styles.header}>
         <Link href="/" className={styles.logo}>
@@ -282,129 +266,22 @@ export default function EditorPage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className={styles.main}>
-        {/* Left Panel - Video & Frames */}
-        <div className={styles.leftPanel}>
-          <div className={styles.panelSection}>
-            <h2 className={styles.sectionTitle}>Load Video</h2>
-            <VideoLoader 
-              onVideoSelect={handleVideoSelect} 
-              disabled={editorState === 'extracting'}
-            />
-          </div>
-
-          {editorState === 'extracting' && progress && (
-            <div className={styles.panelSection}>
-              <ProgressBar 
-                progress={progress.percentage} 
-                message={`Extracting frame ${progress.current} of ${progress.total}...`}
-              />
-            </div>
-          )}
-
-          {showFrameWarning && orderedFrames.length > 0 && (
-            <div className={styles.warning}>
-              ⚠️ {orderedFrames.length} frames extracted. Consider selecting fewer frames for better performance.
-              <button 
-                onClick={() => setShowFrameWarning(false)} 
-                className={styles.warningClose}
-              >
-                ×
-              </button>
-            </div>
-          )}
-
-          {editorState === 'ready' && frameState && (
-            <div className={styles.panelSection + ' ' + styles.frameSection}>
-              <h2 className={styles.sectionTitle}>Frames</h2>
-              <FrameGrid
-                frames={orderedFrames}
-                selectedIds={frameState.selectedIds}
-                processingIds={processingFrameIds}
-                onSelectionChange={handleSelectionChange}
-                onReorder={handleReorder}
-                onDeleteSelected={handleDeleteSelected}
-                onDuplicateSelected={handleDuplicateSelected}
-                onRevertSelected={handleRevertFrames}
-                canRevert={canRevert}
-              />
-            </div>
-          )}
+      {showFrameWarning && orderedFrames.length > 0 && (
+        <div className={styles.warning}>
+          ⚠️ {orderedFrames.length} frames extracted. Consider selecting fewer frames for better performance.
+          <button 
+            onClick={() => setShowFrameWarning(false)} 
+            className={styles.warningClose}
+          >
+            ×
+          </button>
         </div>
+      )}
 
-        {/* Center Panel - Preview */}
-        <div className={styles.centerPanel}>
-          <h2 className={styles.sectionTitle}>Preview</h2>
-          <PreviewPlayer
-            frames={selectedFrames}
-            fps={fps}
-            currentFrame={currentFrame}
-            onFrameChange={setCurrentFrame}
-            loopMode={loopMode}
-            outlineOptions={previewOutline}
-            backgroundMode={previewBgMode}
-            backgroundColor={previewBgColor}
-            onBackgroundModeChange={setPreviewBgMode}
-            onBackgroundColorChange={setPreviewBgColor}
-          />
-        </div>
-
-        {/* Right Panel - Timeline & Export */}
-        <div className={styles.rightPanel}>
-          <div className={styles.panelSection}>
-            <Timeline
-              frameCount={selectedFrames.length}
-              currentFrame={currentFrame}
-              fps={fps}
-              loopMode={loopMode}
-              onFpsChange={setFps}
-              onFrameSelect={setCurrentFrame}
-              onLoopModeChange={setLoopMode}
-            />
-          </div>
-
-          <div className={styles.panelSection}>
-            <ExportPanel 
-              frames={selectedFrames} 
-              fps={fps}
-              loopMode={loopMode}
-              previewBackgroundColor={previewBgMode === 'color' ? previewBgColor : undefined}
-            />
-          </div>
-
-          {editorState === 'ready' && frameState && (
-            <>
-              <div className={styles.panelSection}>
-                <BackgroundRemovalPanel
-                  frames={orderedFrames}
-                  selectedIds={frameState.selectedIds}
-                  onFramesProcessed={handleFramesProcessed}
-                  onProcessingChange={setProcessingFrameIds}
-                />
-              </div>
-
-              <div className={styles.panelSection}>
-                <OutlinePanel
-                  frames={orderedFrames}
-                  selectedIds={frameState.selectedIds}
-                  currentPreviewFrame={selectedFrames[currentFrame] || orderedFrames[0] || null}
-                  onFramesProcessed={handleFramesProcessed}
-                  onSettingsChange={setPreviewOutline}
-                />
-              </div>
-
-              <div className={styles.panelSection}>
-                <WatermarkRemovalPanel
-                  frames={orderedFrames}
-                  selectedIds={frameState.selectedIds}
-                  onFramesProcessed={handleFramesProcessed}
-                />
-              </div>
-            </>
-          )}
-        </div>
-      </main>
+      {/* Dock Layout */}
+      <EditorProvider value={editorContextValue}>
+        <DockLayout />
+      </EditorProvider>
     </div>
   );
 }

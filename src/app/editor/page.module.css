@@ -5,6 +5,14 @@
   background: var(--background-color);
 }
 
+.dockContainer {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--background-color);
+  overflow: hidden;
+}
+
 /* Header */
 .header {
   display: flex;
