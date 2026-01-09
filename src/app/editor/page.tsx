@@ -9,11 +9,13 @@ import Link from 'next/link';
 import { VideoLoader } from '@/components/VideoLoader';
 import { FrameGrid } from '@/components/FrameGrid';
 import { Timeline, LoopMode } from '@/components/Timeline';
-import { PreviewPlayer } from '@/components/PreviewPlayer';
+import { PreviewPlayer, BackgroundMode } from '@/components/PreviewPlayer';
 import { ExportPanel } from '@/components/ExportPanel';
 import { ProgressBar } from '@/components/ProgressBar';
 import { BackgroundRemovalPanel } from '@/components/BackgroundRemovalPanel';
 import { WatermarkRemovalPanel } from '@/components/WatermarkRemovalPanel';
+import { OutlinePanel } from '@/components/OutlinePanel';
+import { OutlineOptions } from '@/lib/outlineGenerator';
 import { extractFrames } from '@/lib/videoDecoder';
 import { 
   FrameState, 
@@ -38,6 +40,12 @@ export default function EditorPage() {
   const [decoderType, setDecoderType] = useState<string>('');
   const [loopMode, setLoopMode] = useState<LoopMode>('normal');
   const [showFrameWarning, setShowFrameWarning] = useState(false);
+  const [processingFrameIds, setProcessingFrameIds] = useState<Set<string>>(new Set());
+  
+  // Preview background and outline settings
+  const [previewBgMode, setPreviewBgMode] = useState<BackgroundMode>('none');
+  const [previewBgColor, setPreviewBgColor] = useState('#1a1a2e');
+  const [previewOutline, setPreviewOutline] = useState<Partial<OutlineOptions>>({ enabled: false });
   
   // Keep a ref to frameState for cleanup on unmount only
   const frameStateRef = useRef<FrameState | null>(null);
@@ -313,6 +321,7 @@ export default function EditorPage() {
               <FrameGrid
                 frames={orderedFrames}
                 selectedIds={frameState.selectedIds}
+                processingIds={processingFrameIds}
                 onSelectionChange={handleSelectionChange}
                 onReorder={handleReorder}
                 onDeleteSelected={handleDeleteSelected}
@@ -333,6 +342,11 @@ export default function EditorPage() {
             currentFrame={currentFrame}
             onFrameChange={setCurrentFrame}
             loopMode={loopMode}
+            outlineOptions={previewOutline}
+            backgroundMode={previewBgMode}
+            backgroundColor={previewBgColor}
+            onBackgroundModeChange={setPreviewBgMode}
+            onBackgroundColorChange={setPreviewBgColor}
           />
         </div>
 
@@ -355,6 +369,7 @@ export default function EditorPage() {
               frames={selectedFrames} 
               fps={fps}
               loopMode={loopMode}
+              previewBackgroundColor={previewBgMode === 'color' ? previewBgColor : undefined}
             />
           </div>
 
@@ -365,6 +380,17 @@ export default function EditorPage() {
                   frames={orderedFrames}
                   selectedIds={frameState.selectedIds}
                   onFramesProcessed={handleFramesProcessed}
+                  onProcessingChange={setProcessingFrameIds}
+                />
+              </div>
+
+              <div className={styles.panelSection}>
+                <OutlinePanel
+                  frames={orderedFrames}
+                  selectedIds={frameState.selectedIds}
+                  currentPreviewFrame={selectedFrames[currentFrame] || orderedFrames[0] || null}
+                  onFramesProcessed={handleFramesProcessed}
+                  onSettingsChange={setPreviewOutline}
                 />
               </div>
 

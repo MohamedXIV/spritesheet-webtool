@@ -2,11 +2,14 @@
 
 /**
  * BackgroundRemovalPanel - Tools for removing backgrounds from frames
+ * With post-processing and outline features
  */
 
 import React, { useState, useCallback } from 'react';
 import { FrameData } from '@/types';
 import { removeBackgroundByColor, autoDetectBackgroundColor } from '@/lib/chromaKey';
+import { postProcessMask, PostProcessOptions, DEFAULT_POST_PROCESS_OPTIONS } from '@/lib/maskPostProcess';
+import { addOutline, OutlineOptions, DEFAULT_OUTLINE_OPTIONS } from '@/lib/outlineGenerator';
 import styles from './BackgroundRemovalPanel.module.css';
 
 type RemovalMethod = 'chromakey' | 'bodypix' | 'u2net';
@@ -15,12 +18,17 @@ interface BackgroundRemovalPanelProps {
   frames: FrameData[];
   selectedIds: Set<string>;
   onFramesProcessed: (processedFrames: Map<string, ImageBitmap>) => void;
+  onProcessingChange?: (processingIds: Set<string>) => void;
 }
+
+// Yield to UI thread to prevent freezing
+const yieldToUI = () => new Promise<void>(resolve => setTimeout(resolve, 0));
 
 export function BackgroundRemovalPanel({
   frames,
   selectedIds,
   onFramesProcessed,
+  onProcessingChange,
 }: BackgroundRemovalPanelProps) {
   const [method, setMethod] = useState<RemovalMethod>('chromakey');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -28,12 +36,27 @@ export function BackgroundRemovalPanel({
   const [statusMessage, setStatusMessage] = useState('');
   
   // Chroma key settings
-  const [targetColor, setTargetColor] = useState({ r: 0, g: 255, b: 0 }); // Green
+  const [targetColor, setTargetColor] = useState({ r: 0, g: 255, b: 0 });
   const [tolerance, setTolerance] = useState(30);
   const [edgeSoftness, setEdgeSoftness] = useState(5);
   
   // ML settings
   const [mlThreshold, setMlThreshold] = useState(0.7);
+  
+  // Post-processing settings (for AI methods)
+  const [postProcessEnabled, setPostProcessEnabled] = useState(true);
+  const [erosion, setErosion] = useState(1);
+  const [decontaminate, setDecontaminate] = useState(true);
+  
+  // Outline settings
+  const [outlineEnabled, setOutlineEnabled] = useState(false);
+  const [outlineThickness, setOutlineThickness] = useState(2);
+  const [outlineColor, setOutlineColor] = useState('#000000');
+  const [outlinePosition, setOutlinePosition] = useState<'outside' | 'inside' | 'both'>('outside');
+  
+  // Collapsible sections
+  const [showPostProcess, setShowPostProcess] = useState(false);
+  const [showOutline, setShowOutline] = useState(false);
   
   const framesToProcess = frames.filter(f => 
     selectedIds.size === 0 || selectedIds.has(f.id)
@@ -41,7 +64,6 @@ export function BackgroundRemovalPanel({
 
   const handleAutoDetect = useCallback(async () => {
     if (framesToProcess.length === 0) return;
-    
     const detected = await autoDetectBackgroundColor(framesToProcess[0].bitmap);
     setTargetColor(detected);
   }, [framesToProcess]);
@@ -53,54 +75,93 @@ export function BackgroundRemovalPanel({
     setProgress({ current: 0, total: framesToProcess.length });
     
     const processedFrames = new Map<string, ImageBitmap>();
+    const currentlyProcessing = new Set<string>();
+    
+    const postProcessOpts: Partial<PostProcessOptions> = {
+      erosion: postProcessEnabled ? erosion : 0,
+      decontaminate: postProcessEnabled && decontaminate,
+    };
+    
+    const outlineOpts: Partial<OutlineOptions> = {
+      enabled: outlineEnabled,
+      thickness: outlineThickness,
+      color: outlineColor,
+      position: outlinePosition,
+    };
     
     try {
-      if (method === 'chromakey') {
-        // Chroma key processing
-        for (let i = 0; i < framesToProcess.length; i++) {
-          const frame = framesToProcess[i];
-          setProgress({ current: i + 1, total: framesToProcess.length });
+      for (let i = 0; i < framesToProcess.length; i++) {
+        const frame = framesToProcess[i];
+        
+        // Mark frame as processing
+        currentlyProcessing.add(frame.id);
+        onProcessingChange?.(new Set(currentlyProcessing));
+        
+        setProgress({ current: i + 1, total: framesToProcess.length });
+        
+        // Yield to UI to prevent freezing
+        await yieldToUI();
+        
+        let processed: ImageBitmap;
+        
+        if (method === 'chromakey') {
           setStatusMessage(`Processing frame ${i + 1}/${framesToProcess.length}...`);
-          
-          const processed = await removeBackgroundByColor(frame.bitmap, {
+          processed = await removeBackgroundByColor(frame.bitmap, {
             targetColor,
             tolerance,
             edgeSoftness
           });
-          
-          processedFrames.set(frame.id, processed);
-        }
-      } else if (method === 'bodypix') {
-        // BodyPix processing
-        setStatusMessage('Loading BodyPix model...');
-        const { loadBodyPix, segmentPerson } = await import('@/lib/bodyPixRemoval');
-        await loadBodyPix(setStatusMessage);
-        
-        for (let i = 0; i < framesToProcess.length; i++) {
-          const frame = framesToProcess[i];
-          setProgress({ current: i + 1, total: framesToProcess.length });
+        } else if (method === 'bodypix') {
+          if (i === 0) {
+            setStatusMessage('Loading BodyPix model...');
+          }
+          const { loadBodyPix, segmentPerson } = await import('@/lib/bodyPixRemoval');
+          if (i === 0) {
+            await loadBodyPix(setStatusMessage);
+          }
           setStatusMessage(`Processing frame ${i + 1}/${framesToProcess.length}...`);
           
-          const processed = await segmentPerson(frame.bitmap, {
-            threshold: mlThreshold
-          });
+          // Yield before heavy processing
+          await yieldToUI();
+          processed = await segmentPerson(frame.bitmap, { threshold: mlThreshold });
           
-          processedFrames.set(frame.id, processed);
-        }
-      } else if (method === 'u2net') {
-        // U-2-Net processing
-        setStatusMessage('Loading U-2-Net model...');
-        const { loadU2Net, removeBackgroundU2Net } = await import('@/lib/u2netRemoval');
-        await loadU2Net(setStatusMessage);
-        
-        for (let i = 0; i < framesToProcess.length; i++) {
-          const frame = framesToProcess[i];
-          setProgress({ current: i + 1, total: framesToProcess.length });
+          // Apply post-processing for AI methods
+          if (postProcessEnabled) {
+            await yieldToUI();
+            processed = await postProcessMask(processed, postProcessOpts);
+          }
+        } else {
+          // U-2-Net
+          if (i === 0) {
+            setStatusMessage('Loading U-2-Net model...');
+          }
+          const { loadU2Net, removeBackgroundU2Net } = await import('@/lib/u2netRemoval');
+          if (i === 0) {
+            await loadU2Net(setStatusMessage);
+          }
           setStatusMessage(`Processing frame ${i + 1}/${framesToProcess.length}...`);
           
-          const processed = await removeBackgroundU2Net(frame.bitmap);
-          processedFrames.set(frame.id, processed);
+          // Yield before heavy processing
+          await yieldToUI();
+          processed = await removeBackgroundU2Net(frame.bitmap);
+          
+          // Apply post-processing for AI methods
+          if (postProcessEnabled) {
+            await yieldToUI();
+            processed = await postProcessMask(processed, postProcessOpts);
+          }
         }
+        
+        // Apply outline if enabled (works for all methods)
+        if (outlineEnabled) {
+          await yieldToUI();
+          processed = await addOutline(processed, outlineOpts);
+        }
+        
+        processedFrames.set(frame.id, processed);
+        
+        // Mark frame as done
+        currentlyProcessing.delete(frame.id);
       }
       
       onFramesProcessed(processedFrames);
@@ -110,8 +171,14 @@ export function BackgroundRemovalPanel({
       setStatusMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsProcessing(false);
+      onProcessingChange?.(new Set());
     }
-  }, [framesToProcess, method, targetColor, tolerance, edgeSoftness, mlThreshold, onFramesProcessed]);
+  }, [
+    framesToProcess, method, targetColor, tolerance, edgeSoftness, mlThreshold,
+    postProcessEnabled, erosion, decontaminate,
+    outlineEnabled, outlineThickness, outlineColor, outlinePosition,
+    onFramesProcessed
+  ]);
 
   const colorHex = `#${targetColor.r.toString(16).padStart(2, '0')}${targetColor.g.toString(16).padStart(2, '0')}${targetColor.b.toString(16).padStart(2, '0')}`;
 
@@ -174,9 +241,7 @@ export function BackgroundRemovalPanel({
             </div>
             
             <div className={styles.field}>
-              <label className={styles.label}>
-                Tolerance: {tolerance}%
-              </label>
+              <label className={styles.label}>Tolerance: {tolerance}%</label>
               <input
                 type="range"
                 min="0"
@@ -189,9 +254,7 @@ export function BackgroundRemovalPanel({
             </div>
             
             <div className={styles.field}>
-              <label className={styles.label}>
-                Edge Softness: {edgeSoftness}
-              </label>
+              <label className={styles.label}>Edge Softness: {edgeSoftness}</label>
               <input
                 type="range"
                 min="0"
@@ -209,16 +272,14 @@ export function BackgroundRemovalPanel({
           <>
             <div className={styles.infoBox}>
               {method === 'bodypix' 
-                ? '🧑 Best for videos with people as subjects. Uses TensorFlow.js.'
-                : '🎯 Best quality for any object. Uses U-2-Net ONNX model.'
+                ? '🧑 Best for videos with people as subjects.'
+                : '🎯 Best quality for any object. Uses U²-Net.'
               }
             </div>
             
             {method === 'bodypix' && (
               <div className={styles.field}>
-                <label className={styles.label}>
-                  Threshold: {(mlThreshold * 100).toFixed(0)}%
-                </label>
+                <label className={styles.label}>Threshold: {(mlThreshold * 100).toFixed(0)}%</label>
                 <input
                   type="range"
                   min="0.1"
@@ -232,6 +293,130 @@ export function BackgroundRemovalPanel({
               </div>
             )}
           </>
+        )}
+      </div>
+
+      {/* Edge Refinement Section (AI methods only) */}
+      {(method === 'bodypix' || method === 'u2net') && (
+        <div className={styles.collapsibleSection}>
+          <button 
+            className={styles.sectionHeader}
+            onClick={() => setShowPostProcess(!showPostProcess)}
+          >
+            <span>Edge Refinement</span>
+            <span className={styles.sectionToggle}>{showPostProcess ? '▼' : '▶'}</span>
+          </button>
+          
+          {showPostProcess && (
+            <div className={styles.sectionContent}>
+              <div className={styles.checkboxRow}>
+                <input
+                  type="checkbox"
+                  id="postprocess-enable"
+                  checked={postProcessEnabled}
+                  onChange={(e) => setPostProcessEnabled(e.target.checked)}
+                  disabled={isProcessing}
+                />
+                <label htmlFor="postprocess-enable">Enable edge cleanup</label>
+              </div>
+              
+              {postProcessEnabled && (
+                <>
+                  <div className={styles.field}>
+                    <label className={styles.label}>Erosion: {erosion}px</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="3"
+                      value={erosion}
+                      onChange={(e) => setErosion(Number(e.target.value))}
+                      className={styles.slider}
+                      disabled={isProcessing}
+                    />
+                  </div>
+                  
+                  <div className={styles.checkboxRow}>
+                    <input
+                      type="checkbox"
+                      id="decontaminate"
+                      checked={decontaminate}
+                      onChange={(e) => setDecontaminate(e.target.checked)}
+                      disabled={isProcessing}
+                    />
+                    <label htmlFor="decontaminate">Color decontamination</label>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Outline Section */}
+      <div className={styles.collapsibleSection}>
+        <button 
+          className={styles.sectionHeader}
+          onClick={() => setShowOutline(!showOutline)}
+        >
+          <span>Sprite Outline</span>
+          <span className={styles.sectionToggle}>{showOutline ? '▼' : '▶'}</span>
+        </button>
+        
+        {showOutline && (
+          <div className={styles.sectionContent}>
+            <div className={styles.checkboxRow}>
+              <input
+                type="checkbox"
+                id="outline-enable"
+                checked={outlineEnabled}
+                onChange={(e) => setOutlineEnabled(e.target.checked)}
+                disabled={isProcessing}
+              />
+              <label htmlFor="outline-enable">Add outline/stroke</label>
+            </div>
+            
+            {outlineEnabled && (
+              <>
+                <div className={styles.field}>
+                  <label className={styles.label}>Thickness: {outlineThickness}px</label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="8"
+                    value={outlineThickness}
+                    onChange={(e) => setOutlineThickness(Number(e.target.value))}
+                    className={styles.slider}
+                    disabled={isProcessing}
+                  />
+                </div>
+                
+                <div className={styles.field}>
+                  <label className={styles.label}>Color</label>
+                  <input
+                    type="color"
+                    value={outlineColor}
+                    onChange={(e) => setOutlineColor(e.target.value)}
+                    className={styles.colorPicker}
+                    disabled={isProcessing}
+                  />
+                </div>
+                
+                <div className={styles.field}>
+                  <label className={styles.label}>Position</label>
+                  <select
+                    value={outlinePosition}
+                    onChange={(e) => setOutlinePosition(e.target.value as 'outside' | 'inside' | 'both')}
+                    className={styles.select}
+                    disabled={isProcessing}
+                  >
+                    <option value="outside">Outside</option>
+                    <option value="inside">Inside</option>
+                    <option value="both">Both</option>
+                  </select>
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
 

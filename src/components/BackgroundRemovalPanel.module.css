@@ -193,3 +193,83 @@
   color: var(--text-muted, #9ca3af);
   text-align: center;
 }
+
+/* Collapsible Sections */
+.collapsibleSection {
+  border: 1px solid var(--border-color, #4a5568);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: var(--background-color, #0f0f1a);
+  color: var(--text-color, #e5e7eb);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.sectionHeader:hover {
+  background: var(--surface-hover, #252542);
+}
+
+.sectionToggle {
+  font-size: 0.7rem;
+  color: var(--text-muted, #9ca3af);
+}
+
+.sectionContent {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--border-color, #4a5568);
+}
+
+/* Checkbox Row */
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-color, #e5e7eb);
+}
+
+.checkboxRow input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary-color, #6366f1);
+  cursor: pointer;
+}
+
+.checkboxRow label {
+  cursor: pointer;
+}
+
+/* Select Dropdown */
+.select {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color, #4a5568);
+  border-radius: 6px;
+  background: var(--background-color, #0f0f1a);
+  color: var(--text-color, #e5e7eb);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--primary-color, #6366f1);
+}
+
+.select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

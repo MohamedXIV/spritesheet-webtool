@@ -28,6 +28,7 @@ import styles from './FrameGrid.module.css';
 interface FrameGridProps {
   frames: FrameData[];
   selectedIds: Set<string>;
+  processingIds?: Set<string>;
   onSelectionChange: (selectedIds: Set<string>) => void;
   onReorder: (newOrder: string[]) => void;
   onDeleteSelected: () => void;
@@ -39,10 +40,11 @@ interface FrameGridProps {
 interface SortableFrameProps {
   frame: FrameData;
   isSelected: boolean;
+  isProcessing: boolean;
   onClick: (e: React.MouseEvent) => void;
 }
 
-function SortableFrame({ frame, isSelected, onClick }: SortableFrameProps) {
+function SortableFrame({ frame, isSelected, isProcessing, onClick }: SortableFrameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const {
     attributes,
@@ -87,7 +89,7 @@ function SortableFrame({ frame, isSelected, onClick }: SortableFrameProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`${styles.frame} ${isSelected ? styles.selected : ''}`}
+      className={`${styles.frame} ${isSelected ? styles.selected : ''} ${isProcessing ? styles.processing : ''}`}
       onClick={onClick}
       {...attributes}
       {...listeners}
@@ -95,6 +97,11 @@ function SortableFrame({ frame, isSelected, onClick }: SortableFrameProps) {
       <canvas ref={canvasRef} className={styles.thumbnail} />
       <div className={styles.frameIndex}>{frame.index + 1}</div>
       {isSelected && <div className={styles.checkmark}>✓</div>}
+      {isProcessing && (
+        <div className={styles.spinnerOverlay}>
+          <div className={styles.spinner} />
+        </div>
+      )}
     </div>
   );
 }
@@ -102,6 +109,7 @@ function SortableFrame({ frame, isSelected, onClick }: SortableFrameProps) {
 export function FrameGrid({
   frames,
   selectedIds,
+  processingIds = new Set(),
   onSelectionChange,
   onReorder,
   onDeleteSelected,
@@ -238,6 +246,7 @@ export function FrameGrid({
                 key={frame.id}
                 frame={frame}
                 isSelected={selectedIds.has(frame.id)}
+                isProcessing={processingIds.has(frame.id)}
                 onClick={(e) => handleFrameClick(frame.id, e)}
               />
             ))}

@@ -1,13 +1,17 @@
 'use client';
 
 /**
- * PreviewPlayer - Canvas-based animation preview with loop modes
+ * PreviewPlayer - Canvas-based animation preview with loop modes,
+ * outline preview, and background options
  */
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { FrameData } from '@/types';
 import { LoopMode } from './Timeline';
+import { addOutline, OutlineOptions } from '@/lib/outlineGenerator';
 import styles from './PreviewPlayer.module.css';
+
+export type BackgroundMode = 'none' | 'checkerboard' | 'color';
 
 interface PreviewPlayerProps {
   frames: FrameData[];
@@ -15,6 +19,11 @@ interface PreviewPlayerProps {
   currentFrame: number;
   onFrameChange: (index: number) => void;
   loopMode: LoopMode;
+  outlineOptions?: Partial<OutlineOptions>;
+  backgroundMode?: BackgroundMode;
+  backgroundColor?: string;
+  onBackgroundModeChange?: (mode: BackgroundMode) => void;
+  onBackgroundColorChange?: (color: string) => void;
 }
 
 export function PreviewPlayer({
@@ -23,12 +32,18 @@ export function PreviewPlayer({
   currentFrame,
   onFrameChange,
   loopMode,
+  outlineOptions,
+  backgroundMode = 'none',
+  backgroundColor = '#1a1a2e',
+  onBackgroundModeChange,
+  onBackgroundColorChange,
 }: PreviewPlayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const animationRef = useRef<number | null>(null);
   const lastFrameTimeRef = useRef<number>(0);
-  const directionRef = useRef<1 | -1>(1); // 1 = forward, -1 = backward
+  const directionRef = useRef<1 | -1>(1);
+  const [showBgMenu, setShowBgMenu] = useState(false);
 
   // Check if bitmap is still valid (not closed)
   const isBitmapValid = (bitmap: ImageBitmap): boolean => {
@@ -39,29 +54,64 @@ export function PreviewPlayer({
     }
   };
 
-  // Draw current frame to canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || frames.length === 0) return;
-
-    const frame = frames[currentFrame];
-    if (!frame?.bitmap || !isBitmapValid(frame.bitmap)) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    try {
-      if (canvas.width !== frame.bitmap.width || canvas.height !== frame.bitmap.height) {
-        canvas.width = frame.bitmap.width;
-        canvas.height = frame.bitmap.height;
+  // Draw checkerboard pattern
+  const drawCheckerboard = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    const tileSize = 16;
+    for (let y = 0; y < height; y += tileSize) {
+      for (let x = 0; x < width; x += tileSize) {
+        ctx.fillStyle = ((x / tileSize + y / tileSize) % 2) ? '#e0e0e0' : '#ffffff';
+        ctx.fillRect(x, y, tileSize, tileSize);
       }
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(frame.bitmap, 0, 0);
-    } catch (error) {
-      console.debug('Frame bitmap unavailable:', error);
     }
-  }, [frames, currentFrame]);
+  };
+
+  // Draw current frame to canvas with outline and background options
+  useEffect(() => {
+    const drawFrame = async () => {
+      const canvas = canvasRef.current;
+      if (!canvas || frames.length === 0) return;
+
+      const frame = frames[currentFrame];
+      if (!frame?.bitmap || !isBitmapValid(frame.bitmap)) return;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      try {
+        if (canvas.width !== frame.bitmap.width || canvas.height !== frame.bitmap.height) {
+          canvas.width = frame.bitmap.width;
+          canvas.height = frame.bitmap.height;
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw background based on mode
+        if (backgroundMode === 'checkerboard') {
+          drawCheckerboard(ctx, canvas.width, canvas.height);
+        } else if (backgroundMode === 'color') {
+          ctx.fillStyle = backgroundColor;
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Apply outline if options provided and enabled
+        let displayBitmap = frame.bitmap;
+        if (outlineOptions?.enabled) {
+          displayBitmap = await addOutline(frame.bitmap, outlineOptions);
+        }
+
+        ctx.drawImage(displayBitmap, 0, 0);
+
+        // Close the processed bitmap if different from original
+        if (displayBitmap !== frame.bitmap) {
+          displayBitmap.close();
+        }
+      } catch (error) {
+        console.debug('Frame bitmap unavailable:', error);
+      }
+    };
+
+    drawFrame();
+  }, [frames, currentFrame, outlineOptions, backgroundMode, backgroundColor]);
 
   // Animation loop with loop mode support
   useEffect(() => {
@@ -85,13 +135,11 @@ export function PreviewPlayer({
         
         switch (loopMode) {
           case 'reverse':
-            // Play backwards, loop
             nextFrame = currentFrame - 1;
             if (nextFrame < 0) nextFrame = frames.length - 1;
             break;
             
           case 'pingpong':
-            // Ping-pong: go forward then backward
             nextFrame = currentFrame + directionRef.current;
             if (nextFrame >= frames.length) {
               directionRef.current = -1;
@@ -100,14 +148,12 @@ export function PreviewPlayer({
               directionRef.current = 1;
               nextFrame = 1;
             }
-            // Handle edge case for very short animations
             if (nextFrame < 0) nextFrame = 0;
             if (nextFrame >= frames.length) nextFrame = frames.length - 1;
             break;
             
           case 'normal':
           default:
-            // Normal forward loop
             nextFrame = (currentFrame + 1) % frames.length;
             break;
         }
@@ -128,49 +174,23 @@ export function PreviewPlayer({
     };
   }, [isPlaying, fps, frames.length, currentFrame, onFrameChange, loopMode]);
 
-  // Reset direction when loop mode changes
-  useEffect(() => {
-    directionRef.current = 1;
-  }, [loopMode]);
-
-  const togglePlay = useCallback(() => {
-    setIsPlaying(prev => !prev);
-  }, []);
-
-  const goToStart = useCallback(() => {
-    setIsPlaying(false);
-    directionRef.current = 1;
-    onFrameChange(0);
-  }, [onFrameChange]);
-
-  const goToEnd = useCallback(() => {
-    setIsPlaying(false);
-    directionRef.current = -1;
-    onFrameChange(Math.max(0, frames.length - 1));
-  }, [frames.length, onFrameChange]);
-
-  const stepBack = useCallback(() => {
-    setIsPlaying(false);
-    onFrameChange(Math.max(0, currentFrame - 1));
-  }, [currentFrame, onFrameChange]);
-
-  const stepForward = useCallback(() => {
-    setIsPlaying(false);
-    onFrameChange(Math.min(frames.length - 1, currentFrame + 1));
-  }, [currentFrame, frames.length, onFrameChange]);
+  const togglePlay = () => setIsPlaying(!isPlaying);
+  const stepBack = () => onFrameChange(Math.max(0, currentFrame - 1));
+  const stepForward = () => onFrameChange(Math.min(frames.length - 1, currentFrame + 1));
+  const goToStart = () => onFrameChange(0);
+  const goToEnd = () => onFrameChange(frames.length - 1);
 
   const hasFrames = frames.length > 0;
-
-  // Loop mode indicator
+  
   const loopModeLabel = {
     normal: '→',
     pingpong: '↔',
-    reverse: '←'
+    reverse: '←',
   }[loopMode];
 
   return (
     <div className={styles.container}>
-      <div className={styles.canvasWrapper}>
+      <div className={styles.canvasContainer}>
         {hasFrames ? (
           <canvas ref={canvasRef} className={styles.canvas} />
         ) : (
@@ -182,9 +202,48 @@ export function PreviewPlayer({
           </div>
         )}
         {hasFrames && (
-          <div className={styles.loopIndicator} title={`Loop: ${loopMode}`}>
-            {loopModeLabel}
-          </div>
+          <>
+            <div className={styles.loopIndicator} title={`Loop: ${loopMode}`}>
+              {loopModeLabel}
+            </div>
+            <button 
+              className={styles.bgToggle}
+              onClick={() => setShowBgMenu(!showBgMenu)}
+              title="Background options"
+            >
+              🎨
+            </button>
+            {showBgMenu && (
+              <div className={styles.bgMenu}>
+                <button
+                  className={`${styles.bgOption} ${backgroundMode === 'none' ? styles.active : ''}`}
+                  onClick={() => { onBackgroundModeChange?.('none'); setShowBgMenu(false); }}
+                >
+                  None (Dark)
+                </button>
+                <button
+                  className={`${styles.bgOption} ${backgroundMode === 'checkerboard' ? styles.active : ''}`}
+                  onClick={() => { onBackgroundModeChange?.('checkerboard'); setShowBgMenu(false); }}
+                >
+                  Checkerboard
+                </button>
+                <button
+                  className={`${styles.bgOption} ${backgroundMode === 'color' ? styles.active : ''}`}
+                  onClick={() => { onBackgroundModeChange?.('color'); setShowBgMenu(false); }}
+                >
+                  Custom Color
+                </button>
+                {backgroundMode === 'color' && (
+                  <input
+                    type="color"
+                    value={backgroundColor}
+                    onChange={(e) => onBackgroundColorChange?.(e.target.value)}
+                    className={styles.bgColorPicker}
+                  />
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 

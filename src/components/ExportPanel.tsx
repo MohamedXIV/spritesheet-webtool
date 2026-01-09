@@ -15,9 +15,10 @@ interface ExportPanelProps {
   frames: FrameData[];
   fps: number;
   loopMode: LoopMode;
+  previewBackgroundColor?: string; // From preview player
 }
 
-export function ExportPanel({ frames, fps, loopMode }: ExportPanelProps) {
+export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: ExportPanelProps) {
   const [columns, setColumns] = useState(0); // 0 = auto
   const [padding, setPadding] = useState(0);
   const [backgroundColor, setBackgroundColor] = useState('transparent');
@@ -175,6 +176,11 @@ export function ExportPanel({ frames, fps, loopMode }: ExportPanelProps) {
             <option value="#000000">Black</option>
             <option value="#ffffff">White</option>
             <option value="#ff00ff">Magenta (for visibility)</option>
+            {previewBackgroundColor && previewBackgroundColor !== 'transparent' && (
+              <option value={previewBackgroundColor}>
+                Preview Color ({previewBackgroundColor})
+              </option>
+            )}
           </select>
         </div>
 
