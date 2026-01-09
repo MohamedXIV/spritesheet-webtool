@@ -1,0 +1,100 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  background: var(--surface-color, #1a1a2e);
+  border-radius: 12px;
+}
+
+.canvasWrapper {
+  position: relative;
+  background: var(--background-color, #0f0f1a);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 250px;
+  aspect-ratio: 16 / 9;
+}
+
+.canvas {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-muted, #9ca3af);
+  padding: 40px;
+  text-align: center;
+}
+
+.placeholder p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.controlButton {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border-color, #4a5568);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-color, #e5e7eb);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.controlButton:hover:not(:disabled) {
+  background: var(--surface-hover, #252542);
+  border-color: var(--primary-color, #6366f1);
+}
+
+.controlButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.playButton {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--primary-color, #6366f1);
+  border-color: var(--primary-color, #6366f1);
+  font-size: 1.2rem;
+}
+
+.playButton:hover:not(:disabled) {
+  background: var(--primary-hover, #4f46e5);
+  border-color: var(--primary-hover, #4f46e5);
+  transform: scale(1.05);
+}
+
+.loopIndicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  color: var(--primary-color, #6366f1);
+}
