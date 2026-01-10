@@ -51,6 +51,11 @@ interface EditorContextValue {
   
   // Video loading
   handleVideoLoad: (file: File) => void;
+  
+  // Panel visibility
+  visiblePanels: Set<string>;
+  togglePanel: (panelId: string) => void;
+  resetLayout: () => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);

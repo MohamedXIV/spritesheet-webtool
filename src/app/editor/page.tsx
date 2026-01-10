@@ -8,8 +8,9 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import Link from 'next/link';
 import { LoopMode } from '@/components/Timeline';
 import { BackgroundMode } from '@/components/PreviewPlayer';
-import { DockLayout } from '@/components/DockLayout';
+import { DockLayout, DockLayoutRef } from '@/components/DockLayout';
 import { EditorProvider } from '@/contexts/EditorContext';
+import { EditorMenuBar } from '@/components/EditorMenuBar';
 import { OutlineOptions } from '@/lib/outlineGenerator';
 import { extractFrames } from '@/lib/videoDecoder';
 import { 
@@ -41,6 +42,13 @@ export default function EditorPage() {
   const [previewBgMode, setPreviewBgMode] = useState<BackgroundMode>('none');
   const [previewBgColor, setPreviewBgColor] = useState('#1a1a2e');
   const [previewOutline, setPreviewOutline] = useState<Partial<OutlineOptions>>({ enabled: false });
+  
+  // Panel visibility tracking
+  const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set([
+    'video-loader', 'frame-grid', 'preview', 'timeline',
+    'bg-removal', 'outline', 'watermark', 'export'
+  ]));
+  const dockLayoutRef = useRef<DockLayoutRef>(null);
   
   // Keep a ref to frameState for cleanup on unmount only
   const frameStateRef = useRef<FrameState | null>(null);
@@ -196,6 +204,27 @@ export default function EditorPage() {
   const orderedFrames = frameState ? getOrderedFrames(frameState) : [];
   const selectedFrames = frameState ? getSelectedFrames(frameState) : [];
 
+  // Panel visibility handlers
+  const togglePanel = useCallback((panelId: string) => {
+    const newVisible = new Set(visiblePanels);
+    if (newVisible.has(panelId)) {
+      newVisible.delete(panelId);
+      dockLayoutRef.current?.removeTab(panelId);
+    } else {
+      newVisible.add(panelId);
+      dockLayoutRef.current?.addTab(panelId);
+    }
+    setVisiblePanels(newVisible);
+  }, [visiblePanels]);
+
+  const resetLayout = useCallback(() => {
+    dockLayoutRef.current?.resetLayout();
+    setVisiblePanels(new Set([
+      'video-loader', 'frame-grid', 'preview', 'timeline',
+      'bg-removal', 'outline', 'watermark', 'export'
+    ]));
+  }, []);
+
   // Context value for all dock panels
   const editorContextValue = useMemo(() => ({
     editorState,
@@ -224,6 +253,9 @@ export default function EditorPage() {
     handleRevertSelected,
     canRevert,
     handleVideoLoad,
+    visiblePanels,
+    togglePanel,
+    resetLayout,
   }), [
     editorState,
     progress,
@@ -244,16 +276,28 @@ export default function EditorPage() {
     handleRevertSelected,
     canRevert,
     handleVideoLoad,
+    visiblePanels,
+    togglePanel,
+    resetLayout,
   ]);
 
   return (
     <div className={styles.dockContainer}>
-      {/* Header */}
+      {/* Header with Menu Bar */}
       <header className={styles.header}>
-        <Link href="/" className={styles.logo}>
-          <span className={styles.logoIcon}>◆</span>
-          Spritesheet Creator
-        </Link>
+        <div className={styles.headerLeft}>
+          <Link href="/" className={styles.logo}>
+            <span className={styles.logoIcon}>◆</span>
+            Spritesheet Creator
+          </Link>
+          <EditorMenuBar
+            visiblePanels={visiblePanels}
+            onTogglePanel={togglePanel}
+            onResetLayout={resetLayout}
+            onOpenVideo={() => {}}
+            onExport={() => {}}
+          />
+        </div>
         <div className={styles.headerInfo}>
           {decoderType && (
             <span className={styles.decoderBadge}>
@@ -282,7 +326,7 @@ export default function EditorPage() {
 
       {/* Dock Layout */}
       <EditorProvider value={editorContextValue}>
-        <DockLayout />
+        <DockLayout ref={dockLayoutRef} onVisiblePanelsChange={setVisiblePanels} />
       </EditorProvider>
     </div>
   );

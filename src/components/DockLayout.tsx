@@ -4,8 +4,8 @@
  * DockLayout - VS Code-style docking layout using flexlayout-react
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Layout, Model, TabNode, IJsonModel, Actions } from 'flexlayout-react';
+import React, { useCallback, useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
+import { Layout, Model, TabNode, Actions, DockLocation } from 'flexlayout-react';
 import 'flexlayout-react/style/dark.css';
 import { useEditorContext } from '@/contexts/EditorContext';
 
@@ -23,6 +23,29 @@ import { ProgressBar } from '@/components/ProgressBar';
 import styles from './DockLayout.module.css';
 
 const STORAGE_KEY = 'editor-dock-layout';
+
+// Panel info for adding tabs dynamically
+const PANEL_INFO: Record<string, { name: string }> = {
+  'video-loader': { name: 'Load Video' },
+  'frame-grid': { name: 'Frames' },
+  'preview': { name: 'Preview' },
+  'timeline': { name: 'Timeline' },
+  'bg-removal': { name: 'Background Removal' },
+  'outline': { name: 'Outline' },
+  'watermark': { name: 'Watermark' },
+  'export': { name: 'Export' },
+};
+
+// Ref type for external control
+export interface DockLayoutRef {
+  addTab: (panelId: string) => void;
+  removeTab: (panelId: string) => void;
+  resetLayout: () => void;
+}
+
+interface DockLayoutProps {
+  onVisiblePanelsChange?: (panels: Set<string>) => void;
+}
 
 // Default layout configuration
 // Using 'as any' because flexlayout-react types are incomplete
@@ -78,7 +101,10 @@ const defaultLayout = {
   },
 };
 
-export function DockLayout() {
+export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function DockLayout(
+  { onVisiblePanelsChange },
+  ref
+) {
   const ctx = useEditorContext();
   const layoutRef = useRef<Layout>(null);
   const [model, setModel] = useState<Model | null>(null);
@@ -99,14 +125,26 @@ export function DockLayout() {
     setModel(Model.fromJson(layoutJson));
   }, []);
 
-  // Save layout on change
+  // Save layout on change and update visible panels
   const handleModelChange = useCallback((newModel: Model) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newModel.toJson()));
+      
+      // Track visible panels
+      if (onVisiblePanelsChange) {
+        const visible = new Set<string>();
+        newModel.visitNodes((node) => {
+          if (node.getType() === 'tab') {
+            const component = (node as TabNode).getComponent();
+            if (component) visible.add(component);
+          }
+        });
+        onVisiblePanelsChange(visible);
+      }
     } catch {
       // Ignore save errors
     }
-  }, []);
+  }, [onVisiblePanelsChange]);
 
   // Factory function to create panel content
   const factory = useCallback((node: TabNode) => {
@@ -257,8 +295,51 @@ export function DockLayout() {
   // Reset layout to default
   const handleResetLayout = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
-    setModel(Model.fromJson(defaultLayout));
-  }, []);
+    const newModel = Model.fromJson(defaultLayout);
+    setModel(newModel);
+    handleModelChange(newModel);
+  }, [handleModelChange]);
+
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    addTab: (panelId: string) => {
+      if (!model) return;
+      const info = PANEL_INFO[panelId];
+      if (!info) return;
+      
+      // Find first tabset and add tab there
+      let firstTabsetId: string | null = null;
+      model.visitNodes((node) => {
+        if (!firstTabsetId && node.getType() === 'tabset') {
+          firstTabsetId = node.getId();
+        }
+      });
+      
+      if (firstTabsetId) {
+        model.doAction(Actions.addNode(
+          { type: 'tab', name: info.name, component: panelId },
+          firstTabsetId,
+          DockLocation.CENTER,
+          -1,
+          true
+        ));
+        handleModelChange(model);
+      }
+    },
+    removeTab: (panelId: string) => {
+      if (!model) return;
+      model.visitNodes((node) => {
+        if (node.getType() === 'tab') {
+          const component = (node as TabNode).getComponent();
+          if (component === panelId) {
+            model.doAction(Actions.deleteTab(node.getId()));
+          }
+        }
+      });
+      handleModelChange(model);
+    },
+    resetLayout: handleResetLayout,
+  }), [model, handleModelChange, handleResetLayout]);
 
   if (!model) {
     return <div className={styles.loading}>Loading layout...</div>;
@@ -266,11 +347,6 @@ export function DockLayout() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.toolbar}>
-        <button onClick={handleResetLayout} className={styles.resetBtn} title="Reset layout to default">
-          ↺ Reset Layout
-        </button>
-      </div>
       <div className={styles.layoutWrapper}>
         <Layout
           ref={layoutRef}
@@ -281,4 +357,4 @@ export function DockLayout() {
       </div>
     </div>
   );
-}
+});
