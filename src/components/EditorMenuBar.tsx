@@ -1,20 +1,13 @@
 'use client';
 
 /**
- * EditorMenuBar - Professional menu bar with File and View menus
+ * EditorMenuBar - Professional menu bar with custom CSS implementation
+ * Bypasses Shadcn/Tailwind conflicts for precise control
  */
 
-import React from 'react';
-import {
-  Menubar,
-  MenubarMenu,
-  MenubarTrigger,
-  MenubarContent,
-  MenubarItem,
-  MenubarSeparator,
-  MenubarCheckboxItem,
-  MenubarShortcut,
-} from '@/components/ui/menubar';
+import React, { useState, useEffect, useRef } from 'react';
+import styles from './EditorMenuBar.module.css';
+import { Check } from 'lucide-react';
 
 // Panel definitions for the View menu
 const PANELS = [
@@ -43,43 +36,137 @@ export function EditorMenuBar({
   onOpenVideo,
   onExport,
 }: EditorMenuBarProps) {
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setActiveMenu(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleMenu = (name: string) => {
+    setActiveMenu(activeMenu === name ? null : name);
+  };
+
+  const onMouseEnter = (name: string) => {
+    if (activeMenu) {
+      setActiveMenu(name);
+    }
+  };
+
+  const closeMenu = () => {
+    setActiveMenu(null);
+  };
+
   return (
-    <Menubar className="rounded-none border-none border-b border-border bg-background px-2">
+    <div className={styles.menubar} ref={menuRef}>
+      {/* App Name */}
+      <div className={styles.menuItem}>
+        <div 
+          className={`${styles.menuTrigger} ${styles.appTitle} ${activeMenu === 'app' ? styles.menuTriggerActive : ''}`}
+          onClick={() => toggleMenu('app')}
+          onMouseEnter={() => onMouseEnter('app')}
+        >
+          <span className="text-primary">◆</span>
+          Spritesheet Creator
+        </div>
+        {activeMenu === 'app' && (
+          <div className={styles.dropdown}>
+            <div className={`${styles.item} ${styles.itemDisabled}`}>
+              Version 0.1.0
+            </div>
+            <div className={styles.separator} />
+            <div className={styles.item} onClick={closeMenu}>
+              About
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* File Menu */}
-      <MenubarMenu>
-        <MenubarTrigger className="font-medium">File</MenubarTrigger>
-        <MenubarContent>
-          <MenubarItem onClick={onOpenVideo}>
-            Open Video...
-            <MenubarShortcut>Ctrl+O</MenubarShortcut>
-          </MenubarItem>
-          <MenubarSeparator />
-          <MenubarItem onClick={onExport}>
-            Export...
-            <MenubarShortcut>Ctrl+E</MenubarShortcut>
-          </MenubarItem>
-        </MenubarContent>
-      </MenubarMenu>
+      <div className={styles.menuItem}>
+        <div 
+          className={`${styles.menuTrigger} ${activeMenu === 'file' ? styles.menuTriggerActive : ''}`}
+          onClick={() => toggleMenu('file')}
+          onMouseEnter={() => onMouseEnter('file')}
+        >
+          File
+        </div>
+        {activeMenu === 'file' && (
+          <div className={styles.dropdown}>
+            <div 
+              className={styles.item} 
+              onClick={() => {
+                onOpenVideo();
+                closeMenu();
+              }}
+            >
+              Open Video...
+              <span className={styles.shortcut}>Ctrl+O</span>
+            </div>
+            <div className={styles.separator} />
+            <div 
+              className={styles.item} 
+              onClick={() => {
+                onExport();
+                closeMenu();
+              }}
+            >
+              Export...
+              <span className={styles.shortcut}>Ctrl+E</span>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* View Menu */}
-      <MenubarMenu>
-        <MenubarTrigger className="font-medium">View</MenubarTrigger>
-        <MenubarContent>
-          {PANELS.map((panel) => (
-            <MenubarCheckboxItem
-              key={panel.id}
-              checked={visiblePanels.has(panel.id)}
-              onCheckedChange={() => onTogglePanel(panel.id)}
+      <div className={styles.menuItem}>
+        <div 
+          className={`${styles.menuTrigger} ${activeMenu === 'view' ? styles.menuTriggerActive : ''}`}
+          onClick={() => toggleMenu('view')}
+          onMouseEnter={() => onMouseEnter('view')}
+        >
+          View
+        </div>
+        {activeMenu === 'view' && (
+          <div className={styles.dropdown}>
+            {PANELS.map((panel) => (
+              <div
+                key={panel.id}
+                className={styles.item}
+                onClick={() => {
+                  onTogglePanel(panel.id);
+                  // Don't close menu to allow multiple toggles, or close if standard behavior? 
+                  // Standard behavior usually keeps open for checkboxes but single click for actions.
+                  // I'll keep it open for convenience.
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div className={styles.checkContainer}>
+                    {visiblePanels.has(panel.id) && <Check size={14} />}
+                  </div>
+                  {panel.name}
+                </div>
+              </div>
+            ))}
+            <div className={styles.separator} />
+            <div 
+              className={styles.item} 
+              onClick={() => {
+                onResetLayout();
+                closeMenu();
+              }}
             >
-              {panel.name}
-            </MenubarCheckboxItem>
-          ))}
-          <MenubarSeparator />
-          <MenubarItem onClick={onResetLayout}>
-            Reset Layout
-          </MenubarItem>
-        </MenubarContent>
-      </MenubarMenu>
-    </Menubar>
+              Reset Layout
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

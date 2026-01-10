@@ -285,19 +285,13 @@ export default function EditorPage() {
     <div className={styles.dockContainer}>
       {/* Header with Menu Bar */}
       <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <Link href="/" className={styles.logo}>
-            <span className={styles.logoIcon}>◆</span>
-            Spritesheet Creator
-          </Link>
-          <EditorMenuBar
-            visiblePanels={visiblePanels}
-            onTogglePanel={togglePanel}
-            onResetLayout={resetLayout}
-            onOpenVideo={() => {}}
-            onExport={() => {}}
-          />
-        </div>
+        <EditorMenuBar
+          visiblePanels={visiblePanels}
+          onTogglePanel={togglePanel}
+          onResetLayout={resetLayout}
+          onOpenVideo={() => {}}
+          onExport={() => {}}
+        />
         <div className={styles.headerInfo}>
           {decoderType && (
             <span className={styles.decoderBadge}>
