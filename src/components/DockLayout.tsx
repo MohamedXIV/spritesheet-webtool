@@ -10,7 +10,7 @@ import 'flexlayout-react/style/dark.css';
 import { useEditorContext } from '@/contexts/EditorContext';
 
 // Panel components (lazy imported via factory)
-import { VideoLoader } from '@/components/VideoLoader';
+import { MediaLoader } from '@/components/MediaLoader';
 import { FrameGrid } from '@/components/FrameGrid';
 import { PreviewPlayer } from '@/components/PreviewPlayer';
 import { Timeline } from '@/components/Timeline';
@@ -26,7 +26,7 @@ const STORAGE_KEY = 'editor-dock-layout';
 
 // Panel info for adding tabs dynamically
 const PANEL_INFO: Record<string, { name: string }> = {
-  'video-loader': { name: 'Load Video' },
+  'media-loader': { name: 'Load Media' },
   'frame-grid': { name: 'Frames' },
   'preview': { name: 'Preview' },
   'timeline': { name: 'Timeline' },
@@ -63,7 +63,7 @@ const defaultLayout = {
         type: 'tabset',
         weight: 25,
         children: [
-          { type: 'tab', name: 'Load Video', component: 'video-loader' },
+          { type: 'tab', name: 'Load Media', component: 'media-loader' },
           { type: 'tab', name: 'Frames', component: 'frame-grid' },
         ],
       },
@@ -151,10 +151,15 @@ export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function Do
     const component = node.getComponent();
     
     switch (component) {
-      case 'video-loader':
+      case 'media-loader':
         return (
           <div className={styles.panelContent}>
-            <VideoLoader onVideoSelect={ctx.handleVideoLoad} />
+            <MediaLoader 
+              onFilesSelected={ctx.handleMediaLoad}
+              loadedSources={ctx.loadedSources}
+              onRemoveSource={ctx.handleRemoveSource}
+              disabled={ctx.editorState === 'extracting'}
+            />
             {ctx.editorState === 'extracting' && ctx.extractionProgress && (
               <div className={styles.extractionOverlay}>
                 <div className={styles.extractionContent}>

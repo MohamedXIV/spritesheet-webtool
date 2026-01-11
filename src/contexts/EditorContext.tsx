@@ -5,7 +5,7 @@
  */
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { FrameData } from '@/types';
+import { FrameData, SourceInfo } from '@/types';
 import { FrameState } from '@/lib/frameStore';
 import { LoopMode } from '@/components/Timeline';
 import { BackgroundMode } from '@/components/PreviewPlayer';
@@ -49,8 +49,10 @@ interface EditorContextValue {
   handleRevertSelected: () => void;
   canRevert: boolean;
   
-  // Video loading
-  handleVideoLoad: (file: File) => void;
+  // Media loading
+  handleMediaLoad: (files: File[]) => void;
+  handleRemoveSource: (sourceId: string) => void;
+  loadedSources: SourceInfo[];
   
   // Panel visibility
   visiblePanels: Set<string>;
