@@ -68,16 +68,42 @@ function applyErosion(
         // Skip if already transparent
         if (currentAlpha[idx] === 0) continue;
         
+        let hasTransparentNeighbor = false;
+
         // Check neighbors (4-connectivity)
-        const neighbors = [
-          y > 0 ? currentAlpha[idx - width] : 0,         // top
-          y < height - 1 ? currentAlpha[idx + width] : 0, // bottom
-          x > 0 ? currentAlpha[idx - 1] : 0,             // left
-          x < width - 1 ? currentAlpha[idx + 1] : 0,     // right
-        ];
+        // Top
+        if (y > 0) {
+          if (currentAlpha[idx - width] < 128) hasTransparentNeighbor = true;
+        } else {
+          hasTransparentNeighbor = true;
+        }
+
+        if (!hasTransparentNeighbor) {
+          // Bottom
+          if (y < height - 1) {
+            if (currentAlpha[idx + width] < 128) hasTransparentNeighbor = true;
+          } else {
+            hasTransparentNeighbor = true;
+          }
+        }
         
-        // If any neighbor is transparent, reduce alpha
-        const hasTransparentNeighbor = neighbors.some(n => n < 128);
+        if (!hasTransparentNeighbor) {
+          // Left
+          if (x > 0) {
+            if (currentAlpha[idx - 1] < 128) hasTransparentNeighbor = true;
+          } else {
+            hasTransparentNeighbor = true;
+          }
+        }
+
+        if (!hasTransparentNeighbor) {
+          // Right
+          if (x < width - 1) {
+            if (currentAlpha[idx + 1] < 128) hasTransparentNeighbor = true;
+          } else {
+            hasTransparentNeighbor = true;
+          }
+        }
         if (hasTransparentNeighbor) {
           // Reduce alpha for edge pixels
           originalAlpha[idx] = Math.max(0, originalAlpha[idx] - 85);
