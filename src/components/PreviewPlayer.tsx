@@ -210,8 +210,9 @@ export function PreviewPlayer({
               className={styles.bgToggle}
               onClick={() => setShowBgMenu(!showBgMenu)}
               title="Background options"
+              aria-label="Background options"
             >
-              🎨
+              <span aria-hidden="true">🎨</span>
             </button>
             {showBgMenu && (
               <div className={styles.bgMenu}>
@@ -253,40 +254,45 @@ export function PreviewPlayer({
           className={styles.controlButton}
           disabled={!hasFrames}
           title="Go to start"
+          aria-label="Go to start"
         >
-          ⏮
+          <span aria-hidden="true">⏮</span>
         </button>
         <button
           onClick={stepBack}
           className={styles.controlButton}
           disabled={!hasFrames}
           title="Previous frame"
+          aria-label="Previous frame"
         >
-          ⏪
+          <span aria-hidden="true">⏪</span>
         </button>
         <button
           onClick={togglePlay}
           className={`${styles.controlButton} ${styles.playButton}`}
           disabled={!hasFrames}
           title={isPlaying ? 'Pause' : 'Play'}
+          aria-label={isPlaying ? 'Pause' : 'Play'}
         >
-          {isPlaying ? '⏸' : '▶'}
+          <span aria-hidden="true">{isPlaying ? '⏸' : '▶'}</span>
         </button>
         <button
           onClick={stepForward}
           className={styles.controlButton}
           disabled={!hasFrames}
           title="Next frame"
+          aria-label="Next frame"
         >
-          ⏩
+          <span aria-hidden="true">⏩</span>
         </button>
         <button
           onClick={goToEnd}
           className={styles.controlButton}
           disabled={!hasFrames}
           title="Go to end"
+          aria-label="Go to end"
         >
-          ⏭
+          <span aria-hidden="true">⏭</span>
         </button>
       </div>
     </div>
