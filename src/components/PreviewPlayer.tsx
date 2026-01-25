@@ -5,7 +5,7 @@
  * outline preview, and background options
  */
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { FrameData } from '@/types';
 import { LoopMode } from './Timeline';
 import { addOutline, OutlineOptions } from '@/lib/outlineGenerator';
@@ -210,6 +210,9 @@ export function PreviewPlayer({
               className={styles.bgToggle}
               onClick={() => setShowBgMenu(!showBgMenu)}
               title="Background options"
+              aria-label="Background options"
+              aria-haspopup="true"
+              aria-expanded={showBgMenu}
             >
               🎨
             </button>
@@ -253,6 +256,7 @@ export function PreviewPlayer({
           className={styles.controlButton}
           disabled={!hasFrames}
           title="Go to start"
+          aria-label="Go to start"
         >
           ⏮
         </button>
@@ -261,6 +265,7 @@ export function PreviewPlayer({
           className={styles.controlButton}
           disabled={!hasFrames}
           title="Previous frame"
+          aria-label="Previous frame"
         >
           ⏪
         </button>
@@ -269,6 +274,7 @@ export function PreviewPlayer({
           className={`${styles.controlButton} ${styles.playButton}`}
           disabled={!hasFrames}
           title={isPlaying ? 'Pause' : 'Play'}
+          aria-label={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? '⏸' : '▶'}
         </button>
@@ -277,6 +283,7 @@ export function PreviewPlayer({
           className={styles.controlButton}
           disabled={!hasFrames}
           title="Next frame"
+          aria-label="Next frame"
         >
           ⏩
         </button>
@@ -285,6 +292,7 @@ export function PreviewPlayer({
           className={styles.controlButton}
           disabled={!hasFrames}
           title="Go to end"
+          aria-label="Go to end"
         >
           ⏭
         </button>
