@@ -115,6 +115,13 @@
   background: var(--surface-hover, #252542);
 }
 
+.dropzone:focus-visible {
+  border-color: var(--primary-color, #6366f1);
+  background: var(--surface-hover, #252542);
+  outline: 2px solid var(--primary-color, #6366f1);
+  outline-offset: 2px;
+}
+
 .dragOver {
   border-color: var(--primary-color, #6366f1);
   background: var(--primary-color-alpha, rgba(99, 102, 241, 0.1));

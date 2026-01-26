@@ -74,6 +74,13 @@ export function MediaLoader({
     e.target.value = '';
   }, [handleFiles]);
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      handleClick();
+    }
+  }, [disabled, handleClick]);
+
   const totalFrames = loadedSources.reduce((sum, s) => sum + s.frameCount, 0);
 
   return (
@@ -102,6 +109,7 @@ export function MediaLoader({
                 className={styles.removeBtn}
                 onClick={() => onRemoveSource(source.id)}
                 title="Remove source"
+                aria-label={`Remove ${source.name}`}
               >
                 <X size={14} />
               </button>
@@ -117,6 +125,10 @@ export function MediaLoader({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
+        role="button"
+        tabIndex={0}
+        aria-label="Upload files"
       >
         <input
           ref={inputRef}
