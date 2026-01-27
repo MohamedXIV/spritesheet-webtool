@@ -203,18 +203,30 @@ export function PreviewPlayer({
         )}
         {hasFrames && (
           <>
-            <div className={styles.loopIndicator} title={`Loop: ${loopMode}`}>
+            <div
+              className={styles.loopIndicator}
+              title={`Loop: ${loopMode}`}
+              role="status"
+              aria-label={`Loop mode: ${loopMode}`}
+            >
               {loopModeLabel}
             </div>
             <button 
               className={styles.bgToggle}
               onClick={() => setShowBgMenu(!showBgMenu)}
               title="Background options"
+              aria-label="Background options"
+              aria-haspopup="true"
+              aria-expanded={showBgMenu}
+              aria-controls="bg-menu"
             >
               🎨
             </button>
             {showBgMenu && (
-              <div className={styles.bgMenu}>
+              <div
+                id="bg-menu"
+                className={styles.bgMenu}
+              >
                 <button
                   className={`${styles.bgOption} ${backgroundMode === 'none' ? styles.active : ''}`}
                   onClick={() => { onBackgroundModeChange?.('none'); setShowBgMenu(false); }}
@@ -239,6 +251,7 @@ export function PreviewPlayer({
                     value={backgroundColor}
                     onChange={(e) => onBackgroundColorChange?.(e.target.value)}
                     className={styles.bgColorPicker}
+                    aria-label="Select custom background color"
                   />
                 )}
               </div>
@@ -253,6 +266,7 @@ export function PreviewPlayer({
           className={styles.controlButton}
           disabled={!hasFrames}
           title="Go to start"
+          aria-label="Go to start"
         >
           ⏮
         </button>
@@ -261,6 +275,7 @@ export function PreviewPlayer({
           className={styles.controlButton}
           disabled={!hasFrames}
           title="Previous frame"
+          aria-label="Previous frame"
         >
           ⏪
         </button>
@@ -269,6 +284,7 @@ export function PreviewPlayer({
           className={`${styles.controlButton} ${styles.playButton}`}
           disabled={!hasFrames}
           title={isPlaying ? 'Pause' : 'Play'}
+          aria-label={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? '⏸' : '▶'}
         </button>
@@ -277,6 +293,7 @@ export function PreviewPlayer({
           className={styles.controlButton}
           disabled={!hasFrames}
           title="Next frame"
+          aria-label="Next frame"
         >
           ⏩
         </button>
@@ -285,6 +302,7 @@ export function PreviewPlayer({
           className={styles.controlButton}
           disabled={!hasFrames}
           title="Go to end"
+          aria-label="Go to end"
         >
           ⏭
         </button>
