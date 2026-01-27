@@ -68,6 +68,11 @@
   border-color: var(--primary-color, #6366f1);
 }
 
+.controlButton:focus-visible {
+  outline: 2px solid var(--primary-color, #6366f1);
+  outline-offset: 2px;
+}
+
 .controlButton:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -118,6 +123,11 @@
   background: rgba(0, 0, 0, 0.8);
 }
 
+.bgToggle:focus-visible {
+  outline: 2px solid var(--primary-color, #6366f1);
+  outline-offset: 2px;
+}
+
 .bgMenu {
   position: absolute;
   top: 44px;
@@ -147,6 +157,11 @@
 
 .bgOption:hover {
   background: var(--surface-hover, #252542);
+}
+
+.bgOption:focus-visible {
+  outline: 2px solid var(--primary-color, #6366f1);
+  outline-offset: -2px;
 }
 
 .bgOption.active {
