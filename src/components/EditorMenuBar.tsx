@@ -67,40 +67,47 @@ export function EditorMenuBar({
     <div className={styles.menubar} ref={menuRef}>
       {/* App Name */}
       <div className={styles.menuItem}>
-        <div 
+        <button
+          type="button"
           className={`${styles.menuTrigger} ${styles.appTitle} ${activeMenu === 'app' ? styles.menuTriggerActive : ''}`}
           onClick={() => toggleMenu('app')}
           onMouseEnter={() => onMouseEnter('app')}
+          aria-haspopup="true"
+          aria-expanded={activeMenu === 'app'}
         >
           <span className="text-primary">◆</span>
           Spritesheet Creator
-        </div>
+        </button>
         {activeMenu === 'app' && (
           <div className={styles.dropdown}>
             <div className={`${styles.item} ${styles.itemDisabled}`}>
               Version 0.1.0
             </div>
             <div className={styles.separator} />
-            <div className={styles.item} onClick={closeMenu}>
+            <button type="button" className={styles.item} onClick={closeMenu}>
               About
-            </div>
+            </button>
           </div>
         )}
       </div>
 
       {/* File Menu */}
       <div className={styles.menuItem}>
-        <div 
+        <button
+          type="button"
           className={`${styles.menuTrigger} ${activeMenu === 'file' ? styles.menuTriggerActive : ''}`}
           onClick={() => toggleMenu('file')}
           onMouseEnter={() => onMouseEnter('file')}
+          aria-haspopup="true"
+          aria-expanded={activeMenu === 'file'}
         >
           File
-        </div>
+        </button>
         {activeMenu === 'file' && (
           <div className={styles.dropdown}>
-            <div 
-              className={styles.item} 
+            <button
+              type="button"
+              className={styles.item}
               onClick={() => {
                 onOpenVideo();
                 closeMenu();
@@ -108,10 +115,11 @@ export function EditorMenuBar({
             >
               Open Video...
               <span className={styles.shortcut}>Ctrl+O</span>
-            </div>
+            </button>
             <div className={styles.separator} />
-            <div 
-              className={styles.item} 
+            <button
+              type="button"
+              className={styles.item}
               onClick={() => {
                 onExport();
                 closeMenu();
@@ -119,24 +127,28 @@ export function EditorMenuBar({
             >
               Export...
               <span className={styles.shortcut}>Ctrl+E</span>
-            </div>
+            </button>
           </div>
         )}
       </div>
 
       {/* View Menu */}
       <div className={styles.menuItem}>
-        <div 
+        <button
+          type="button"
           className={`${styles.menuTrigger} ${activeMenu === 'view' ? styles.menuTriggerActive : ''}`}
           onClick={() => toggleMenu('view')}
           onMouseEnter={() => onMouseEnter('view')}
+          aria-haspopup="true"
+          aria-expanded={activeMenu === 'view'}
         >
           View
-        </div>
+        </button>
         {activeMenu === 'view' && (
           <div className={styles.dropdown}>
             {PANELS.map((panel) => (
-              <div
+              <button
+                type="button"
                 key={panel.id}
                 className={styles.item}
                 onClick={() => {
@@ -152,18 +164,19 @@ export function EditorMenuBar({
                   </div>
                   {panel.name}
                 </div>
-              </div>
+              </button>
             ))}
             <div className={styles.separator} />
-            <div 
-              className={styles.item} 
+            <button
+              type="button"
+              className={styles.item}
               onClick={() => {
                 onResetLayout();
                 closeMenu();
               }}
             >
               Reset Layout
-            </div>
+            </button>
           </div>
         )}
       </div>
