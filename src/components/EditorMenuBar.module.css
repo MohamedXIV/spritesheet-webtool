@@ -18,10 +18,13 @@
   align-items: center;
   padding: 6px 12px;
   border-radius: 4px;
-  cursor: default;
+  cursor: pointer;
   font-size: 0.9rem;
   color: var(--text-color, #f1f5f9);
   transition: background-color 0.15s ease;
+  background: transparent;
+  border: none;
+  font-family: inherit;
 }
 
 .appTitle {
@@ -60,6 +63,11 @@
   font-size: 0.85rem;
   color: var(--text-color, #f1f5f9);
   transition: background-color 0.1s;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
 }
 
 .item:hover {
