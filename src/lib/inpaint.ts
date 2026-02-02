@@ -43,8 +43,13 @@ export async function inpaintRegion(
   for (let iter = 0; iter < iterations; iter++) {
     const newData = new Uint8ClampedArray(data);
     
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
+    const startY = Math.max(0, region.y);
+    const endY = Math.min(height, region.y + region.height);
+    const startX = Math.max(0, region.x);
+    const endX = Math.min(width, region.x + region.width);
+
+    for (let y = startY; y < endY; y++) {
+      for (let x = startX; x < endX; x++) {
         const idx = y * width + x;
         if (mask[idx] !== 1) continue;
         
@@ -90,14 +95,17 @@ export async function inpaintRegion(
     }
     
     // Update data and reset mask for filled pixels
-    for (let i = 0; i < mask.length; i++) {
-      if (mask[i] === 2) {
-        const pidx = i * 4;
-        data[pidx] = newData[pidx];
-        data[pidx + 1] = newData[pidx + 1];
-        data[pidx + 2] = newData[pidx + 2];
-        data[pidx + 3] = newData[pidx + 3];
-        mask[i] = 0; // No longer needs inpainting
+    for (let y = startY; y < endY; y++) {
+      for (let x = startX; x < endX; x++) {
+        const i = y * width + x;
+        if (mask[i] === 2) {
+          const pidx = i * 4;
+          data[pidx] = newData[pidx];
+          data[pidx + 1] = newData[pidx + 1];
+          data[pidx + 2] = newData[pidx + 2];
+          data[pidx + 3] = newData[pidx + 3];
+          mask[i] = 0; // No longer needs inpainting
+        }
       }
     }
   }
