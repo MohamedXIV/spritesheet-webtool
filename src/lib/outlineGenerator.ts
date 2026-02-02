@@ -44,9 +44,10 @@ function dilateMask(
   pixels: number
 ): Uint8Array {
   let current = new Uint8Array(alpha);
+  let next = new Uint8Array(width * height);
   
   for (let pass = 0; pass < pixels; pass++) {
-    const next = new Uint8Array(current);
+    next.set(current);
     
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
@@ -55,26 +56,33 @@ function dilateMask(
         // If current pixel is transparent
         if (current[idx] < 128) {
           // Check if any neighbor is opaque
-          let found = false;
-          
-          if (y > 0 && current[idx - width] > 128) found = true;
-          else if (y < height - 1 && current[idx + width] > 128) found = true;
-          else if (x > 0 && current[idx - 1] > 128) found = true;
-          else if (x < width - 1 && current[idx + 1] > 128) found = true;
-          // Diagonals for smoother outline
-          else if (y > 0 && x > 0 && current[idx - width - 1] > 128) found = true;
-          else if (y > 0 && x < width - 1 && current[idx - width + 1] > 128) found = true;
-          else if (y < height - 1 && x > 0 && current[idx + width - 1] > 128) found = true;
-          else if (y < height - 1 && x < width - 1 && current[idx + width + 1] > 128) found = true;
+          let maxNeighbor = 0;
 
-          if (found) {
+          // Up
+          if (y > 0) maxNeighbor = Math.max(maxNeighbor, current[idx - width]);
+          // Down
+          if (y < height - 1) maxNeighbor = Math.max(maxNeighbor, current[idx + width]);
+          // Left
+          if (x > 0) maxNeighbor = Math.max(maxNeighbor, current[idx - 1]);
+          // Right
+          if (x < width - 1) maxNeighbor = Math.max(maxNeighbor, current[idx + 1]);
+
+          // Diagonals for smoother outline
+          if (y > 0 && x > 0) maxNeighbor = Math.max(maxNeighbor, current[idx - width - 1]);
+          if (y > 0 && x < width - 1) maxNeighbor = Math.max(maxNeighbor, current[idx - width + 1]);
+          if (y < height - 1 && x > 0) maxNeighbor = Math.max(maxNeighbor, current[idx + width - 1]);
+          if (y < height - 1 && x < width - 1) maxNeighbor = Math.max(maxNeighbor, current[idx + width + 1]);
+          
+          if (maxNeighbor > 128) {
             next[idx] = 255;
           }
         }
       }
     }
     
+    const temp = current;
     current = next;
+    next = temp;
   }
   
   return current;
@@ -90,9 +98,10 @@ function erodeMask(
   pixels: number
 ): Uint8Array {
   let current = new Uint8Array(alpha);
+  let next = new Uint8Array(width * height);
   
   for (let pass = 0; pass < pixels; pass++) {
-    const next = new Uint8Array(current);
+    next.set(current);
     
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
@@ -100,7 +109,7 @@ function erodeMask(
         
         // If current pixel is opaque
         if (current[idx] > 128) {
-          // Check if any neighbor is transparent
+          // Check if any neighbor is transparent (or out of bounds, which implies transparent)
           let hasTransparentNeighbor = false;
 
           if (y === 0 || current[idx - width] < 128) hasTransparentNeighbor = true;
@@ -115,7 +124,9 @@ function erodeMask(
       }
     }
     
+    const temp = current;
     current = next;
+    next = temp;
   }
   
   return current;
