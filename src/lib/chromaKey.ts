@@ -121,12 +121,12 @@ export async function getColorAtPixel(
   y: number
 ): Promise<{ r: number; g: number; b: number }> {
   const canvas = document.createElement('canvas');
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
+  canvas.width = 1;
+  canvas.height = 1;
   const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(bitmap, 0, 0);
+  ctx.drawImage(bitmap, x, y, 1, 1, 0, 0, 1, 1);
   
-  const imageData = ctx.getImageData(x, y, 1, 1);
+  const imageData = ctx.getImageData(0, 0, 1, 1);
   return {
     r: imageData.data[0],
     g: imageData.data[1],
