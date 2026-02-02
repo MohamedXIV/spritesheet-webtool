@@ -9,19 +9,6 @@ export interface ChromaKeyOptions {
   edgeSoftness?: number; // 0-20, for smoother edges
 }
 
-/**
- * Calculate color distance between two RGB colors (Euclidean)
- */
-function colorDistance(
-  r1: number, g1: number, b1: number,
-  r2: number, g2: number, b2: number
-): number {
-  return Math.sqrt(
-    Math.pow(r1 - r2, 2) +
-    Math.pow(g1 - g2, 2) +
-    Math.pow(b1 - b2, 2)
-  );
-}
 
 /**
  * Sample the dominant color from corners of an image
@@ -85,6 +72,15 @@ export async function removeBackgroundByColor(
   const maxDistance = 441.67;
   const toleranceThreshold = (tolerance / 100) * maxDistance;
   const softnessRange = (edgeSoftness / 100) * maxDistance;
+  const toleranceThresholdSq = toleranceThreshold * toleranceThreshold;
+  // Calculate squared max distance for transparent + softness check
+  // distance <= toleranceThreshold + softnessRange
+  // distance^2 <= (toleranceThreshold + softnessRange)^2
+  const maxTransparentDistSq = (toleranceThreshold + softnessRange) ** 2;
+
+  const tr = targetColor.r;
+  const tg = targetColor.g;
+  const tb = targetColor.b;
   
   // Process each pixel
   for (let i = 0; i < data.length; i += 4) {
@@ -92,13 +88,18 @@ export async function removeBackgroundByColor(
     const g = data[i + 1];
     const b = data[i + 2];
     
-    const distance = colorDistance(r, g, b, targetColor.r, targetColor.g, targetColor.b);
+    const dr = r - tr;
+    const dg = g - tg;
+    const db = b - tb;
+    const distSq = dr * dr + dg * dg + db * db;
     
-    if (distance <= toleranceThreshold) {
+    if (distSq <= toleranceThresholdSq) {
       // Fully transparent
       data[i + 3] = 0;
-    } else if (softnessRange > 0 && distance <= toleranceThreshold + softnessRange) {
+    } else if (softnessRange > 0 && distSq <= maxTransparentDistSq) {
       // Partial transparency for edge softness
+      // Only calculate sqrt when strictly necessary for the linear interpolation
+      const distance = Math.sqrt(distSq);
       const alpha = ((distance - toleranceThreshold) / softnessRange) * 255;
       data[i + 3] = Math.round(alpha);
     }
