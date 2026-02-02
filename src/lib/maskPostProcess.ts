@@ -57,9 +57,11 @@ function applyErosion(
     originalAlpha[i] = data[i * 4 + 3];
   }
   
+  const currentAlpha = new Uint8Array(width * height);
+
   // For each erosion pass
   for (let pass = 0; pass < pixels; pass++) {
-    const currentAlpha = new Uint8Array(originalAlpha);
+    currentAlpha.set(originalAlpha);
     
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
