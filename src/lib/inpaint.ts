@@ -48,7 +48,8 @@ export async function inpaintRegion(
         if (mask[idx] !== 1) continue;
         
         // Check if this is a boundary pixel (has non-masked neighbors)
-        const neighbors: number[][] = [];
+        let sumR = 0, sumG = 0, sumB = 0, sumA = 0;
+        let count = 0;
         const offsets = [
           [-1, -1], [0, -1], [1, -1],
           [-1, 0],          [1, 0],
@@ -62,25 +63,22 @@ export async function inpaintRegion(
             const nidx = ny * width + nx;
             if (mask[nidx] !== 1) {
               const pidx = nidx * 4;
-              neighbors.push([data[pidx], data[pidx + 1], data[pidx + 2], data[pidx + 3]]);
+              sumR += data[pidx];
+              sumG += data[pidx + 1];
+              sumB += data[pidx + 2];
+              sumA += data[pidx + 3];
+              count++;
             }
           }
         }
         
-        if (neighbors.length > 0) {
+        if (count > 0) {
           // Average the neighbor colors
           const pidx = idx * 4;
-          let sumR = 0, sumG = 0, sumB = 0, sumA = 0;
-          for (const [r, g, b, a] of neighbors) {
-            sumR += r;
-            sumG += g;
-            sumB += b;
-            sumA += a;
-          }
-          newData[pidx] = Math.round(sumR / neighbors.length);
-          newData[pidx + 1] = Math.round(sumG / neighbors.length);
-          newData[pidx + 2] = Math.round(sumB / neighbors.length);
-          newData[pidx + 3] = Math.round(sumA / neighbors.length);
+          newData[pidx] = Math.round(sumR / count);
+          newData[pidx + 1] = Math.round(sumG / count);
+          newData[pidx + 2] = Math.round(sumB / count);
+          newData[pidx + 3] = Math.round(sumA / count);
           
           // Mark as filled for next iteration
           mask[idx] = 2;
