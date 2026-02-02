@@ -4,13 +4,13 @@
  * DockLayout - VS Code-style docking layout using flexlayout-react
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Layout, Model, TabNode, IJsonModel, Actions } from 'flexlayout-react';
+import React, { useCallback, useEffect, useRef, useState, forwardRef, useImperativeHandle } from 'react';
+import { Layout, Model, TabNode, Actions, DockLocation } from 'flexlayout-react';
 import 'flexlayout-react/style/dark.css';
 import { useEditorContext } from '@/contexts/EditorContext';
 
 // Panel components (lazy imported via factory)
-import { VideoLoader } from '@/components/VideoLoader';
+import { MediaLoader } from '@/components/MediaLoader';
 import { FrameGrid } from '@/components/FrameGrid';
 import { PreviewPlayer } from '@/components/PreviewPlayer';
 import { Timeline } from '@/components/Timeline';
@@ -23,6 +23,29 @@ import { ProgressBar } from '@/components/ProgressBar';
 import styles from './DockLayout.module.css';
 
 const STORAGE_KEY = 'editor-dock-layout';
+
+// Panel info for adding tabs dynamically
+const PANEL_INFO: Record<string, { name: string }> = {
+  'media-loader': { name: 'Load Media' },
+  'frame-grid': { name: 'Frames' },
+  'preview': { name: 'Preview' },
+  'timeline': { name: 'Timeline' },
+  'bg-removal': { name: 'Background Removal' },
+  'outline': { name: 'Outline' },
+  'watermark': { name: 'Watermark' },
+  'export': { name: 'Export' },
+};
+
+// Ref type for external control
+export interface DockLayoutRef {
+  addTab: (panelId: string) => void;
+  removeTab: (panelId: string) => void;
+  resetLayout: () => void;
+}
+
+interface DockLayoutProps {
+  onVisiblePanelsChange?: (panels: Set<string>) => void;
+}
 
 // Default layout configuration
 // Using 'as any' because flexlayout-react types are incomplete
@@ -40,45 +63,48 @@ const defaultLayout = {
         type: 'tabset',
         weight: 25,
         children: [
-          { type: 'tab', name: 'Load Video', component: 'video-loader' },
+          { type: 'tab', name: 'Load Media', component: 'media-loader' },
           { type: 'tab', name: 'Frames', component: 'frame-grid' },
         ],
       },
       {
-        type: 'tabset',
-        weight: 40,
-        children: [
-          { type: 'tab', name: 'Preview', component: 'preview' },
-        ],
-      },
-      {
         type: 'row',
-        weight: 35,
+        weight: 45,
         children: [
+          {
+            type: 'tabset',
+            weight: 70,
+            children: [
+              { type: 'tab', name: 'Preview', component: 'preview' },
+            ],
+          },
           {
             type: 'tabset',
             weight: 30,
             children: [
               { type: 'tab', name: 'Timeline', component: 'timeline' },
-              { type: 'tab', name: 'Export', component: 'export' },
             ],
           },
-          {
-            type: 'tabset',
-            weight: 70,
-            children: [
-              { type: 'tab', name: 'Background Removal', component: 'bg-removal' },
-              { type: 'tab', name: 'Outline', component: 'outline' },
-              { type: 'tab', name: 'Watermark', component: 'watermark' },
-            ],
-          },
+        ],
+      },
+      {
+        type: 'tabset',
+        weight: 30,
+        children: [
+          { type: 'tab', name: 'Background Removal', component: 'bg-removal' },
+          { type: 'tab', name: 'Outline', component: 'outline' },
+          { type: 'tab', name: 'Watermark', component: 'watermark' },
+          { type: 'tab', name: 'Export', component: 'export' },
         ],
       },
     ],
   },
 };
 
-export function DockLayout() {
+export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function DockLayout(
+  { onVisiblePanelsChange },
+  ref
+) {
   const ctx = useEditorContext();
   const layoutRef = useRef<Layout>(null);
   const [model, setModel] = useState<Model | null>(null);
@@ -99,24 +125,57 @@ export function DockLayout() {
     setModel(Model.fromJson(layoutJson));
   }, []);
 
-  // Save layout on change
+  // Save layout on change and update visible panels
   const handleModelChange = useCallback((newModel: Model) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newModel.toJson()));
+      
+      // Track visible panels
+      if (onVisiblePanelsChange) {
+        const visible = new Set<string>();
+        newModel.visitNodes((node) => {
+          if (node.getType() === 'tab') {
+            const component = (node as TabNode).getComponent();
+            if (component) visible.add(component);
+          }
+        });
+        onVisiblePanelsChange(visible);
+      }
     } catch {
       // Ignore save errors
     }
-  }, []);
+  }, [onVisiblePanelsChange]);
 
   // Factory function to create panel content
   const factory = useCallback((node: TabNode) => {
     const component = node.getComponent();
     
     switch (component) {
-      case 'video-loader':
+      case 'media-loader':
         return (
           <div className={styles.panelContent}>
-            <VideoLoader onVideoSelect={ctx.handleVideoLoad} />
+            <MediaLoader 
+              onFilesSelected={ctx.handleMediaLoad}
+              loadedSources={ctx.loadedSources}
+              onRemoveSource={ctx.handleRemoveSource}
+              disabled={ctx.editorState === 'extracting'}
+            />
+            {ctx.editorState === 'extracting' && ctx.extractionProgress && (
+              <div className={styles.extractionOverlay}>
+                <div className={styles.extractionContent}>
+                  <div className={styles.spinner}></div>
+                  <div className={styles.extractionText}>
+                    Extracting frame {ctx.extractionProgress.current} of {ctx.extractionProgress.total}
+                  </div>
+                  <div className={styles.progressBar}>
+                    <div 
+                      className={styles.progressFill} 
+                      style={{ width: `${ctx.extractionProgress.percentage}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
         
@@ -241,8 +300,51 @@ export function DockLayout() {
   // Reset layout to default
   const handleResetLayout = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
-    setModel(Model.fromJson(defaultLayout));
-  }, []);
+    const newModel = Model.fromJson(defaultLayout);
+    setModel(newModel);
+    handleModelChange(newModel);
+  }, [handleModelChange]);
+
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    addTab: (panelId: string) => {
+      if (!model) return;
+      const info = PANEL_INFO[panelId];
+      if (!info) return;
+      
+      // Find first tabset and add tab there
+      let firstTabsetId: string | null = null;
+      model.visitNodes((node) => {
+        if (!firstTabsetId && node.getType() === 'tabset') {
+          firstTabsetId = node.getId();
+        }
+      });
+      
+      if (firstTabsetId) {
+        model.doAction(Actions.addNode(
+          { type: 'tab', name: info.name, component: panelId },
+          firstTabsetId,
+          DockLocation.CENTER,
+          -1,
+          true
+        ));
+        handleModelChange(model);
+      }
+    },
+    removeTab: (panelId: string) => {
+      if (!model) return;
+      model.visitNodes((node) => {
+        if (node.getType() === 'tab') {
+          const component = (node as TabNode).getComponent();
+          if (component === panelId) {
+            model.doAction(Actions.deleteTab(node.getId()));
+          }
+        }
+      });
+      handleModelChange(model);
+    },
+    resetLayout: handleResetLayout,
+  }), [model, handleModelChange, handleResetLayout]);
 
   if (!model) {
     return <div className={styles.loading}>Loading layout...</div>;
@@ -250,11 +352,6 @@ export function DockLayout() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.toolbar}>
-        <button onClick={handleResetLayout} className={styles.resetBtn} title="Reset layout to default">
-          ↺ Reset Layout
-        </button>
-      </div>
       <div className={styles.layoutWrapper}>
         <Layout
           ref={layoutRef}
@@ -265,4 +362,4 @@ export function DockLayout() {
       </div>
     </div>
   );
-}
+});

@@ -62,6 +62,8 @@ export async function getVideoInfo(file: File): Promise<VideoInfo> {
 export async function extractFramesFallback(
   file: File,
   targetFps: number = 12,
+  sourceId: string,
+  sourceColor: string,
   onProgress?: (progress: ExtractionProgress) => void
 ): Promise<FrameData[]> {
   const videoInfo = await getVideoInfo(file);
@@ -97,7 +99,9 @@ export async function extractFramesFallback(
             id: generateFrameId(),
             index: i,
             timestamp,
-            bitmap
+            bitmap,
+            sourceId,
+            sourceColor,
           });
           
           onProgress?.({
@@ -145,6 +149,8 @@ function seekVideo(video: HTMLVideoElement, timestamp: number): Promise<void> {
 export async function extractFramesWebCodecs(
   file: File,
   targetFps: number = 12,
+  sourceId: string,
+  sourceColor: string,
   onProgress?: (progress: ExtractionProgress) => void
 ): Promise<FrameData[]> {
   if (!isWebCodecsSupported()) {
@@ -194,7 +200,9 @@ export async function extractFramesWebCodecs(
             id: generateFrameId(),
             index: i,
             timestamp,
-            bitmap
+            bitmap,
+            sourceId,
+            sourceColor,
           });
           
           onProgress?.({
@@ -228,13 +236,15 @@ export async function extractFramesWebCodecs(
 export async function extractFrames(
   file: File,
   targetFps: number = 12,
+  sourceId: string,
+  sourceColor: string,
   onProgress?: (progress: ExtractionProgress) => void
 ): Promise<{ frames: FrameData[]; decoderType: DecoderType }> {
   const decoderType: DecoderType = isWebCodecsSupported() ? 'webcodecs' : 'fallback';
   
   const frames = decoderType === 'webcodecs'
-    ? await extractFramesWebCodecs(file, targetFps, onProgress)
-    : await extractFramesFallback(file, targetFps, onProgress);
+    ? await extractFramesWebCodecs(file, targetFps, sourceId, sourceColor, onProgress)
+    : await extractFramesFallback(file, targetFps, sourceId, sourceColor, onProgress);
   
   return { frames, decoderType };
 }

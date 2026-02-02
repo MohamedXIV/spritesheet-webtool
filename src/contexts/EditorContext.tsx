@@ -5,7 +5,7 @@
  */
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { FrameData } from '@/types';
+import { FrameData, SourceInfo } from '@/types';
 import { FrameState } from '@/lib/frameStore';
 import { LoopMode } from '@/components/Timeline';
 import { BackgroundMode } from '@/components/PreviewPlayer';
@@ -14,6 +14,7 @@ import { OutlineOptions } from '@/lib/outlineGenerator';
 interface EditorContextValue {
   // Editor state
   editorState: 'idle' | 'extracting' | 'ready';
+  extractionProgress: { current: number; total: number; percentage: number } | null;
   
   // Frames
   frameState: FrameState | null;
@@ -48,8 +49,15 @@ interface EditorContextValue {
   handleRevertSelected: () => void;
   canRevert: boolean;
   
-  // Video loading
-  handleVideoLoad: (file: File) => void;
+  // Media loading
+  handleMediaLoad: (files: File[]) => void;
+  handleRemoveSource: (sourceId: string) => void;
+  loadedSources: SourceInfo[];
+  
+  // Panel visibility
+  visiblePanels: Set<string>;
+  togglePanel: (panelId: string) => void;
+  resetLayout: () => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);

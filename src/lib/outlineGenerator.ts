@@ -55,20 +55,19 @@ function dilateMask(
         // If current pixel is transparent
         if (current[idx] < 128) {
           // Check if any neighbor is opaque
-          const neighbors = [
-            y > 0 ? current[idx - width] : 0,
-            y < height - 1 ? current[idx + width] : 0,
-            x > 0 ? current[idx - 1] : 0,
-            x < width - 1 ? current[idx + 1] : 0,
-            // Diagonals for smoother outline
-            (y > 0 && x > 0) ? current[idx - width - 1] : 0,
-            (y > 0 && x < width - 1) ? current[idx - width + 1] : 0,
-            (y < height - 1 && x > 0) ? current[idx + width - 1] : 0,
-            (y < height - 1 && x < width - 1) ? current[idx + width + 1] : 0,
-          ];
+          let found = false;
           
-          const maxNeighbor = Math.max(...neighbors);
-          if (maxNeighbor > 128) {
+          if (y > 0 && current[idx - width] > 128) found = true;
+          else if (y < height - 1 && current[idx + width] > 128) found = true;
+          else if (x > 0 && current[idx - 1] > 128) found = true;
+          else if (x < width - 1 && current[idx + 1] > 128) found = true;
+          // Diagonals for smoother outline
+          else if (y > 0 && x > 0 && current[idx - width - 1] > 128) found = true;
+          else if (y > 0 && x < width - 1 && current[idx - width + 1] > 128) found = true;
+          else if (y < height - 1 && x > 0 && current[idx + width - 1] > 128) found = true;
+          else if (y < height - 1 && x < width - 1 && current[idx + width + 1] > 128) found = true;
+
+          if (found) {
             next[idx] = 255;
           }
         }
@@ -102,14 +101,13 @@ function erodeMask(
         // If current pixel is opaque
         if (current[idx] > 128) {
           // Check if any neighbor is transparent
-          const neighbors = [
-            y > 0 ? current[idx - width] : 0,
-            y < height - 1 ? current[idx + width] : 0,
-            x > 0 ? current[idx - 1] : 0,
-            x < width - 1 ? current[idx + 1] : 0,
-          ];
+          let hasTransparentNeighbor = false;
+
+          if (y === 0 || current[idx - width] < 128) hasTransparentNeighbor = true;
+          else if (y === height - 1 || current[idx + width] < 128) hasTransparentNeighbor = true;
+          else if (x === 0 || current[idx - 1] < 128) hasTransparentNeighbor = true;
+          else if (x === width - 1 || current[idx + 1] < 128) hasTransparentNeighbor = true;
           
-          const hasTransparentNeighbor = neighbors.some(n => n < 128);
           if (hasTransparentNeighbor) {
             next[idx] = 0;
           }

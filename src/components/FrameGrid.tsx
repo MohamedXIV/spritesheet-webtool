@@ -59,7 +59,8 @@ function SortableFrame({ frame, isSelected, isProcessing, onClick }: SortableFra
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-  };
+    '--source-color': frame.sourceColor || 'transparent',
+  } as React.CSSProperties;
 
   // Draw frame thumbnail to canvas
   useEffect(() => {
@@ -95,6 +96,12 @@ function SortableFrame({ frame, isSelected, isProcessing, onClick }: SortableFra
       {...listeners}
     >
       <canvas ref={canvasRef} className={styles.thumbnail} />
+      {frame.sourceColor && (
+        <div 
+          className={styles.sourceIndicator} 
+          style={{ backgroundColor: frame.sourceColor }}
+        />
+      )}
       <div className={styles.frameIndex}>{frame.index + 1}</div>
       {isSelected && <div className={styles.checkmark}>✓</div>}
       {isProcessing && (
