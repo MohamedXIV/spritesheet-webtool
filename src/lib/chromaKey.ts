@@ -10,20 +10,6 @@ export interface ChromaKeyOptions {
 }
 
 /**
- * Calculate color distance between two RGB colors (Euclidean)
- */
-function colorDistance(
-  r1: number, g1: number, b1: number,
-  r2: number, g2: number, b2: number
-): number {
-  return Math.sqrt(
-    Math.pow(r1 - r2, 2) +
-    Math.pow(g1 - g2, 2) +
-    Math.pow(b1 - b2, 2)
-  );
-}
-
-/**
  * Sample the dominant color from corners of an image
  */
 export function sampleCornerColor(
@@ -86,19 +72,25 @@ export async function removeBackgroundByColor(
   const toleranceThreshold = (tolerance / 100) * maxDistance;
   const softnessRange = (edgeSoftness / 100) * maxDistance;
   
+  const toleranceThresholdSq = toleranceThreshold * toleranceThreshold;
+  const softnessThresholdSq = (toleranceThreshold + softnessRange) ** 2;
+
   // Process each pixel
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i];
     const g = data[i + 1];
     const b = data[i + 2];
     
-    const distance = colorDistance(r, g, b, targetColor.r, targetColor.g, targetColor.b);
+    const distSq = (r - targetColor.r) ** 2 +
+                   (g - targetColor.g) ** 2 +
+                   (b - targetColor.b) ** 2;
     
-    if (distance <= toleranceThreshold) {
+    if (distSq <= toleranceThresholdSq) {
       // Fully transparent
       data[i + 3] = 0;
-    } else if (softnessRange > 0 && distance <= toleranceThreshold + softnessRange) {
+    } else if (softnessRange > 0 && distSq <= softnessThresholdSq) {
       // Partial transparency for edge softness
+      const distance = Math.sqrt(distSq);
       const alpha = ((distance - toleranceThreshold) / softnessRange) * 255;
       data[i + 3] = Math.round(alpha);
     }
