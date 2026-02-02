@@ -40,9 +40,8 @@ export async function inpaintRegion(
   }
   
   // Iterative inpainting from edges inward
+  const newData = new Uint8ClampedArray(data);
   for (let iter = 0; iter < iterations; iter++) {
-    const newData = new Uint8ClampedArray(data);
-    
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = y * width + x;
