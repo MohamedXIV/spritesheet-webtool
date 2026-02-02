@@ -44,10 +44,11 @@ function dilateMask(
   pixels: number
 ): Uint8Array {
   let current = new Uint8Array(alpha);
-  
+  let next = new Uint8Array(alpha.length);
+
   for (let pass = 0; pass < pixels; pass++) {
-    const next = new Uint8Array(current);
-    
+    next.set(current);
+
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = y * width + x;
@@ -74,7 +75,9 @@ function dilateMask(
       }
     }
     
+    const temp = current;
     current = next;
+    next = temp;
   }
   
   return current;
@@ -90,9 +93,10 @@ function erodeMask(
   pixels: number
 ): Uint8Array {
   let current = new Uint8Array(alpha);
+  let next = new Uint8Array(alpha.length);
   
   for (let pass = 0; pass < pixels; pass++) {
-    const next = new Uint8Array(current);
+    next.set(current);
     
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
@@ -115,7 +119,9 @@ function erodeMask(
       }
     }
     
+    const temp = current;
     current = next;
+    next = temp;
   }
   
   return current;
