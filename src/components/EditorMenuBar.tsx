@@ -45,8 +45,19 @@ export function EditorMenuBar({
         setActiveMenu(null);
       }
     }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setActiveMenu(null);
+      }
+    }
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
   const toggleMenu = (name: string) => {
@@ -67,84 +78,92 @@ export function EditorMenuBar({
     <div className={styles.menubar} ref={menuRef}>
       {/* App Name */}
       <div className={styles.menuItem}>
-        <div 
+        <button
           className={`${styles.menuTrigger} ${styles.appTitle} ${activeMenu === 'app' ? styles.menuTriggerActive : ''}`}
           onClick={() => toggleMenu('app')}
           onMouseEnter={() => onMouseEnter('app')}
+          aria-haspopup="true"
+          aria-expanded={activeMenu === 'app'}
+          aria-label="Application menu"
         >
           <span className="text-primary">◆</span>
           Spritesheet Creator
-        </div>
+        </button>
         {activeMenu === 'app' && (
-          <div className={styles.dropdown}>
-            <div className={`${styles.item} ${styles.itemDisabled}`}>
+          <div className={styles.dropdown} role="menu">
+            <div className={`${styles.item} ${styles.itemDisabled}`} role="menuitem" aria-disabled="true">
               Version 0.1.0
             </div>
-            <div className={styles.separator} />
-            <div className={styles.item} onClick={closeMenu}>
+            <div className={styles.separator} role="separator" />
+            <button className={styles.item} onClick={closeMenu} role="menuitem">
               About
-            </div>
+            </button>
           </div>
         )}
       </div>
 
       {/* File Menu */}
       <div className={styles.menuItem}>
-        <div 
+        <button
           className={`${styles.menuTrigger} ${activeMenu === 'file' ? styles.menuTriggerActive : ''}`}
           onClick={() => toggleMenu('file')}
           onMouseEnter={() => onMouseEnter('file')}
+          aria-haspopup="true"
+          aria-expanded={activeMenu === 'file'}
         >
           File
-        </div>
+        </button>
         {activeMenu === 'file' && (
-          <div className={styles.dropdown}>
-            <div 
+          <div className={styles.dropdown} role="menu">
+            <button
               className={styles.item} 
               onClick={() => {
                 onOpenVideo();
                 closeMenu();
               }}
+              role="menuitem"
             >
               Open Video...
               <span className={styles.shortcut}>Ctrl+O</span>
-            </div>
-            <div className={styles.separator} />
-            <div 
+            </button>
+            <div className={styles.separator} role="separator" />
+            <button
               className={styles.item} 
               onClick={() => {
                 onExport();
                 closeMenu();
               }}
+              role="menuitem"
             >
               Export...
               <span className={styles.shortcut}>Ctrl+E</span>
-            </div>
+            </button>
           </div>
         )}
       </div>
 
       {/* View Menu */}
       <div className={styles.menuItem}>
-        <div 
+        <button
           className={`${styles.menuTrigger} ${activeMenu === 'view' ? styles.menuTriggerActive : ''}`}
           onClick={() => toggleMenu('view')}
           onMouseEnter={() => onMouseEnter('view')}
+          aria-haspopup="true"
+          aria-expanded={activeMenu === 'view'}
         >
           View
-        </div>
+        </button>
         {activeMenu === 'view' && (
-          <div className={styles.dropdown}>
+          <div className={styles.dropdown} role="menu">
             {PANELS.map((panel) => (
-              <div
+              <button
                 key={panel.id}
                 className={styles.item}
                 onClick={() => {
                   onTogglePanel(panel.id);
-                  // Don't close menu to allow multiple toggles, or close if standard behavior? 
-                  // Standard behavior usually keeps open for checkboxes but single click for actions.
-                  // I'll keep it open for convenience.
                 }}
+                role="menuitemcheckbox"
+                aria-checked={visiblePanels.has(panel.id)}
               >
                 <div style={{ display: 'flex', alignItems: 'center' }}>
                   <div className={styles.checkContainer}>
@@ -152,18 +171,19 @@ export function EditorMenuBar({
                   </div>
                   {panel.name}
                 </div>
-              </div>
+              </button>
             ))}
-            <div className={styles.separator} />
-            <div 
+            <div className={styles.separator} role="separator" />
+            <button
               className={styles.item} 
               onClick={() => {
                 onResetLayout();
                 closeMenu();
               }}
+              role="menuitem"
             >
               Reset Layout
-            </div>
+            </button>
           </div>
         )}
       </div>
