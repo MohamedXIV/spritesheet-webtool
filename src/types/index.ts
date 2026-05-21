@@ -70,3 +70,13 @@ export interface VideoInfo {
   fps: number;
 }
 
+export interface Folder {
+  id: string;
+  name: string;
+  frameIds: string[];
+  visible: boolean;
+  collapsed: boolean;
+  color: string;
+}
+
+

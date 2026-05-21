@@ -1,31 +1,63 @@
 /**
- * Frame Store - Manages extracted frames and selection state
+ * Frame Store - Manages extracted frames, folders, and selection state
  */
 
-import { FrameData } from '@/types';
+import { FrameData, Folder } from '@/types';
 
 export interface FrameState {
   frames: FrameData[];
+  folders: Folder[];
   selectedIds: Set<string>;
-  orderedIds: string[];
 }
 
 /**
  * Create initial frame state from extracted frames
  */
 export function createFrameState(frames: FrameData[]): FrameState {
+  const defaultFolder: Folder = {
+    id: 'folder-main',
+    name: 'Main Frames',
+    frameIds: frames.map(f => f.id),
+    visible: true,
+    collapsed: false,
+    color: '#3b82f6' // Default Blue
+  };
+  
   return {
     frames,
-    selectedIds: new Set(frames.map(f => f.id)),
-    orderedIds: frames.map(f => f.id)
+    folders: [defaultFolder],
+    selectedIds: new Set(frames.map(f => f.id))
   };
 }
 
 /**
- * Get frames in their current order
+ * Get frames in active (visible) folders in their current order
  */
 export function getOrderedFrames(state: FrameState): FrameData[] {
-  return state.orderedIds
+  const activeFrameIds: string[] = [];
+  
+  state.folders.forEach(folder => {
+    if (folder.visible) {
+      activeFrameIds.push(...folder.frameIds);
+    }
+  });
+  
+  return activeFrameIds
+    .map(id => state.frames.find(f => f.id === id))
+    .filter((f): f is FrameData => f !== undefined);
+}
+
+/**
+ * Get ALL frames in folder sequence, regardless of visibility
+ */
+export function getFoldersOrderedFrames(state: FrameState): FrameData[] {
+  const allFrameIds: string[] = [];
+  
+  state.folders.forEach(folder => {
+    allFrameIds.push(...folder.frameIds);
+  });
+  
+  return allFrameIds
     .map(id => state.frames.find(f => f.id === id))
     .filter((f): f is FrameData => f !== undefined);
 }
@@ -34,10 +66,8 @@ export function getOrderedFrames(state: FrameState): FrameData[] {
  * Get selected frames in their current order
  */
 export function getSelectedFrames(state: FrameState): FrameData[] {
-  return state.orderedIds
-    .filter(id => state.selectedIds.has(id))
-    .map(id => state.frames.find(f => f.id === id))
-    .filter((f): f is FrameData => f !== undefined);
+  const ordered = getOrderedFrames(state);
+  return ordered.filter(f => state.selectedIds.has(f.id));
 }
 
 /**
@@ -61,8 +91,9 @@ export function selectFrameRange(
   fromId: string,
   toId: string
 ): FrameState {
-  const fromIndex = state.orderedIds.indexOf(fromId);
-  const toIndex = state.orderedIds.indexOf(toId);
+  const orderedIds = getOrderedFrames(state).map(f => f.id);
+  const fromIndex = orderedIds.indexOf(fromId);
+  const toIndex = orderedIds.indexOf(toId);
   
   if (fromIndex === -1 || toIndex === -1) return state;
   
@@ -71,7 +102,7 @@ export function selectFrameRange(
   
   const newSelected = new Set(state.selectedIds);
   for (let i = start; i <= end; i++) {
-    newSelected.add(state.orderedIds[i]);
+    newSelected.add(orderedIds[i]);
   }
   
   return { ...state, selectedIds: newSelected };
@@ -81,9 +112,10 @@ export function selectFrameRange(
  * Select all frames
  */
 export function selectAllFrames(state: FrameState): FrameState {
+  const orderedIds = getOrderedFrames(state).map(f => f.id);
   return {
     ...state,
-    selectedIds: new Set(state.orderedIds)
+    selectedIds: new Set(orderedIds)
   };
 }
 
@@ -107,42 +139,143 @@ export function deleteSelectedFrames(state: FrameState): FrameState {
     .forEach(f => f.bitmap.close());
   
   const remainingFrames = state.frames.filter(f => !state.selectedIds.has(f.id));
-  const remainingIds = state.orderedIds.filter(id => !state.selectedIds.has(id));
+  
+  const newFolders = state.folders.map(folder => ({
+    ...folder,
+    frameIds: folder.frameIds.filter(id => !state.selectedIds.has(id))
+  }));
   
   return {
     frames: remainingFrames,
-    selectedIds: new Set(),
-    orderedIds: remainingIds
+    folders: newFolders,
+    selectedIds: new Set()
   };
 }
 
 /**
- * Reorder frames (for drag and drop)
+ * Folder Operations
  */
-export function reorderFrames(
+
+export function createFolder(state: FrameState, name: string, color: string): FrameState {
+  const newFolder: Folder = {
+    id: `folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    name,
+    frameIds: [],
+    visible: true,
+    collapsed: false,
+    color
+  };
+  
+  return {
+    ...state,
+    folders: [...state.folders, newFolder]
+  };
+}
+
+export function deleteFolder(state: FrameState, folderId: string): FrameState {
+  const folder = state.folders.find(f => f.id === folderId);
+  if (!folder) return state;
+  
+  // Close bitmaps of frames in this folder to release memory
+  state.frames
+    .filter(f => folder.frameIds.includes(f.id))
+    .forEach(f => f.bitmap.close());
+  
+  const remainingFrames = state.frames.filter(f => !folder.frameIds.includes(f.id));
+  const newFolders = state.folders.filter(f => f.id !== folderId);
+  
+  // Keep at least one default folder
+  if (newFolders.length === 0) {
+    newFolders.push({
+      id: 'folder-main',
+      name: 'Main Frames',
+      frameIds: [],
+      visible: true,
+      collapsed: false,
+      color: '#3b82f6'
+    });
+  }
+  
+  const remainingIds = new Set(remainingFrames.map(f => f.id));
+  const newSelected = new Set(Array.from(state.selectedIds).filter(id => remainingIds.has(id)));
+  
+  return {
+    frames: remainingFrames,
+    folders: newFolders,
+    selectedIds: newSelected
+  };
+}
+
+export function renameFolder(state: FrameState, folderId: string, name: string): FrameState {
+  const newFolders = state.folders.map(f => 
+    f.id === folderId ? { ...f, name } : f
+  );
+  return { ...state, folders: newFolders };
+}
+
+export function toggleFolderVisibility(state: FrameState, folderId: string): FrameState {
+  const newFolders = state.folders.map(f => 
+    f.id === folderId ? { ...f, visible: !f.visible } : f
+  );
+  return { ...state, folders: newFolders };
+}
+
+export function toggleFolderCollapse(state: FrameState, folderId: string): FrameState {
+  const newFolders = state.folders.map(f => 
+    f.id === folderId ? { ...f, collapsed: !f.collapsed } : f
+  );
+  return { ...state, folders: newFolders };
+}
+
+export function moveFrameToFolder(
+  state: FrameState, 
+  frameId: string, 
+  targetFolderId: string,
+  targetIndex?: number
+): FrameState {
+  const newFolders = state.folders.map(folder => {
+    // Remove frameId from its current folder
+    let frameIds = folder.frameIds.filter(id => id !== frameId);
+    
+    // Add frameId to target folder
+    if (folder.id === targetFolderId) {
+      if (targetIndex !== undefined) {
+        frameIds.splice(targetIndex, 0, frameId);
+      } else {
+        frameIds.push(frameId);
+      }
+    }
+    
+    return { ...folder, frameIds };
+  });
+  
+  return { ...state, folders: newFolders };
+}
+
+export function reorderFolders(state: FrameState, fromIndex: number, toIndex: number): FrameState {
+  const newFolders = [...state.folders];
+  const [movedFolder] = newFolders.splice(fromIndex, 1);
+  newFolders.splice(toIndex, 0, movedFolder);
+  return { ...state, folders: newFolders };
+}
+
+export function reorderFramesInFolder(
   state: FrameState,
+  folderId: string,
   fromIndex: number,
   toIndex: number
 ): FrameState {
-  const newOrder = [...state.orderedIds];
-  const [movedId] = newOrder.splice(fromIndex, 1);
-  newOrder.splice(toIndex, 0, movedId);
+  const newFolders = state.folders.map(folder => {
+    if (folder.id === folderId) {
+      const frameIds = [...folder.frameIds];
+      const [movedId] = frameIds.splice(fromIndex, 1);
+      frameIds.splice(toIndex, 0, movedId);
+      return { ...folder, frameIds };
+    }
+    return folder;
+  });
   
-  return { ...state, orderedIds: newOrder };
-}
-
-/**
- * Move frame by ID to a new position
- */
-export function moveFrame(
-  state: FrameState,
-  frameId: string,
-  toIndex: number
-): FrameState {
-  const fromIndex = state.orderedIds.indexOf(frameId);
-  if (fromIndex === -1) return state;
-  
-  return reorderFrames(state, fromIndex, toIndex);
+  return { ...state, folders: newFolders };
 }
 
 /**
