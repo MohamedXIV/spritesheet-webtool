@@ -5,7 +5,7 @@
  */
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { FrameData, SourceInfo } from '@/types';
+import { FrameData, SourceInfo, Folder } from '@/types';
 import { FrameState } from '@/lib/frameStore';
 import { LoopMode } from '@/components/Timeline';
 import { BackgroundMode } from '@/components/PreviewPlayer';
@@ -21,6 +21,17 @@ interface EditorContextValue {
   orderedFrames: FrameData[];
   selectedFrames: FrameData[];
   processingFrameIds: Set<string>;
+  
+  // Folders
+  folders: Folder[];
+  createFolder: (name: string, color?: string) => void;
+  deleteFolder: (id: string) => void;
+  renameFolder: (id: string, name: string) => void;
+  toggleFolderVisibility: (id: string) => void;
+  toggleFolderCollapse: (id: string) => void;
+  moveFrameToFolder: (frameId: string, folderId: string, targetIndex?: number) => void;
+  reorderFolders: (fromIndex: number, toIndex: number) => void;
+  reorderFramesInFolder: (folderId: string, fromIndex: number, toIndex: number) => void;
   
   // Playback
   fps: number;

@@ -12,16 +12,25 @@ import { DockLayout, DockLayoutRef } from '@/components/DockLayout';
 import { EditorProvider } from '@/contexts/EditorContext';
 import { EditorMenuBar } from '@/components/EditorMenuBar';
 import { OutlineOptions } from '@/lib/outlineGenerator';
-import { extractFrames } from '@/lib/videoDecoder';
+import { extractFrames, getVideoInfo } from '@/lib/videoDecoder';
 import { loadImagesAsFrames, isVideoFile, isImageFile } from '@/lib/imageLoader';
 import { 
   FrameState, 
   createFrameState, 
   getOrderedFrames, 
   getSelectedFrames,
-  disposeFrames 
+  disposeFrames,
+  createFolder,
+  deleteFolder,
+  renameFolder,
+  toggleFolderVisibility,
+  toggleFolderCollapse,
+  moveFrameToFolder,
+  reorderFolders,
+  reorderFramesInFolder,
+  deleteSelectedFrames
 } from '@/lib/frameStore';
-import { FrameData, ExtractionProgress, SourceInfo, SOURCE_COLORS } from '@/types';
+import { FrameData, ExtractionProgress, SourceInfo, SOURCE_COLORS, Folder } from '@/types';
 import styles from './page.module.css';
 
 type EditorState = 'idle' | 'extracting' | 'ready';
@@ -62,6 +71,50 @@ export default function EditorPage() {
   // Store original bitmaps for revert functionality
   const originalFramesRef = useRef<Map<string, ImageBitmap>>(new Map());
 
+  // Folder helper actions
+  const folders = frameState ? frameState.folders : [];
+
+  const handleCreateFolder = useCallback((name: string, color?: string) => {
+    if (!frameState) return;
+    const folderColor = color || SOURCE_COLORS[folders.length % SOURCE_COLORS.length];
+    setFrameState(createFolder(frameState, name, folderColor));
+  }, [frameState, folders.length]);
+
+  const handleDeleteFolder = useCallback((folderId: string) => {
+    if (!frameState) return;
+    setFrameState(deleteFolder(frameState, folderId));
+  }, [frameState]);
+
+  const handleRenameFolder = useCallback((folderId: string, name: string) => {
+    if (!frameState) return;
+    setFrameState(renameFolder(frameState, folderId, name));
+  }, [frameState]);
+
+  const handleToggleFolderVisibility = useCallback((folderId: string) => {
+    if (!frameState) return;
+    setFrameState(toggleFolderVisibility(frameState, folderId));
+  }, [frameState]);
+
+  const handleToggleFolderCollapse = useCallback((folderId: string) => {
+    if (!frameState) return;
+    setFrameState(toggleFolderCollapse(frameState, folderId));
+  }, [frameState]);
+
+  const handleMoveFrameToFolder = useCallback((frameId: string, folderId: string, targetIndex?: number) => {
+    if (!frameState) return;
+    setFrameState(moveFrameToFolder(frameState, frameId, folderId, targetIndex));
+  }, [frameState]);
+
+  const handleReorderFolders = useCallback((fromIndex: number, toIndex: number) => {
+    if (!frameState) return;
+    setFrameState(reorderFolders(frameState, fromIndex, toIndex));
+  }, [frameState]);
+
+  const handleReorderFramesInFolder = useCallback((folderId: string, fromIndex: number, toIndex: number) => {
+    if (!frameState) return;
+    setFrameState(reorderFramesInFolder(frameState, folderId, fromIndex, toIndex));
+  }, [frameState]);
+
   // Cleanup on unmount only
   useEffect(() => {
     return () => {
@@ -77,10 +130,34 @@ export default function EditorPage() {
     setShowFrameWarning(false);
 
     try {
+      // First, get metadata/frame count for all files
+      let totalExpectedFrames = 0;
+      const fileFramesCount: number[] = [];
+      
+      for (const file of files) {
+        if (isVideoFile(file)) {
+          try {
+            const info = await getVideoInfo(file);
+            const count = Math.floor(info.duration * fps);
+            totalExpectedFrames += count;
+            fileFramesCount.push(count);
+          } catch (e) {
+            console.error('Failed to get video info for', file.name, e);
+            fileFramesCount.push(0);
+          }
+        } else if (isImageFile(file)) {
+          totalExpectedFrames += 1;
+          fileFramesCount.push(1);
+        } else {
+          fileFramesCount.push(0);
+        }
+      }
+
       const newFrames: FrameData[] = [];
       const newSources: SourceInfo[] = [...loadedSources];
-      let totalFilesProcessed = 0;
-      const totalFiles = files.length;
+      let framesExtractedSoFar = 0;
+      let fileIndex = 0;
+      const incomingFolders: Folder[] = [];
 
       for (const file of files) {
         // Assign color for this source
@@ -91,10 +168,12 @@ export default function EditorPage() {
         if (isVideoFile(file)) {
           // Extract frames from video
           const result = await extractFrames(file, fps, sourceId, sourceColor, (p: ExtractionProgress) => {
+            const current = framesExtractedSoFar + p.current;
+            const total = totalExpectedFrames;
             setProgress({
-              current: totalFilesProcessed * 100 + p.percentage,
-              total: totalFiles * 100,
-              percentage: Math.round(((totalFilesProcessed * 100 + p.percentage) / (totalFiles * 100)) * 100),
+              current,
+              total,
+              percentage: total > 0 ? Math.round((current / total) * 100) : 0,
             });
           });
 
@@ -108,7 +187,27 @@ export default function EditorPage() {
             frameCount: result.frames.length,
             color: sourceColor,
           });
+
+          incomingFolders.push({
+            id: `folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            name: file.name.substring(0, file.name.lastIndexOf('.')) || file.name,
+            frameIds: result.frames.map(f => f.id),
+            visible: true,
+            collapsed: false,
+            color: sourceColor
+          });
+
+          framesExtractedSoFar += result.frames.length;
         } else if (isImageFile(file)) {
+          // For images, we can update progress immediately
+          const current = framesExtractedSoFar + 1;
+          const total = totalExpectedFrames;
+          setProgress({
+            current,
+            total,
+            percentage: total > 0 ? Math.round((current / total) * 100) : 0,
+          });
+
           // Load image as single frame
           const imageFrames = await loadImagesAsFrames(
             [file],
@@ -125,22 +224,44 @@ export default function EditorPage() {
             frameCount: 1,
             color: sourceColor,
           });
+
+          incomingFolders.push({
+            id: `folder-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            name: file.name,
+            frameIds: imageFrames.map(f => f.id),
+            visible: true,
+            collapsed: false,
+            color: sourceColor
+          });
+
+          framesExtractedSoFar += 1;
         }
 
-        totalFilesProcessed++;
-        setProgress({
-          current: totalFilesProcessed,
-          total: totalFiles,
-          percentage: Math.round((totalFilesProcessed / totalFiles) * 100),
-        });
+        fileIndex++;
       }
 
-      // Combine with existing frames if any
+      // Combine with existing frames and folders if any
       const existingFrames = frameState?.frames || [];
       const allFrames = [...existingFrames, ...newFrames];
+      
+      const existingFolders = frameState?.folders || [];
+      const allFolders = [...existingFolders, ...incomingFolders];
 
       setLoadedSources(newSources);
-      setFrameState(createFrameState(allFrames));
+      setFrameState({
+        frames: allFrames,
+        folders: allFolders.length > 0 ? allFolders : [
+          {
+            id: 'folder-main',
+            name: 'Main Frames',
+            frameIds: allFrames.map(f => f.id),
+            visible: true,
+            collapsed: false,
+            color: '#3b82f6'
+          }
+        ],
+        selectedIds: new Set(allFrames.map(f => f.id))
+      });
       setCurrentFrame(0);
       setEditorState('ready');
 
@@ -159,10 +280,11 @@ export default function EditorPage() {
   const handleRemoveSource = useCallback((sourceId: string) => {
     if (!frameState) return;
 
-    // Remove frames from this source
-    const remainingFrames = frameState.frames.filter(f => f.sourceId !== sourceId);
-    const remainingIds = frameState.orderedIds.filter(id => 
-      remainingFrames.some(f => f.id === id)
+    // Get removed frame IDs
+    const removedFrameIds = new Set(
+      frameState.frames
+        .filter(f => f.sourceId === sourceId)
+        .map(f => f.id)
     );
 
     // Close bitmaps of removed frames
@@ -170,15 +292,38 @@ export default function EditorPage() {
       .filter(f => f.sourceId === sourceId)
       .forEach(f => f.bitmap.close());
 
-    // Remove from sources list
+    const remainingFrames = frameState.frames.filter(f => f.sourceId !== sourceId);
+
+    // Remove frameIds from folders, and filter out any empty folders
+    const newFolders = frameState.folders
+      .map(folder => ({
+        ...folder,
+        frameIds: folder.frameIds.filter(id => !removedFrameIds.has(id))
+      }))
+      .filter(folder => folder.frameIds.length > 0);
+
     const newSources = loadedSources.filter(s => s.id !== sourceId);
     setLoadedSources(newSources);
 
     if (remainingFrames.length > 0) {
+      if (newFolders.length === 0) {
+        newFolders.push({
+          id: 'folder-main',
+          name: 'Main Frames',
+          frameIds: remainingFrames.map(f => f.id),
+          visible: true,
+          collapsed: false,
+          color: '#3b82f6'
+        });
+      }
+
+      const remainingFrameIds = new Set(remainingFrames.map(f => f.id));
       setFrameState({
         frames: remainingFrames,
-        selectedIds: new Set(remainingIds.filter(id => frameState.selectedIds.has(id))),
-        orderedIds: remainingIds,
+        folders: newFolders,
+        selectedIds: new Set(
+          Array.from(frameState.selectedIds).filter(id => remainingFrameIds.has(id))
+        ),
       });
     } else {
       setFrameState(null);
@@ -196,27 +341,21 @@ export default function EditorPage() {
 
   const handleOrderChange = useCallback((newOrder: string[]) => {
     if (!frameState) return;
-    setFrameState({ ...frameState, orderedIds: newOrder });
+    const newFolders = frameState.folders.map(folder => {
+      const sortedFolderFrames = [...newOrder].filter(id => folder.frameIds.includes(id));
+      return { ...folder, frameIds: sortedFolderFrames };
+    });
+    setFrameState({ ...frameState, folders: newFolders });
   }, [frameState]);
 
   const handleDeleteSelected = useCallback(() => {
     if (!frameState) return;
     
-    frameState.frames
-      .filter(f => frameState.selectedIds.has(f.id))
-      .forEach(f => f.bitmap.close());
+    const nextState = deleteSelectedFrames(frameState);
+    setFrameState(nextState);
     
-    const remainingFrames = frameState.frames.filter(f => !frameState.selectedIds.has(f.id));
-    const remainingIds = frameState.orderedIds.filter(id => !frameState.selectedIds.has(id));
-    
-    setFrameState({
-      frames: remainingFrames,
-      selectedIds: new Set(),
-      orderedIds: remainingIds
-    });
-    
-    if (currentFrame >= remainingFrames.length) {
-      setCurrentFrame(Math.max(0, remainingFrames.length - 1));
+    if (currentFrame >= nextState.frames.length) {
+      setCurrentFrame(Math.max(0, nextState.frames.length - 1));
     }
   }, [frameState, currentFrame]);
 
@@ -324,6 +463,15 @@ export default function EditorPage() {
     orderedFrames,
     selectedFrames,
     processingFrameIds,
+    folders,
+    createFolder: handleCreateFolder,
+    deleteFolder: handleDeleteFolder,
+    renameFolder: handleRenameFolder,
+    toggleFolderVisibility: handleToggleFolderVisibility,
+    toggleFolderCollapse: handleToggleFolderCollapse,
+    moveFrameToFolder: handleMoveFrameToFolder,
+    reorderFolders: handleReorderFolders,
+    reorderFramesInFolder: handleReorderFramesInFolder,
     fps,
     currentFrame,
     loopMode,
@@ -356,6 +504,15 @@ export default function EditorPage() {
     orderedFrames,
     selectedFrames,
     processingFrameIds,
+    folders,
+    handleCreateFolder,
+    handleDeleteFolder,
+    handleRenameFolder,
+    handleToggleFolderVisibility,
+    handleToggleFolderCollapse,
+    handleMoveFrameToFolder,
+    handleReorderFolders,
+    handleReorderFramesInFolder,
     fps,
     currentFrame,
     loopMode,
