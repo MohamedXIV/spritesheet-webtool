@@ -1,195 +1,374 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-  background: var(--surface-color, #1a1a2e);
-  border-radius: 12px;
+  height: 100%;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(26, 26, 46, 0.2);
+  backdrop-filter: blur(12px);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .title {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
   color: var(--text-color, #e5e7eb);
+  letter-spacing: 0.02em;
+}
+
+.folderBadges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  margin-left: 8px;
+}
+
+.badge {
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 2px 8px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: var(--primary-light, #a5b4fc);
+  border-radius: 10px;
+}
+
+.mutedBadge {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted, #9ca3af);
 }
 
 .fpsControl {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.fpsLabel {
-  font-size: 0.85rem;
-  color: var(--text-muted, #9ca3af);
-  white-space: nowrap;
-}
-
-.fpsValue {
-  font-weight: 600;
-  color: var(--primary-color, #6366f1);
-  min-width: 24px;
-  display: inline-block;
-  text-align: right;
-}
-
-.slider {
-  width: 100px;
-  height: 4px;
-  -webkit-appearance: none;
-  appearance: none;
-  background: var(--border-color, #4a5568);
-  border-radius: 2px;
-  outline: none;
-  cursor: pointer;
-}
-
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 14px;
-  height: 14px;
-  background: var(--primary-color, #6366f1);
-  border-radius: 50%;
-  cursor: pointer;
-  transition: transform 0.15s ease;
-}
-
-.slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-}
-
-.slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
-  background: var(--primary-color, #6366f1);
-  border-radius: 50%;
-  cursor: pointer;
-  border: none;
-}
-
-.scrubber {
-  display: flex;
-  flex-direction: column;
   gap: 8px;
 }
 
-.frameSlider {
-  width: 100%;
-  height: 6px;
-  -webkit-appearance: none;
-  appearance: none;
-  background: var(--border-color, #4a5568);
-  border-radius: 3px;
-  outline: none;
-  cursor: pointer;
-}
-
-.frameSlider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  background: var(--accent-color, #10b981);
-  border-radius: 50%;
-  cursor: pointer;
-  transition: transform 0.15s ease;
-}
-
-.frameSlider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-}
-
-.frameSlider:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.frameInfo {
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--text-muted, #9ca3af);
-}
-
-.stats {
-  display: flex;
-  justify-content: space-around;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-color, #4a5568);
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.statLabel {
+.fpsLabel {
   font-size: 0.75rem;
-  color: var(--text-muted, #9ca3af);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.statValue {
-  font-size: 1rem;
   font-weight: 600;
-  color: var(--text-color, #e5e7eb);
+  color: var(--text-muted, #9ca3af);
 }
 
 .fpsInput {
-  width: 50px;
-  padding: 4px 8px;
+  width: 48px;
+  padding: 3px 6px;
+  background: rgba(0, 0, 0, 0.4);
   border: 1px solid var(--border-color, #4a5568);
   border-radius: 4px;
-  background: var(--background-color, #0f0f1a);
-  color: var(--text-color, #e5e7eb);
-  font-size: 0.9rem;
+  color: #fff;
+  font-size: 0.78rem;
   text-align: center;
+  outline: none;
+  transition: border-color 0.15s ease;
 }
 
 .fpsInput:focus {
-  outline: none;
   border-color: var(--primary-color, #6366f1);
 }
 
-.fpsInput::-webkit-inner-spin-button,
-.fpsInput::-webkit-outer-spin-button {
-  opacity: 1;
+.slider {
+  width: 90px;
+  accent-color: var(--primary-color, #6366f1);
+  cursor: pointer;
+}
+
+/* Scrubber / Timeline Track Container */
+.scrubberContainer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 50px;
+  justify-content: center;
+}
+
+.track {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  overflow: visible;
+  cursor: ew-resize;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  user-select: none;
+}
+
+.trackSegment {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  position: relative;
+  border-bottom: 3px solid var(--folder-theme-color, #3b82f6);
+  background: color-mix(in srgb, var(--folder-theme-color, #3b82f6) 12%, transparent);
+  transition: all 0.2s ease;
+}
+
+.trackSegment:hover {
+  background: color-mix(in srgb, var(--folder-theme-color, #3b82f6) 20%, transparent);
+}
+
+/* Striped styling for skipped / muted segments */
+.segmentMuted {
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(0, 0, 0, 0.2),
+    rgba(0, 0, 0, 0.2) 6px,
+    rgba(255, 255, 255, 0.02) 6px,
+    rgba(255, 255, 255, 0.02) 12px
+  ) !important;
+  border-bottom: 3px dashed rgba(255, 255, 255, 0.15) !important;
+  opacity: 0.5;
+}
+
+.ticksWrapper {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 4px;
+  pointer-events: none;
+}
+
+.tick {
+  width: 1px;
+  height: 25%;
+  background: color-mix(in srgb, var(--tick-theme-color, #3b82f6) 30%, transparent);
+  border-radius: 1px;
+  transition: height 0.15s ease, background-color 0.15s ease;
+}
+
+.tickActive {
+  height: 60%;
+  width: 2px;
+  background: var(--tick-theme-color, #3b82f6) !important;
+  box-shadow: 0 0 6px var(--tick-theme-color, #3b82f6);
+}
+
+.emptyTrack {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-muted, #9ca3af);
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+/* Playhead Indicator */
+.playhead {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+  pointer-events: none;
+  z-index: 20;
+  transform: translateX(-50%);
+  transition: left 0.1s cubic-bezier(0.1, 0.8, 0.2, 1);
+}
+
+.playheadHandle {
+  width: 12px;
+  height: 12px;
+  background: #ff4757;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+  z-index: 21;
+}
+
+.playheadLine {
+  width: 2px;
+  height: 100%;
+  background: #ff4757;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+}
+
+.frameInfo {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted, #9ca3af);
+  text-align: right;
+  margin-top: 6px;
+}
+
+/* Hover Tooltip Overlay */
+.tooltip {
+  position: absolute;
+  bottom: 100%;
+  transform: translate(-50%, -8px);
+  background: rgba(15, 15, 27, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  gap: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  z-index: 100;
+  transition: left 0.05s ease-out;
+  animation: tooltipFadeIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 0px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -8px);
+  }
+}
+
+.tooltipCanvas {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+.tooltipMeta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  min-width: 110px;
+}
+
+.tooltipFolder {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+
+.tooltipColorDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.2);
+}
+
+.tooltipFrameIndex {
+  font-size: 0.74rem;
+  color: #e5e7eb;
+  font-weight: 500;
+}
+
+.tooltipTimestamp {
+  font-size: 0.65rem;
+  color: var(--text-muted, #9ca3af);
+}
+
+.tooltipMutedBadge {
+  font-size: 0.62rem;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  margin-top: 2px;
+  width: max-content;
+}
+
+/* Bottom Bar controls */
+.bottomBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-top: 6px;
+  flex-shrink: 0;
 }
 
 .loopControl {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 0;
-  border-top: 1px solid var(--border-color, #4a5568);
+  gap: 8px;
 }
 
 .loopLabel {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 600;
   color: var(--text-muted, #9ca3af);
 }
 
 .loopSelect {
-  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.4);
   border: 1px solid var(--border-color, #4a5568);
   border-radius: 6px;
-  background: var(--background-color, #0f0f1a);
-  color: var(--text-color, #e5e7eb);
-  font-size: 0.85rem;
+  color: #fff;
+  font-size: 0.76rem;
+  padding: 4px 10px;
+  outline: none;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.loopSelect:focus {
-  outline: none;
+.loopSelect:hover {
   border-color: var(--primary-color, #6366f1);
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.stats {
+  display: flex;
+  gap: 16px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.statLabel {
+  font-size: 0.68rem;
+  color: var(--text-muted, #9ca3af);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.statValue {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-color, #e5e7eb);
 }
