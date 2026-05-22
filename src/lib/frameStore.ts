@@ -252,6 +252,48 @@ export function moveFrameToFolder(
   return { ...state, folders: newFolders };
 }
 
+export function moveFramesToFolder(
+  state: FrameState,
+  frameIds: string[],
+  targetFolderId: string
+): FrameState {
+  const frameIdsSet = new Set(frameIds);
+  const newFolders = state.folders.map(folder => {
+    // Remove frameIds from all folders first
+    let currentFrameIds = folder.frameIds.filter(id => !frameIdsSet.has(id));
+    
+    // Add all frameIds to target folder
+    if (folder.id === targetFolderId) {
+      currentFrameIds = [...currentFrameIds, ...frameIds];
+    }
+    
+    return { ...folder, frameIds: currentFrameIds };
+  });
+  
+  return { ...state, folders: newFolders };
+}
+
+export function addFramesToFolder(
+  state: FrameState,
+  newFrames: FrameData[],
+  targetFolderId: string
+): FrameState {
+  const newFrameIds = newFrames.map(f => f.id);
+  const newFolders = state.folders.map(folder => {
+    if (folder.id === targetFolderId) {
+      return { ...folder, frameIds: [...folder.frameIds, ...newFrameIds] };
+    }
+    return folder;
+  });
+  
+  return {
+    frames: [...state.frames, ...newFrames],
+    folders: newFolders,
+    selectedIds: new Set(newFrameIds) // Auto-select the newly copied frames
+  };
+}
+
+
 export function reorderFolders(state: FrameState, fromIndex: number, toIndex: number): FrameState {
   const newFolders = [...state.folders];
   const [movedFolder] = newFolders.splice(fromIndex, 1);

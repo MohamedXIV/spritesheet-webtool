@@ -30,6 +30,8 @@ interface EditorContextValue {
   toggleFolderVisibility: (id: string) => void;
   toggleFolderCollapse: (id: string) => void;
   moveFrameToFolder: (frameId: string, folderId: string, targetIndex?: number) => void;
+  moveFramesToFolder: (frameIds: string[], folderId: string) => void;
+  copyFramesToFolder: (frameIds: string[], folderId: string) => Promise<void>;
   reorderFolders: (fromIndex: number, toIndex: number) => void;
   reorderFramesInFolder: (folderId: string, fromIndex: number, toIndex: number) => void;
   

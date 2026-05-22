@@ -50,15 +50,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 import gsap from 'gsap';
 import styles from './FrameGrid.module.css';
+import { ContextMenu } from './ContextMenu';
 
 interface SortableFrameProps {
   frame: FrameData;
   isSelected: boolean;
   isProcessing: boolean;
   onClick: (e: React.MouseEvent) => void;
+  onContextMenu: (e: React.MouseEvent) => void;
 }
 
-function SortableFrame({ frame, isSelected, isProcessing, onClick }: SortableFrameProps) {
+function SortableFrame({ frame, isSelected, isProcessing, onClick, onContextMenu }: SortableFrameProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { folders, moveFrameToFolder } = useEditorContext();
   const {
@@ -106,6 +108,7 @@ function SortableFrame({ frame, isSelected, isProcessing, onClick }: SortableFra
       style={style}
       className={`${styles.frame} ${isSelected ? styles.selected : ''} ${isProcessing ? styles.processing : ''}`}
       onClick={onClick}
+      onContextMenu={onContextMenu}
       {...attributes}
       {...listeners}
     >
@@ -166,6 +169,9 @@ interface FolderSectionProps {
   setEditingFolderId: (id: string | null) => void;
   setRenameValue: (val: string) => void;
   onFrameClick: (frameId: string, e: React.MouseEvent) => void;
+  onFrameContextMenu: (frameId: string, e: React.MouseEvent) => void;
+  onFolderContextMenu: (folderId: string, e: React.MouseEvent) => void;
+  onGridContextMenu: (folderId: string, e: React.MouseEvent) => void;
 }
 
 function FolderSection({
@@ -178,6 +184,9 @@ function FolderSection({
   setEditingFolderId,
   setRenameValue,
   onFrameClick,
+  onFrameContextMenu,
+  onFolderContextMenu,
+  onGridContextMenu,
 }: FolderSectionProps) {
   const {
     renameFolder,
@@ -301,6 +310,11 @@ function FolderSection({
         className={styles.folderHeader} 
         style={{ borderLeftColor: folder.color }}
         onClick={() => toggleFolderCollapse(folder.id)}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onFolderContextMenu(folder.id, e);
+        }}
       >
         <div className={styles.folderHeaderLeft} onClick={e => e.stopPropagation()}>
           <button 
@@ -386,7 +400,14 @@ function FolderSection({
       {/* Folder Accordion Body */}
       <div ref={contentRef} className={styles.folderContent}>
         {folderFrames.length === 0 ? (
-          <div className={styles.folderEmpty}>
+          <div 
+            className={styles.folderEmpty}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onGridContextMenu(folder.id, e);
+            }}
+          >
             No frames in this folder.
           </div>
         ) : (
@@ -396,7 +417,16 @@ function FolderSection({
             onDragEnd={handleFrameDragEnd}
           >
             <SortableContext items={folder.frameIds} strategy={rectSortingStrategy}>
-              <div className={styles.grid}>
+              <div 
+                className={styles.grid}
+                onContextMenu={(e) => {
+                  if (e.target === e.currentTarget) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onGridContextMenu(folder.id, e);
+                  }
+                }}
+              >
                 {folderFrames.map(frame => (
                   <SortableFrame
                     key={frame.id}
@@ -404,6 +434,11 @@ function FolderSection({
                     isSelected={selectedIds.has(frame.id)}
                     isProcessing={processingIds.has(frame.id)}
                     onClick={(e) => onFrameClick(frame.id, e)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onFrameContextMenu(frame.id, e);
+                    }}
                   />
                 ))}
               </div>
@@ -443,12 +478,48 @@ export function FrameGrid({
     createFolder,
     reorderFolders,
     moveFrameToFolder,
+    moveFramesToFolder,
     frameState
   } = useEditorContext();
 
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    targetType: 'frame' | 'folder' | 'grid';
+    targetId: string;
+  } | null>(null);
+
+  const handleFrameContextMenu = useCallback((frameId: string, e: React.MouseEvent) => {
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      targetType: 'frame',
+      targetId: frameId,
+    });
+  }, []);
+
+  const handleFolderContextMenu = useCallback((folderId: string, e: React.MouseEvent) => {
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      targetType: 'folder',
+      targetId: folderId,
+    });
+  }, []);
+
+  const handleGridContextMenu = useCallback((folderId: string, e: React.MouseEvent) => {
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      targetType: 'grid',
+      targetId: folderId,
+    });
+  }, []);
   
   // New folder creation state
   const [newFolderName, setNewFolderName] = useState('');
@@ -568,9 +639,7 @@ export function FrameGrid({
                   <DropdownMenuItem
                     key={fold.id}
                     onClick={() => {
-                      selectedIds.forEach((id: string) => {
-                        moveFrameToFolder(id, fold.id);
-                      });
+                      moveFramesToFolder(Array.from(selectedIds), fold.id);
                     }}
                     className={styles.dropdownItem}
                   >
@@ -620,6 +689,7 @@ export function FrameGrid({
             onClick={onDeleteSelected}
             className={`${styles.button} ${styles.deleteButton}`}
             disabled={selectedIds.size === 0}
+            id="btn-delete-selected"
           >
             Delete Selected
           </button>
@@ -646,11 +716,25 @@ export function FrameGrid({
                 setEditingFolderId={setEditingFolderId}
                 setRenameValue={setRenameValue}
                 onFrameClick={handleFrameClick}
+                onFrameContextMenu={handleFrameContextMenu}
+                onFolderContextMenu={handleFolderContextMenu}
+                onGridContextMenu={handleGridContextMenu}
               />
             ))}
           </SortableContext>
         </DndContext>
       </div>
+
+      {/* Floating Glassmorphic Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          targetType={contextMenu.targetType}
+          targetId={contextMenu.targetId}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 }

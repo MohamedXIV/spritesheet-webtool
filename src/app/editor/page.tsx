@@ -26,6 +26,8 @@ import {
   toggleFolderVisibility,
   toggleFolderCollapse,
   moveFrameToFolder,
+  moveFramesToFolder,
+  addFramesToFolder,
   reorderFolders,
   reorderFramesInFolder,
   deleteSelectedFrames
@@ -75,45 +77,103 @@ export default function EditorPage() {
   const folders = frameState ? frameState.folders : [];
 
   const handleCreateFolder = useCallback((name: string, color?: string) => {
-    if (!frameState) return;
-    const folderColor = color || SOURCE_COLORS[folders.length % SOURCE_COLORS.length];
-    setFrameState(createFolder(frameState, name, folderColor));
-  }, [frameState, folders.length]);
+    setFrameState(prev => {
+      if (!prev) return prev;
+      const folderColor = color || SOURCE_COLORS[prev.folders.length % SOURCE_COLORS.length];
+      return createFolder(prev, name, folderColor);
+    });
+  }, []);
 
   const handleDeleteFolder = useCallback((folderId: string) => {
-    if (!frameState) return;
-    setFrameState(deleteFolder(frameState, folderId));
-  }, [frameState]);
+    setFrameState(prev => {
+      if (!prev) return prev;
+      return deleteFolder(prev, folderId);
+    });
+  }, []);
 
   const handleRenameFolder = useCallback((folderId: string, name: string) => {
-    if (!frameState) return;
-    setFrameState(renameFolder(frameState, folderId, name));
-  }, [frameState]);
+    setFrameState(prev => {
+      if (!prev) return prev;
+      return renameFolder(prev, folderId, name);
+    });
+  }, []);
 
   const handleToggleFolderVisibility = useCallback((folderId: string) => {
-    if (!frameState) return;
-    setFrameState(toggleFolderVisibility(frameState, folderId));
-  }, [frameState]);
+    setFrameState(prev => {
+      if (!prev) return prev;
+      return toggleFolderVisibility(prev, folderId);
+    });
+  }, []);
 
   const handleToggleFolderCollapse = useCallback((folderId: string) => {
-    if (!frameState) return;
-    setFrameState(toggleFolderCollapse(frameState, folderId));
-  }, [frameState]);
+    setFrameState(prev => {
+      if (!prev) return prev;
+      return toggleFolderCollapse(prev, folderId);
+    });
+  }, []);
 
   const handleMoveFrameToFolder = useCallback((frameId: string, folderId: string, targetIndex?: number) => {
-    if (!frameState) return;
-    setFrameState(moveFrameToFolder(frameState, frameId, folderId, targetIndex));
-  }, [frameState]);
+    setFrameState(prev => {
+      if (!prev) return prev;
+      return moveFrameToFolder(prev, frameId, folderId, targetIndex);
+    });
+  }, []);
+
+  const handleMoveFramesToFolder = useCallback((frameIds: string[], folderId: string) => {
+    setFrameState(prev => {
+      if (!prev) return prev;
+      return moveFramesToFolder(prev, frameIds, folderId);
+    });
+  }, []);
+
+  const handleCopyFramesToFolder = useCallback(async (frameIds: string[], folderId: string) => {
+    if (frameIds.length === 0) return;
+    
+    let framesToCopy: FrameData[] = [];
+    setFrameState(prev => {
+      if (prev) {
+        framesToCopy = prev.frames.filter(f => frameIds.includes(f.id));
+      }
+      return prev;
+    });
+
+    if (framesToCopy.length === 0) return;
+
+    try {
+      const copiedFrames: FrameData[] = [];
+      for (const frame of framesToCopy) {
+        const clonedBitmap = await createImageBitmap(frame.bitmap);
+        const newId = `frame-copy-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        copiedFrames.push({
+          ...frame,
+          id: newId,
+          bitmap: clonedBitmap,
+        });
+      }
+
+      setFrameState(prev => {
+        if (!prev) return prev;
+        return addFramesToFolder(prev, copiedFrames, folderId);
+      });
+    } catch (e) {
+      console.error('Failed to copy frames:', e);
+      alert('Failed to copy frames due to an image cloning error.');
+    }
+  }, []);
 
   const handleReorderFolders = useCallback((fromIndex: number, toIndex: number) => {
-    if (!frameState) return;
-    setFrameState(reorderFolders(frameState, fromIndex, toIndex));
-  }, [frameState]);
+    setFrameState(prev => {
+      if (!prev) return prev;
+      return reorderFolders(prev, fromIndex, toIndex);
+    });
+  }, []);
 
   const handleReorderFramesInFolder = useCallback((folderId: string, fromIndex: number, toIndex: number) => {
-    if (!frameState) return;
-    setFrameState(reorderFramesInFolder(frameState, folderId, fromIndex, toIndex));
-  }, [frameState]);
+    setFrameState(prev => {
+      if (!prev) return prev;
+      return reorderFramesInFolder(prev, folderId, fromIndex, toIndex);
+    });
+  }, []);
 
   // Cleanup on unmount only
   useEffect(() => {
@@ -470,6 +530,8 @@ export default function EditorPage() {
     toggleFolderVisibility: handleToggleFolderVisibility,
     toggleFolderCollapse: handleToggleFolderCollapse,
     moveFrameToFolder: handleMoveFrameToFolder,
+    moveFramesToFolder: handleMoveFramesToFolder,
+    copyFramesToFolder: handleCopyFramesToFolder,
     reorderFolders: handleReorderFolders,
     reorderFramesInFolder: handleReorderFramesInFolder,
     fps,
@@ -511,6 +573,8 @@ export default function EditorPage() {
     handleToggleFolderVisibility,
     handleToggleFolderCollapse,
     handleMoveFrameToFolder,
+    handleMoveFramesToFolder,
+    handleCopyFramesToFolder,
     handleReorderFolders,
     handleReorderFramesInFolder,
     fps,
