@@ -334,7 +334,29 @@
   border-top: 1px solid rgba(255, 255, 255, 0.02);
   background: rgba(0, 0, 0, 0.08);
   justify-content: start;
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
+
+.grid::-webkit-scrollbar {
+  width: 6px;
+}
+
+.grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.grid::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 
 .frame {
   position: relative;
