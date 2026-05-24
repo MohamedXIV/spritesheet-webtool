@@ -15,6 +15,7 @@ import { LoopMode } from '@/components/Timeline';
 import { BackgroundMode } from '@/components/PreviewPlayer';
 import styles from './page.module.css';
 import { useFrameHistory } from '@/hooks/useFrameHistory';
+import { useProjectSave } from '@/hooks/useProjectSave';
 
 export default function StandalonePixelatorPage() {
   // 1. Slicing state variables
@@ -75,6 +76,149 @@ export default function StandalonePixelatorPage() {
 
   // Original Bitmap storage for Revert actions
   const originalFramesRef = useRef<Map<string, ImageBitmap>>(new Map());
+
+  // Save Subsystem states
+  const [projectId, setProjectId] = useState<string>('');
+  const [projectName, setProjectName] = useState<string>('Untitled Pixelator Project');
+
+  useEffect(() => {
+    if (!projectId) {
+      setProjectId(`pixelator-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+    }
+  }, [projectId]);
+
+  const {
+    triggerSave,
+    isSaving,
+    autosaveNotification
+  } = useProjectSave({
+    projectId,
+    setProjectId,
+    projectName,
+    setProjectName,
+    type: 'pixelator',
+    frameState,
+    fps,
+    loopMode,
+    previewBgMode,
+    previewBgColor,
+    pixelatorOptions: {
+      enabled: pixelatorEnabled,
+      pixelSize,
+      palette: pixelatorPalette,
+      ditherType: pixelatorDitherType,
+      ditherAmount: pixelatorDitherAmount,
+      pixelShape: pixelatorPixelShape,
+      outlineEnabled: pixelatorOutlineEnabled,
+      outlineColor: pixelatorOutlineColor,
+      outlineThickness: pixelatorOutlineThickness,
+      contrast: pixelatorContrast,
+      saturation: pixelatorSaturation,
+      brightness: pixelatorBrightness,
+    },
+    slicerOptions: {
+      sliceType,
+      cols,
+      rows,
+      cellWidth,
+      cellHeight,
+    },
+    isDirty,
+    markSaved
+  });
+
+  // URL project deep-linking restore effect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('project');
+    if (!id) return;
+
+    setIsSlicing(true); // Show loader
+
+    import('@/lib/projectDatabase').then(async ({ getProject }) => {
+      try {
+        const project = await getProject(id);
+        if (!project) {
+          alert('Project not found locally.');
+          setIsSlicing(false);
+          return;
+        }
+
+        // Restore project info
+        setProjectId(project.id);
+        setProjectName(project.name);
+        setFps(project.metadata.fps || 12);
+        setLoopMode((project.metadata.loopMode as any) || 'normal');
+        setPreviewBgMode((project.metadata.previewBgMode as any) || 'none');
+        setPreviewBgColor(project.metadata.previewBgColor || '#1a1a2e');
+        
+        // Restore slicer options
+        if (project.metadata.slicerOptions) {
+          setSliceType(project.metadata.slicerOptions.sliceType);
+          setCols(project.metadata.slicerOptions.cols);
+          setRows(project.metadata.slicerOptions.rows);
+          setCellWidth(project.metadata.slicerOptions.cellWidth);
+          setCellHeight(project.metadata.slicerOptions.cellHeight);
+        }
+
+        // Restore pixelator options
+        if (project.metadata.pixelatorOptions) {
+          const opts = project.metadata.pixelatorOptions;
+          setPixelatorEnabled(opts.enabled ?? true);
+          setPixelSize(opts.pixelSize ?? 8);
+          setPixelatorPalette(opts.palette ?? 'none');
+          setPixelatorDitherType(opts.ditherType ?? 'none');
+          setPixelatorDitherAmount(opts.ditherAmount ?? 50);
+          setPixelatorPixelShape(opts.pixelShape ?? 'square');
+          setPixelatorOutlineEnabled(opts.outlineEnabled ?? false);
+          setPixelatorOutlineColor(opts.outlineColor ?? '#000000');
+          setPixelatorOutlineThickness(opts.outlineThickness ?? 1);
+          setPixelatorContrast(opts.contrast ?? 0);
+          setPixelatorSaturation(opts.saturation ?? 0);
+          setPixelatorBrightness(opts.brightness ?? 0);
+        }
+        
+        // Re-construct FrameState from Blob frames
+        const restoredFrames: FrameData[] = [];
+        for (const f of project.frames) {
+          const bitmap = await createImageBitmap(f.blob);
+          restoredFrames.push({
+            id: f.id,
+            index: f.index,
+            timestamp: f.timestamp,
+            bitmap,
+            sourceId: f.sourceId,
+            sourceColor: f.sourceColor
+          });
+        }
+
+        const restoredState = {
+          frames: restoredFrames,
+          folders: project.metadata.folders || [],
+          selectedIds: new Set(project.metadata.selectedIds || [])
+        };
+
+        // Populate frames backup for Reverts
+        originalFramesRef.current.clear();
+        for (const frame of restoredFrames) {
+          const canvas = document.createElement('canvas');
+          canvas.width = frame.bitmap.width;
+          canvas.height = frame.bitmap.height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(frame.bitmap, 0, 0);
+          const clone = await createImageBitmap(canvas);
+          originalFramesRef.current.set(frame.id, clone);
+        }
+
+        resetHistory(restoredState);
+        setIsSlicing(false);
+      } catch (err) {
+        console.error('Failed to restore project:', err);
+        alert('Failed to load project.');
+        setIsSlicing(false);
+      }
+    });
+  }, [resetHistory]);
 
   // Frame selectors
   const orderedFrames = useMemo(() => {
@@ -353,7 +497,7 @@ export default function StandalonePixelatorPage() {
     ]));
   }, []);
 
-  // 6. Keyboard Shortcuts for Undo/Redo (Ctrl+Z / Ctrl+Y)
+  // 6. Keyboard Shortcuts (Ctrl+Z / Ctrl+Y / Ctrl+S)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
@@ -363,6 +507,9 @@ export default function StandalonePixelatorPage() {
         } else if (e.key === 'y' || e.key === 'Y') {
           e.preventDefault();
           redo();
+        } else if (e.key === 's' || e.key === 'S') {
+          e.preventDefault();
+          triggerSave();
         }
       } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
@@ -372,7 +519,7 @@ export default function StandalonePixelatorPage() {
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo]);
+  }, [undo, redo, triggerSave]);
 
   // 7. Warn before tab close with unsaved modifications
   useEffect(() => {
@@ -438,6 +585,12 @@ export default function StandalonePixelatorPage() {
     canRedo,
     isDirty,
     markSaved,
+    projectId,
+    projectName,
+    setProjectName,
+    triggerSave,
+    isSaving,
+    autosaveNotification,
     
     // Inject Custom Pixelator Slicing Namespace hook
     pixelatorSlicer: {
@@ -534,7 +687,12 @@ export default function StandalonePixelatorPage() {
     canUndo,
     canRedo,
     isDirty,
-    markSaved
+    markSaved,
+    projectId,
+    projectName,
+    triggerSave,
+    isSaving,
+    autosaveNotification
   ]);
 
   return (

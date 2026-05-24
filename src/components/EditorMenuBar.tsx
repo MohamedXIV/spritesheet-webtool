@@ -33,7 +33,12 @@ export function EditorMenuBar() {
     redo,
     canUndo,
     canRedo,
-    isDirty
+    isDirty,
+    projectName,
+    setProjectName,
+    triggerSave,
+    isSaving,
+    autosaveNotification
   } = useEditorContext();
 
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -100,9 +105,16 @@ export function EditorMenuBar() {
         </div>
         {activeMenu === 'file' && (
           <div className={styles.dropdown}>
-            <div className={`${styles.item} ${styles.itemDisabled}`}>
-              Open video/images in Load Video panel
-            </div>
+            <button 
+              className={styles.item} 
+              onClick={() => {
+                triggerSave?.();
+                closeMenu();
+              }}
+            >
+              <span>Save Project</span>
+              <span className={styles.shortcut}>Ctrl+S</span>
+            </button>
             <div className={styles.separator} />
             <Link href="/" className={styles.item} onClick={closeMenu}>
               Exit to Portal Hub
@@ -191,6 +203,58 @@ export function EditorMenuBar() {
           </div>
         )}
       </div>
+
+      {/* Editable Project Name Input */}
+      <div className={styles.menuItem} style={{ marginLeft: '12px' }}>
+        <input
+          type="text"
+          value={projectName || ''}
+          onChange={(e) => setProjectName?.(e.target.value)}
+          placeholder="Untitled Project"
+          style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '4px',
+            color: '#e2e8f0',
+            fontSize: '0.78rem',
+            padding: '4px 10px',
+            width: '180px',
+            outline: 'none',
+            transition: 'all 0.15s ease'
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = 'rgba(139, 92, 246, 0.4)';
+            e.target.style.background = 'rgba(0, 0, 0, 0.2)';
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+            e.target.style.background = 'rgba(255, 255, 255, 0.03)';
+          }}
+        />
+      </div>
+
+      {/* Autosaved Indicator Status */}
+      {autosaveNotification && (
+        <span 
+          style={{ 
+            fontSize: '0.72rem', 
+            color: '#10b981', 
+            marginLeft: '12px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '4px',
+            animation: 'fadeIn 0.2s ease'
+          }}
+        >
+          <span style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%' }} />
+          {autosaveNotification}
+        </span>
+      )}
+      {isSaving && (
+        <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: '12px' }}>
+          Saving...
+        </span>
+      )}
     </div>
   );
 }

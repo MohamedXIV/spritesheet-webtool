@@ -128,6 +128,12 @@ interface EditorContextValue {
   canRedo?: boolean;
   isDirty?: boolean;
   markSaved?: () => void;
+  projectId?: string;
+  projectName?: string;
+  setProjectName?: (name: string) => void;
+  triggerSave?: (customName?: string) => Promise<void>;
+  isSaving?: boolean;
+  autosaveNotification?: string | null;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);

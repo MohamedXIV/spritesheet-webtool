@@ -27,7 +27,12 @@ export function PixelatorMenuBar() {
     redo,
     canUndo,
     canRedo,
-    isDirty
+    isDirty,
+    projectName,
+    setProjectName,
+    triggerSave,
+    isSaving,
+    autosaveNotification
   } = useEditorContext();
 
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -94,6 +99,17 @@ export function PixelatorMenuBar() {
         </div>
         {activeMenu === 'file' && (
           <div className={styles.dropdown}>
+            <button 
+              className={styles.item} 
+              onClick={() => {
+                triggerSave?.();
+                closeMenu();
+              }}
+            >
+              <span className={styles.itemLabel}>Save Project</span>
+              <span className={styles.itemHotkey}>Ctrl+S</span>
+            </button>
+            <div className={styles.separator} />
             <button 
               className={styles.item} 
               onClick={() => {
@@ -190,6 +206,59 @@ export function PixelatorMenuBar() {
           </div>
         )}
       </div>
+
+      {/* Editable Project Name Input */}
+      <div className={styles.menuItem} style={{ marginLeft: '12px' }}>
+        <input
+          type="text"
+          value={projectName || ''}
+          onChange={(e) => setProjectName?.(e.target.value)}
+          placeholder="Untitled Project"
+          style={{
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '4px',
+            color: '#cbd5e1',
+            fontSize: '0.78rem',
+            padding: '4px 10px',
+            width: '180px',
+            outline: 'none',
+            transition: 'all 0.15s ease',
+            fontFamily: 'inherit'
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = 'rgba(168, 85, 247, 0.4)';
+            e.target.style.background = 'rgba(0, 0, 0, 0.2)';
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+            e.target.style.background = 'rgba(255, 255, 255, 0.03)';
+          }}
+        />
+      </div>
+
+      {/* Autosaved Indicator Status */}
+      {autosaveNotification && (
+        <span 
+          style={{ 
+            fontSize: '0.72rem', 
+            color: '#10b981', 
+            marginLeft: '12px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '4px',
+            animation: 'fadeIn 0.2s ease'
+          }}
+        >
+          <span style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%' }} />
+          {autosaveNotification}
+        </span>
+      )}
+      {isSaving && (
+        <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: '12px' }}>
+          Saving...
+        </span>
+      )}
     </div>
   );
 }

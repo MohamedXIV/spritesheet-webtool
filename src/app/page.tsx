@@ -1,7 +1,72 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Trash2, Edit2, FolderOpen, Clock, Settings, FileSpreadsheet, Image } from 'lucide-react';
+import { getAllProjectsSummary, deleteProject, renameProject, ProjectSummary } from '@/lib/projectDatabase';
 import styles from './page.module.css';
 
 export default function Home() {
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+
+  // Fetch projects from IndexedDB on mount
+  const loadProjects = async () => {
+    try {
+      const list = await getAllProjectsSummary();
+      setProjects(list);
+    } catch (e) {
+      console.error('Failed to load local projects:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  const handleDelete = async (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete the local project "${name}"? This action cannot be undone.`)) {
+      try {
+        await deleteProject(id);
+        await loadProjects();
+      } catch (e) {
+        console.error('Failed to delete project:', e);
+        alert('Failed to delete project');
+      }
+    }
+  };
+
+  const startRename = (id: string, currentName: string) => {
+    setEditingId(id);
+    setEditingName(currentName);
+  };
+
+  const handleRenameSubmit = async (id: string) => {
+    if (!editingName.trim()) return;
+    try {
+      await renameProject(id, editingName.trim());
+      setEditingId(null);
+      await loadProjects();
+    } catch (e) {
+      console.error('Failed to rename project:', e);
+      alert('Failed to rename project');
+    }
+  };
+
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString(undefined, { 
+      month: 'short', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
   return (
     <main className={styles.main}>
       {/* Premium Background Orbs */}
@@ -80,6 +145,125 @@ export default function Home() {
             </svg>
           </Link>
         </div>
+      </section>
+
+      {/* Recent Local Projects Dashboard Section */}
+      <section className={styles.recentProjectsSection}>
+        <h3 className={styles.projectsHeader}>
+          <FolderOpen size={20} style={{ color: '#a855f7' }} />
+          Recent Local Projects
+        </h3>
+
+        {isLoading ? (
+          <div className={styles.emptyState}>
+            <p>Scanning browser database store...</p>
+          </div>
+        ) : projects.length === 0 ? (
+          <div className={styles.emptyState}>
+            <p>No local projects found. Create one by saving your workspace (Ctrl+S) in any tool above!</p>
+          </div>
+        ) : (
+          <div className={styles.projectsGrid}>
+            {projects.map((proj) => {
+              const isSpritesheet = proj.type === 'spritesheet';
+              const targetLink = isSpritesheet
+                ? `/tools/video-to-spritesheet?project=${proj.id}`
+                : `/tools/pixelator?project=${proj.id}`;
+
+              return (
+                <div key={proj.id} className={styles.projectCard}>
+                  <div className={styles.projectHeader}>
+                    <span 
+                      className={`${styles.projectTypeBadge} ${
+                        isSpritesheet ? styles.badgeSpritesheet : styles.badgePixelator
+                      }`}
+                    >
+                      {isSpritesheet ? '🎬 Spritesheet' : '👾 Pixelator'}
+                    </span>
+                    <div className={styles.projectActions}>
+                      <button 
+                        className={styles.actionButton}
+                        onClick={() => startRename(proj.id, proj.name)}
+                        title="Rename Project"
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button 
+                        className={`${styles.actionButton} ${styles.deleteButton}`}
+                        onClick={() => handleDelete(proj.id, proj.name)}
+                        title="Delete Project"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {editingId === proj.id ? (
+                    <div style={{ display: 'flex', gap: '6px', margin: '4px 0' }}>
+                      <input 
+                        type="text" 
+                        value={editingName} 
+                        onChange={(e) => setEditingName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRenameSubmit(proj.id);
+                          if (e.key === 'Escape') setEditingId(null);
+                        }}
+                        style={{
+                          flex: 1,
+                          background: 'rgba(0, 0, 0, 0.4)',
+                          border: '1px solid rgba(139, 92, 246, 0.4)',
+                          color: '#ffffff',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.85rem',
+                          outline: 'none'
+                        }}
+                        autoFocus
+                      />
+                      <button 
+                        onClick={() => handleRenameSubmit(proj.id)}
+                        style={{
+                          background: '#6366f1',
+                          border: 'none',
+                          color: '#ffffff',
+                          borderRadius: '6px',
+                          padding: '4px 8px',
+                          fontSize: '0.75rem',
+                          fontWeight: 650,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Save
+                      </button>
+                    </div>
+                  ) : (
+                    <h4 className={styles.projectName} title={proj.name}>
+                      {proj.name}
+                    </h4>
+                  )}
+
+                  <div className={styles.projectMetadata}>
+                    <div className={styles.projectMetaRow}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock size={11} /> Saved:
+                      </span>
+                      <strong>{formatDate(proj.updatedAt)}</strong>
+                    </div>
+                    <div className={styles.projectMetaRow}>
+                      <span>Frames Count:</span>
+                      <strong>{proj.frameCount} frames</strong>
+                    </div>
+                  </div>
+
+                  <Link href={targetLink} className={styles.projectLink}>
+                    <FolderOpen size={14} />
+                    Restore Local Workspace
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* Hub Features grid */}

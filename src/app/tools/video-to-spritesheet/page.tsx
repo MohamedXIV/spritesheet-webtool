@@ -35,6 +35,7 @@ import {
 import { FrameData, ExtractionProgress, SourceInfo, SOURCE_COLORS, Folder } from '@/types';
 import styles from './page.module.css';
 import { useFrameHistory } from '@/hooks/useFrameHistory';
+import { useProjectSave } from '@/hooks/useProjectSave';
 
 type EditorState = 'idle' | 'extracting' | 'ready';
 
@@ -68,6 +69,103 @@ export default function EditorPage() {
   const [previewBgColor, setPreviewBgColor] = useState('#1a1a2e');
   const [previewOutline, setPreviewOutline] = useState<Partial<OutlineOptions>>({ enabled: false });
   
+  // Save Subsystem states
+  const [projectId, setProjectId] = useState<string>('');
+  const [projectName, setProjectName] = useState<string>('Untitled Spritesheet Project');
+
+  useEffect(() => {
+    if (!projectId) {
+      setProjectId(`spritesheet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+    }
+  }, [projectId]);
+
+  const {
+    triggerSave,
+    isSaving,
+    autosaveNotification
+  } = useProjectSave({
+    projectId,
+    setProjectId,
+    projectName,
+    setProjectName,
+    type: 'spritesheet',
+    frameState,
+    fps,
+    loopMode,
+    previewBgMode,
+    previewBgColor,
+    isDirty,
+    markSaved
+  });
+
+  // URL project deep-linking restore effect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('project');
+    if (!id) return;
+
+    setEditorState('extracting');
+    setProgress({ current: 0, total: 100, percentage: 0 });
+
+    import('@/lib/projectDatabase').then(async ({ getProject }) => {
+      try {
+        const project = await getProject(id);
+        if (!project) {
+          alert('Project not found locally.');
+          setEditorState('idle');
+          return;
+        }
+
+        // Restore project info
+        setProjectId(project.id);
+        setProjectName(project.name);
+        setFps(project.metadata.fps || 12);
+        setLoopMode((project.metadata.loopMode as any) || 'normal');
+        setPreviewBgMode((project.metadata.previewBgMode as any) || 'none');
+        setPreviewBgColor(project.metadata.previewBgColor || '#1a1a2e');
+        
+        // Re-construct FrameState from Blob frames
+        const restoredFrames: FrameData[] = [];
+        for (const f of project.frames) {
+          const bitmap = await createImageBitmap(f.blob);
+          restoredFrames.push({
+            id: f.id,
+            index: f.index,
+            timestamp: f.timestamp,
+            bitmap,
+            sourceId: f.sourceId,
+            sourceColor: f.sourceColor
+          });
+        }
+
+        const restoredState = {
+          frames: restoredFrames,
+          folders: project.metadata.folders || [],
+          selectedIds: new Set(project.metadata.selectedIds || [])
+        };
+
+        // Populate frames backup for Reverts
+        originalFramesRef.current.clear();
+        for (const frame of restoredFrames) {
+          const canvas = document.createElement('canvas');
+          canvas.width = frame.bitmap.width;
+          canvas.height = frame.bitmap.height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(frame.bitmap, 0, 0);
+          const clone = await createImageBitmap(canvas);
+          originalFramesRef.current.set(frame.id, clone);
+        }
+
+        resetHistory(restoredState);
+        setEditorState('ready');
+      } catch (err) {
+        console.error('Failed to restore project:', err);
+        alert('Failed to load project.');
+        setEditorState('idle');
+      }
+    });
+  }, [resetHistory]);
+
   // Active Real-Time Pixelator State Hooks
   const [pixelatorEnabled, setPixelatorEnabled] = useState(true);
   const [pixelSize, setPixelSize] = useState(8);
@@ -547,7 +645,7 @@ export default function EditorPage() {
     ]));
   }, []);
 
-  // 6. Keyboard Shortcuts for Undo/Redo (Ctrl+Z / Ctrl+Y)
+  // 6. Keyboard Shortcuts (Ctrl+Z / Ctrl+Y / Ctrl+S)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
@@ -557,6 +655,9 @@ export default function EditorPage() {
         } else if (e.key === 'y' || e.key === 'Y') {
           e.preventDefault();
           redo();
+        } else if (e.key === 's' || e.key === 'S') {
+          e.preventDefault();
+          triggerSave();
         }
       } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
@@ -566,7 +667,7 @@ export default function EditorPage() {
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo]);
+  }, [undo, redo, triggerSave]);
 
   // 7. Warn before tab close with unsaved modifications
   useEffect(() => {
@@ -632,6 +733,12 @@ export default function EditorPage() {
     canRedo,
     isDirty,
     markSaved,
+    projectId,
+    projectName,
+    setProjectName,
+    triggerSave,
+    isSaving,
+    autosaveNotification,
 
     // Inject Active Real-time Pixelator options
     activePixelatorOptions: {
@@ -713,7 +820,12 @@ export default function EditorPage() {
     canUndo,
     canRedo,
     isDirty,
-    markSaved
+    markSaved,
+    projectId,
+    projectName,
+    triggerSave,
+    isSaving,
+    autosaveNotification
   ]);
 
   return (
