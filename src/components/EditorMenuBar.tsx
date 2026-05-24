@@ -17,6 +17,7 @@ const PANELS = [
   { id: 'timeline', name: 'Timeline' },
   { id: 'bg-removal', name: 'Background Removal' },
   { id: 'outline', name: 'Outline' },
+  { id: 'pixelate', name: 'Pixelation' },
   { id: 'watermark', name: 'Watermark' },
   { id: 'export', name: 'Export' },
 ] as const;

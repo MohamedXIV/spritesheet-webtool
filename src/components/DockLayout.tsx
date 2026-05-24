@@ -19,6 +19,7 @@ import { BackgroundRemovalPanel } from '@/components/BackgroundRemovalPanel';
 import { OutlinePanel } from '@/components/OutlinePanel';
 import { WatermarkRemovalPanel } from '@/components/WatermarkRemovalPanel';
 import { ProgressBar } from '@/components/ProgressBar';
+import { PixelationPanel } from '@/components/PixelationPanel';
 
 import styles from './DockLayout.module.css';
 
@@ -32,6 +33,7 @@ const PANEL_INFO: Record<string, { name: string }> = {
   'timeline': { name: 'Timeline' },
   'bg-removal': { name: 'Background Removal' },
   'outline': { name: 'Outline' },
+  'pixelate': { name: 'Pixelation' },
   'watermark': { name: 'Watermark' },
   'export': { name: 'Export' },
 };
@@ -93,6 +95,7 @@ const defaultLayout = {
         children: [
           { type: 'tab', name: 'Background Removal', component: 'bg-removal' },
           { type: 'tab', name: 'Outline', component: 'outline' },
+          { type: 'tab', name: 'Pixelation', component: 'pixelate' },
           { type: 'tab', name: 'Watermark', component: 'watermark' },
           { type: 'tab', name: 'Export', component: 'export' },
         ],
@@ -212,6 +215,7 @@ export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function Do
               backgroundColor={ctx.previewBgColor}
               onBackgroundModeChange={ctx.setPreviewBgMode}
               onBackgroundColorChange={ctx.setPreviewBgColor}
+              pixelatorOptions={ctx.activePixelatorOptions}
             />
           </div>
         );
@@ -287,6 +291,25 @@ export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function Do
             <WatermarkRemovalPanel
               frames={ctx.orderedFrames}
               selectedIds={ctx.frameState.selectedIds}
+              onFramesProcessed={ctx.handleFramesProcessed}
+            />
+          </div>
+        );
+        
+      case 'pixelate':
+        if (ctx.editorState !== 'ready' || !ctx.frameState) {
+          return <div className={styles.panelContent}><div className={styles.placeholder}>Load a video first</div></div>;
+        }
+        return (
+          <div className={styles.panelContent}>
+            <PixelationPanel
+              frames={ctx.orderedFrames}
+              selectedIds={ctx.frameState.selectedIds}
+              currentPreviewFrame={
+                (ctx.selectedFrames.length > 0 ? ctx.selectedFrames : ctx.orderedFrames)[ctx.currentFrame] || 
+                ctx.orderedFrames[0] || 
+                null
+              }
               onFramesProcessed={ctx.handleFramesProcessed}
             />
           </div>

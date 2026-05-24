@@ -6,7 +6,7 @@
  */
 
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
-import { useEditorContext } from '@/contexts/EditorContext';
+import { useOptionalEditorContext } from '@/contexts/EditorContext';
 import { FrameData, Folder } from '@/types';
 import styles from './Timeline.module.css';
 
@@ -20,6 +20,7 @@ interface TimelineProps {
   onFpsChange: (fps: number) => void;
   onFrameSelect: (index: number) => void;
   onLoopModeChange: (mode: LoopMode) => void;
+  frames?: FrameData[];
 }
 
 // Tooltip Thumbnail Component
@@ -55,12 +56,12 @@ export function Timeline({
   onFpsChange,
   onFrameSelect,
   onLoopModeChange,
+  frames = [],
 }: TimelineProps) {
-  const {
-    folders,
-    orderedFrames,
-    frameState
-  } = useEditorContext();
+  const ctx = useOptionalEditorContext();
+  const folders = ctx?.folders || [];
+  const orderedFrames = ctx?.orderedFrames || frames;
+  const frameState = ctx?.frameState || null;
 
   const trackRef = useRef<HTMLDivElement>(null);
   const [isScrubbing, setIsScrubbing] = useState(false);
@@ -71,11 +72,13 @@ export function Timeline({
   const [hoveredFolder, setHoveredFolder] = useState<Folder | null>(null);
 
   const totalFrames = useMemo(() => {
+    if (!ctx) return orderedFrames.length;
     return folders.reduce((sum, f) => sum + f.frameIds.length, 0);
-  }, [folders]);
+  }, [ctx, folders, orderedFrames.length]);
 
   // Flat array of ALL frames in their sequence, visible or hidden
   const allFoldersOrderedFrames = useMemo(() => {
+    if (!ctx) return orderedFrames;
     if (!frameState) return [];
     const allFrameIds: string[] = [];
     folders.forEach(folder => {
@@ -84,14 +87,15 @@ export function Timeline({
     return allFrameIds
       .map(id => frameState.frames.find(f => f.id === id))
       .filter((f): f is FrameData => f !== undefined);
-  }, [frameState, folders]);
+  }, [ctx, frameState, folders, orderedFrames]);
 
   // Current active frame ID and its global index
   const activeFrame = orderedFrames[currentFrame];
   const activeGlobalIndex = useMemo(() => {
+    if (!ctx) return currentFrame;
     if (!activeFrame) return -1;
     return allFoldersOrderedFrames.findIndex(f => f.id === activeFrame.id);
-  }, [activeFrame, allFoldersOrderedFrames]);
+  }, [ctx, currentFrame, activeFrame, allFoldersOrderedFrames]);
 
   // Playhead left percentage
   const playheadPercentage = useMemo(() => {
@@ -102,10 +106,21 @@ export function Timeline({
 
   // Scrub execution
   const performScrub = useCallback((clientX: number) => {
-    if (!trackRef.current || allFoldersOrderedFrames.length === 0 || orderedFrames.length === 0) return;
+    if (!trackRef.current || orderedFrames.length === 0) return;
     const rect = trackRef.current.getBoundingClientRect();
     const clickX = clientX - rect.left;
     const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+
+    if (!ctx) {
+      const targetIdx = Math.min(
+        orderedFrames.length - 1,
+        Math.max(0, Math.floor(percentage * orderedFrames.length))
+      );
+      onFrameSelect(targetIdx);
+      return;
+    }
+
+    if (allFoldersOrderedFrames.length === 0) return;
 
     const targetGlobalIdx = Math.min(
       allFoldersOrderedFrames.length - 1,
@@ -134,7 +149,7 @@ export function Timeline({
     }
 
     onFrameSelect(activeIdx);
-  }, [allFoldersOrderedFrames, orderedFrames, onFrameSelect]);
+  }, [ctx, allFoldersOrderedFrames, orderedFrames, onFrameSelect]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsScrubbing(true);
@@ -163,11 +178,23 @@ export function Timeline({
 
   // Hover Tooltip Position & Details
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!trackRef.current || allFoldersOrderedFrames.length === 0) return;
+    if (!trackRef.current || orderedFrames.length === 0) return;
     const rect = trackRef.current.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const p = Math.max(0, Math.min(1, clickX / rect.width));
     setHoverPercent(p * 100);
+
+    if (!ctx) {
+      const idx = Math.min(
+        orderedFrames.length - 1,
+        Math.max(0, Math.floor(p * orderedFrames.length))
+      );
+      setHoveredFrame(orderedFrames[idx]);
+      setHoveredFolder(null);
+      return;
+    }
+
+    if (allFoldersOrderedFrames.length === 0) return;
 
     const idx = Math.min(
       allFoldersOrderedFrames.length - 1,
@@ -204,8 +231,8 @@ export function Timeline({
     }
   };
 
-  const activeFoldersCount = folders.filter(f => f.visible).length;
-  const hiddenFoldersCount = folders.length - activeFoldersCount;
+  const activeFoldersCount = ctx ? folders.filter(f => f.visible).length : 0;
+  const hiddenFoldersCount = ctx ? folders.length - activeFoldersCount : 0;
 
   return (
     <div className={styles.container}>
@@ -213,16 +240,18 @@ export function Timeline({
         <h3 className={styles.title}>Timeline</h3>
         
         {/* Folder Stats mini display */}
-        <div className={styles.folderBadges}>
-          <span className={styles.badge} title="Active Folders">
-            📂 {activeFoldersCount} active
-          </span>
-          {hiddenFoldersCount > 0 && (
-            <span className={`${styles.badge} ${styles.mutedBadge}`} title="Hidden Folders">
-              👁️ {hiddenFoldersCount} muted
+        {ctx && (
+          <div className={styles.folderBadges}>
+            <span className={styles.badge} title="Active Folders">
+              📂 {activeFoldersCount} active
             </span>
-          )}
-        </div>
+            {hiddenFoldersCount > 0 && (
+              <span className={`${styles.badge} ${styles.mutedBadge}`} title="Hidden Folders">
+                👁️ {hiddenFoldersCount} muted
+              </span>
+            )}
+          </div>
+        )}
 
         <div className={styles.fpsControl}>
           <label htmlFor="fps-input" className={styles.fpsLabel}>
@@ -259,8 +288,8 @@ export function Timeline({
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
         >
-          {/* Render Colored Tracks for Folders */}
-          {folders.map(folder => {
+          {/* Render Colored Tracks for Folders (Editor Mode) */}
+          {ctx && folders.map(folder => {
             const widthPercentage = totalFrames > 0
               ? (folder.frameIds.length / totalFrames) * 100
               : 0;
@@ -293,6 +322,31 @@ export function Timeline({
             );
           })}
 
+          {/* Render Single Flat Track for Standalone Mode */}
+          {!ctx && orderedFrames.length > 0 && (
+            <div
+              className={styles.trackSegment}
+              style={{
+                width: '100%',
+                '--folder-theme-color': 'var(--primary-color, #8b5cf6)',
+              } as React.CSSProperties}
+            >
+              {/* Ticks for each frame */}
+              <div className={styles.ticksWrapper}>
+                {orderedFrames.map((frame, index) => {
+                  const isTickActive = currentFrame === index;
+                  return (
+                    <div
+                      key={frame.id}
+                      className={`${styles.tick} ${isTickActive ? styles.tickActive : ''}`}
+                      style={{ '--tick-theme-color': 'var(--primary-color, #8b5cf6)' } as React.CSSProperties}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {totalFrames === 0 && (
             <div className={styles.emptyTrack}>
               Load media assets to populate timeline track
@@ -314,7 +368,7 @@ export function Timeline({
                       style={{ backgroundColor: hoveredFolder.color }}
                     />
                   )}
-                  {hoveredFolder ? hoveredFolder.name : 'Unassigned'}
+                  {ctx ? (hoveredFolder ? hoveredFolder.name : 'Unassigned') : 'Pixelator Sequence'}
                 </div>
                 <div className={styles.tooltipFrameIndex}>
                   Frame {hoveredFrame.index + 1}
@@ -322,7 +376,7 @@ export function Timeline({
                 <div className={styles.tooltipTimestamp}>
                   {(hoveredFrame.timestamp).toFixed(3)}s
                 </div>
-                {!hoveredFolder?.visible && (
+                {ctx && !hoveredFolder?.visible && (
                   <div className={styles.tooltipMutedBadge}>
                     Hidden (will be skipped)
                   </div>
@@ -345,7 +399,7 @@ export function Timeline({
 
         {/* Frame index text indicator */}
         <div className={styles.frameInfo}>
-          Frame {frameCount > 0 ? currentFrame + 1 : 0} of {frameCount} (Visible)
+          Frame {frameCount > 0 ? currentFrame + 1 : 0} of {frameCount} {ctx ? '(Visible)' : ''}
         </div>
       </div>
 
@@ -375,7 +429,9 @@ export function Timeline({
           </div>
           <div className={styles.stat}>
             <span className={styles.statLabel}>Total Frames</span>
-            <span className={styles.statValue}>{totalFrames} ({frameCount} playing)</span>
+            <span className={styles.statValue}>
+              {ctx ? `${totalFrames} (${frameCount} playing)` : totalFrames}
+            </span>
           </div>
         </div>
       </div>

@@ -1,0 +1,145 @@
+.menubar {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  background: rgba(13, 13, 21, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+  padding: 0 16px;
+  font-family: inherit;
+  user-select: none;
+  position: relative;
+  z-index: 1000;
+  width: 100%;
+}
+
+.menuItem {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.menuTrigger {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #94a3b8;
+  padding: 0 10px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.menuTrigger:hover {
+  background: rgba(139, 92, 246, 0.08);
+  color: #f1f5f9;
+}
+
+.menuTriggerActive {
+  background: rgba(139, 92, 246, 0.15) !important;
+  color: #ffffff !important;
+}
+
+.appTitle {
+  font-weight: 700;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 0;
+  font-size: 0.85rem;
+  background: transparent !important;
+  cursor: pointer;
+}
+
+.logoBullet {
+  color: #a855f7;
+  filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.5));
+}
+
+.dropdown {
+  position: absolute;
+  top: 36px;
+  left: 0;
+  background: rgba(18, 18, 30, 0.98);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 6px;
+  padding: 6px;
+  min-width: 180px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdownHeader {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  padding: 4px 8px;
+  letter-spacing: 0.05em;
+}
+
+.item, .itemWithCheck {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  border-radius: 4px;
+  text-align: left;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.item:hover, .itemWithCheck:hover {
+  background: rgba(139, 92, 246, 0.2);
+  color: #ffffff;
+}
+
+.itemDisabled {
+  color: #475569;
+  cursor: default;
+}
+
+.itemDisabled:hover {
+  background: transparent;
+  color: #475569;
+}
+
+.itemWithCheck {
+  gap: 8px;
+}
+
+.checkWrapper {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkIcon {
+  color: #c084fc;
+}
+
+.separator {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 4px 0;
+}

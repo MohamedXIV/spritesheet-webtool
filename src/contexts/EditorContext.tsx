@@ -71,6 +71,55 @@ interface EditorContextValue {
   visiblePanels: Set<string>;
   togglePanel: (panelId: string) => void;
   resetLayout: () => void;
+
+  // Standalone Pixelator slicing state (optional)
+  pixelatorSlicer?: {
+    file: File | null;
+    originalImgSrc: string | null;
+    imgDimensions: { width: number; height: number } | null;
+    sliceType: 'grid' | 'dimensions';
+    cols: number;
+    rows: number;
+    cellWidth: number;
+    cellHeight: number;
+    isSlicing: boolean;
+    setSliceType: (type: 'grid' | 'dimensions') => void;
+    setCols: (val: number) => void;
+    setRows: (val: number) => void;
+    setCellWidth: (val: number) => void;
+    setCellHeight: (val: number) => void;
+    handleSliceSpritesheet: () => void;
+    loadNewFile: (file: File) => void;
+    handleResetImage: () => void;
+  };
+
+  // Active real-time pixelation options
+  activePixelatorOptions?: {
+    enabled: boolean;
+    pixelSize: number;
+    palette: any;
+    ditherType: any;
+    ditherAmount: number;
+    pixelShape: any;
+    outlineEnabled: boolean;
+    outlineColor: string;
+    outlineThickness: number;
+    contrast: number;
+    saturation: number;
+    brightness: number;
+    setEnabled: (val: boolean) => void;
+    setPixelSize: (val: number) => void;
+    setPalette: (val: any) => void;
+    setDitherType: (val: any) => void;
+    setDitherAmount: (val: number) => void;
+    setPixelShape: (val: any) => void;
+    setOutlineEnabled: (val: boolean) => void;
+    setOutlineColor: (val: string) => void;
+    setOutlineThickness: (val: number) => void;
+    setContrast: (val: number) => void;
+    setSaturation: (val: number) => void;
+    setBrightness: (val: number) => void;
+  };
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);
@@ -82,6 +131,11 @@ export function useEditorContext() {
   }
   return ctx;
 }
+
+export function useOptionalEditorContext() {
+  return useContext(EditorContext);
+}
+
 
 interface EditorProviderProps {
   value: EditorContextValue;

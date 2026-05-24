@@ -1,0 +1,35 @@
+.dockContainer {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #0d0d15;
+  overflow: hidden;
+  position: relative;
+}
+
+.header {
+  height: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #0d0d15;
+  z-index: 10;
+  position: relative;
+}
+
+.headerInfo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-right: 16px;
+}
+
+.frameCount {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
