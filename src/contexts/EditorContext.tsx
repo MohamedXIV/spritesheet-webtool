@@ -132,6 +132,7 @@ interface EditorContextValue {
   projectName?: string;
   setProjectName?: (name: string) => void;
   triggerSave?: (customName?: string) => Promise<void>;
+  triggerSaveAs?: (newName: string) => Promise<void>;
   isSaving?: boolean;
   autosaveNotification?: string | null;
 }

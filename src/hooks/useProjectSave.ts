@@ -85,6 +85,65 @@ export function useProjectSave(options: {
     }
   }, []);
 
+  const triggerSaveAs = useCallback(async (newName: string) => {
+    const currentOpts = optionsRef.current;
+    if (!currentOpts.frameState) return;
+
+    setIsSaving(true);
+    try {
+      // 1. Generate a brand new unique project ID
+      const newId = `${currentOpts.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      // 2. Serialize frames using our safe compile PNG Blobs method
+      const serialized = await serializeProject(currentOpts.frameState, currentOpts.fps);
+
+      // 3. Build the project metadata structure
+      const metadata: ProjectMetadata = {
+        folders: currentOpts.frameState.folders,
+        selectedIds: Array.from(currentOpts.frameState.selectedIds),
+        fps: currentOpts.fps,
+        loopMode: currentOpts.loopMode,
+        previewBgMode: currentOpts.previewBgMode,
+        previewBgColor: currentOpts.previewBgColor,
+        pixelatorOptions: currentOpts.pixelatorOptions,
+        slicerOptions: currentOpts.slicerOptions,
+      };
+
+      // 4. Construct DbProject record
+      const dbProject: DbProject = {
+        id: newId,
+        name: newName,
+        type: currentOpts.type,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        metadata,
+        frames: serialized.frames,
+      };
+
+      // 5. Save to IndexedDB
+      await saveProject(dbProject);
+      
+      // 6. Update ID and Name inside parent component state
+      currentOpts.setProjectId(newId);
+      currentOpts.setProjectName(newName);
+      
+      // 7. Update browser URL query parameter dynamically without page reload
+      const newUrl = `${window.location.pathname}?project=${newId}`;
+      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
+
+      // 8. Update UI states
+      setLastSavedAt(Date.now());
+      currentOpts.markSaved?.();
+      
+      alert(`Project successfully cloned as "${newName}"! Future changes (Ctrl+S) will save into this new version.`);
+    } catch (error) {
+      console.error('Project Save As failed:', error);
+      alert('Failed to clone project locally');
+    } finally {
+      setIsSaving(false);
+    }
+  }, []);
+
   // Autosave loop (every 30 seconds)
   useEffect(() => {
     if (!autosaveEnabled) return;
@@ -105,6 +164,7 @@ export function useProjectSave(options: {
 
   return {
     triggerSave,
+    triggerSaveAs,
     isSaving,
     lastSavedAt,
     autosaveEnabled,

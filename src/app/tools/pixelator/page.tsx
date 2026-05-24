@@ -89,6 +89,7 @@ export default function StandalonePixelatorPage() {
 
   const {
     triggerSave,
+    triggerSaveAs,
     isSaving,
     autosaveNotification
   } = useProjectSave({
@@ -589,6 +590,7 @@ export default function StandalonePixelatorPage() {
     projectName,
     setProjectName,
     triggerSave,
+    triggerSaveAs,
     isSaving,
     autosaveNotification,
     
@@ -691,6 +693,7 @@ export default function StandalonePixelatorPage() {
     projectId,
     projectName,
     triggerSave,
+    triggerSaveAs,
     isSaving,
     autosaveNotification
   ]);

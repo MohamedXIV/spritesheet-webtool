@@ -81,6 +81,7 @@ export default function EditorPage() {
 
   const {
     triggerSave,
+    triggerSaveAs,
     isSaving,
     autosaveNotification
   } = useProjectSave({
@@ -737,6 +738,7 @@ export default function EditorPage() {
     projectName,
     setProjectName,
     triggerSave,
+    triggerSaveAs,
     isSaving,
     autosaveNotification,
 
@@ -824,6 +826,7 @@ export default function EditorPage() {
     projectId,
     projectName,
     triggerSave,
+    triggerSaveAs,
     isSaving,
     autosaveNotification
   ]);

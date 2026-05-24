@@ -31,6 +31,7 @@ export function PixelatorMenuBar() {
     projectName,
     setProjectName,
     triggerSave,
+    triggerSaveAs,
     isSaving,
     autosaveNotification
   } = useEditorContext();
@@ -108,6 +109,18 @@ export function PixelatorMenuBar() {
             >
               <span className={styles.itemLabel}>Save Project</span>
               <span className={styles.itemHotkey}>Ctrl+S</span>
+            </button>
+            <button 
+              className={styles.item} 
+              onClick={() => {
+                const newName = prompt("Enter a name for the new version/copy:", `${projectName || 'Project'} (Copy)`);
+                if (newName && newName.trim()) {
+                  triggerSaveAs?.(newName.trim());
+                }
+                closeMenu();
+              }}
+            >
+              <span className={styles.itemLabel}>Save Copy As...</span>
             </button>
             <div className={styles.separator} />
             <button 

@@ -37,6 +37,7 @@ export function EditorMenuBar() {
     projectName,
     setProjectName,
     triggerSave,
+    triggerSaveAs,
     isSaving,
     autosaveNotification
   } = useEditorContext();
@@ -114,6 +115,18 @@ export function EditorMenuBar() {
             >
               <span>Save Project</span>
               <span className={styles.shortcut}>Ctrl+S</span>
+            </button>
+            <button 
+              className={styles.item} 
+              onClick={() => {
+                const newName = prompt("Enter a name for the new version/copy:", `${projectName || 'Project'} (Copy)`);
+                if (newName && newName.trim()) {
+                  triggerSaveAs?.(newName.trim());
+                }
+                closeMenu();
+              }}
+            >
+              <span>Save Copy As...</span>
             </button>
             <div className={styles.separator} />
             <Link href="/" className={styles.item} onClick={closeMenu}>
