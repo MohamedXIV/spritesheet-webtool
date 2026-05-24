@@ -7,6 +7,9 @@ export interface ChromaKeyOptions {
   targetColor: { r: number; g: number; b: number };
   tolerance: number; // 0-100
   edgeSoftness?: number; // 0-20, for smoother edges
+  spillSuppression?: boolean; // CorridorKey-style spill suppression
+  spillMethod?: 'cap' | 'desaturate'; // cap = cap excess green, desaturate = unmix color average
+  spillAmount?: number; // 0-100
 }
 
 /**
@@ -48,13 +51,20 @@ export function sampleCornerColor(
 }
 
 /**
- * Remove background by color (chroma key)
+ * Remove background by color (chroma key) with pro-grade VFX unmixing spill suppression
  */
 export async function removeBackgroundByColor(
   bitmap: ImageBitmap,
   options: ChromaKeyOptions
 ): Promise<ImageBitmap> {
-  const { targetColor, tolerance, edgeSoftness = 0 } = options;
+  const { 
+    targetColor, 
+    tolerance, 
+    edgeSoftness = 0,
+    spillSuppression = false,
+    spillMethod = 'cap',
+    spillAmount = 100
+  } = options;
   
   // Create canvas and draw bitmap
   const canvas = document.createElement('canvas');
@@ -75,6 +85,14 @@ export async function removeBackgroundByColor(
   const toleranceThresholdSq = toleranceThreshold * toleranceThreshold;
   const softnessThresholdSq = (toleranceThreshold + softnessRange) ** 2;
 
+  // Auto-detect dominant key color channel to support green, blue, and red keying unspills
+  let dominantChannel: 'r' | 'g' | 'b' = 'g';
+  if (targetColor.r > targetColor.g && targetColor.r > targetColor.b) {
+    dominantChannel = 'r';
+  } else if (targetColor.b > targetColor.g && targetColor.b > targetColor.r) {
+    dominantChannel = 'b';
+  }
+
   // Process each pixel
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i];
@@ -94,7 +112,42 @@ export async function removeBackgroundByColor(
       const alpha = ((distance - toleranceThreshold) / softnessRange) * 255;
       data[i + 3] = Math.round(alpha);
     }
-    // else: keep original alpha
+    
+    // Apply CorridorKey-style Spill Suppression & Color Unmixing if enabled and pixel is not fully transparent
+    if (spillSuppression && data[i + 3] > 0) {
+      const factor = spillAmount / 100;
+      if (dominantChannel === 'g') {
+        const excess = g - Math.max(r, b);
+        if (excess > 0) {
+          if (spillMethod === 'cap') {
+            data[i + 1] = Math.round(Math.max(r, Math.max(b, g - excess * factor)));
+          } else { // desaturate / unmix color average
+            const avg = (r + b) / 2;
+            data[i + 1] = Math.round(g - (g - avg) * factor);
+          }
+        }
+      } else if (dominantChannel === 'b') {
+        const excess = b - Math.max(r, g);
+        if (excess > 0) {
+          if (spillMethod === 'cap') {
+            data[i + 2] = Math.round(Math.max(r, Math.max(g, b - excess * factor)));
+          } else {
+            const avg = (r + g) / 2;
+            data[i + 2] = Math.round(b - (b - avg) * factor);
+          }
+        }
+      } else if (dominantChannel === 'r') {
+        const excess = r - Math.max(g, b);
+        if (excess > 0) {
+          if (spillMethod === 'cap') {
+            data[i] = Math.round(Math.max(g, Math.max(b, r - excess * factor)));
+          } else {
+            const avg = (g + b) / 2;
+            data[i] = Math.round(r - (r - avg) * factor);
+          }
+        }
+      }
+    }
   }
   
   // Put modified data back

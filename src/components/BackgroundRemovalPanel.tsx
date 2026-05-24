@@ -43,6 +43,14 @@ export function BackgroundRemovalPanel({
   // ML settings
   const [mlThreshold, setMlThreshold] = useState(0.7);
   
+  // U2Net quality setting
+  const [u2netQuality, setU2netQuality] = useState<'low' | 'medium'>('low');
+
+  // Spill suppression settings
+  const [spillSuppression, setSpillSuppression] = useState(true);
+  const [spillMethod, setSpillMethod] = useState<'cap' | 'desaturate'>('desaturate');
+  const [spillAmount, setSpillAmount] = useState(80);
+  
   // Post-processing settings (for AI methods)
   const [postProcessEnabled, setPostProcessEnabled] = useState(true);
   const [erosion, setErosion] = useState(1);
@@ -109,7 +117,10 @@ export function BackgroundRemovalPanel({
           processed = await removeBackgroundByColor(frame.bitmap, {
             targetColor,
             tolerance,
-            edgeSoftness
+            edgeSoftness,
+            spillSuppression,
+            spillMethod,
+            spillAmount
           });
         } else if (method === 'bodypix') {
           if (i === 0) {
@@ -143,7 +154,7 @@ export function BackgroundRemovalPanel({
           
           // Yield before heavy processing
           await yieldToUI();
-          processed = await removeBackgroundU2Net(frame.bitmap);
+          processed = await removeBackgroundU2Net(frame.bitmap, { quality: u2netQuality });
           
           // Apply post-processing for AI methods
           if (postProcessEnabled) {
@@ -174,7 +185,8 @@ export function BackgroundRemovalPanel({
       onProcessingChange?.(new Set());
     }
   }, [
-    framesToProcess, method, targetColor, tolerance, edgeSoftness, mlThreshold,
+    framesToProcess, method, targetColor, tolerance, edgeSoftness, mlThreshold, u2netQuality,
+    spillSuppression, spillMethod, spillAmount,
     postProcessEnabled, erosion, decontaminate,
     outlineEnabled, outlineThickness, outlineColor, outlinePosition,
     onFramesProcessed
@@ -265,6 +277,57 @@ export function BackgroundRemovalPanel({
                 disabled={isProcessing}
               />
             </div>
+
+            {/* CorridorKey-Inspired Spill Suppression & Color Unmixing Controls */}
+            <div style={{ marginTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}>
+              <div className={styles.checkboxRow}>
+                <input
+                  type="checkbox"
+                  id="spill-suppression-enable"
+                  checked={spillSuppression}
+                  onChange={(e) => setSpillSuppression(e.target.checked)}
+                  disabled={isProcessing}
+                />
+                <label htmlFor="spill-suppression-enable" style={{ fontWeight: 600, color: 'var(--primary-color, #6366f1)', cursor: 'pointer' }}>
+                  🎬 VFX Spill Suppression (Unspill)
+                </label>
+              </div>
+              
+              {spillSuppression && (
+                <div style={{ paddingLeft: '20px', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div className={styles.field}>
+                    <label className={styles.label}>Suppression Method</label>
+                    <select
+                      value={spillMethod}
+                      onChange={(e) => setSpillMethod(e.target.value as 'cap' | 'desaturate')}
+                      className={styles.select}
+                      disabled={isProcessing}
+                    >
+                      <option value="desaturate">Desaturate (Color Unmix)</option>
+                      <option value="cap">Cap Excess (Keylight Style)</option>
+                    </select>
+                  </div>
+
+                  <div className={styles.field}>
+                    <label className={styles.label}>Spill Strength: {spillAmount}%</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={spillAmount}
+                      onChange={(e) => setSpillAmount(Number(e.target.value))}
+                      className={styles.slider}
+                      disabled={isProcessing}
+                    />
+                  </div>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted, #9ca3af)', lineHeight: '1.3', display: 'block' }}>
+                    {spillMethod === 'desaturate'
+                      ? 'Preserves delicate edge hair details by unmixing green fringes into matching neutral tones.'
+                      : 'Clamps green channel levels to prevent green bleed while maintaining bright colors.'}
+                  </span>
+                </div>
+              )}
+            </div>
           </>
         )}
 
@@ -290,6 +353,26 @@ export function BackgroundRemovalPanel({
                   className={styles.slider}
                   disabled={isProcessing}
                 />
+              </div>
+            )}
+
+            {method === 'u2net' && (
+              <div className={styles.field}>
+                <label className={styles.label}>Processing Mode</label>
+                <select
+                  value={u2netQuality}
+                  onChange={(e) => setU2netQuality(e.target.value as 'low' | 'medium')}
+                  className={styles.select}
+                  disabled={isProcessing}
+                >
+                  <option value="low">⚡ Fast (8-bit Quantized - Recommended)</option>
+                  <option value="medium">🎯 Best Quality (16-bit Precision - Heavy)</option>
+                </select>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted, #9ca3af)', marginTop: '4px', display: 'block', lineHeight: '1.3' }}>
+                  {u2netQuality === 'low'
+                    ? 'Uses a 40MB quantized model. Up to 2x faster, requires significantly less CPU memory.'
+                    : 'Uses an 80MB full model. Higher edge quality, but very heavy and might hang on older CPUs.'}
+                </span>
               </div>
             )}
           </>

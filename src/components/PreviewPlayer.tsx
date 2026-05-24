@@ -2,13 +2,15 @@
 
 /**
  * PreviewPlayer - Canvas-based animation preview with loop modes,
- * outline preview, and background options
+ * outline preview, background options, GPU-accelerated frame caching,
+ * and smart auto-sleep power-saving modes.
  */
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { FrameData } from '@/types';
 import { LoopMode } from './Timeline';
 import { addOutline, OutlineOptions } from '@/lib/outlineGenerator';
+import { pixelateImage } from '@/lib/pixelator';
 import styles from './PreviewPlayer.module.css';
 
 export type BackgroundMode = 'none' | 'checkerboard' | 'color';
@@ -24,6 +26,7 @@ interface PreviewPlayerProps {
   backgroundColor?: string;
   onBackgroundModeChange?: (mode: BackgroundMode) => void;
   onBackgroundColorChange?: (color: string) => void;
+  pixelatorOptions?: any;
 }
 
 export function PreviewPlayer({
@@ -37,13 +40,106 @@ export function PreviewPlayer({
   backgroundColor = '#1a1a2e',
   onBackgroundModeChange,
   onBackgroundColorChange,
+  pixelatorOptions,
 }: PreviewPlayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const animationRef = useRef<number | null>(null);
   const lastFrameTimeRef = useRef<number>(0);
   const directionRef = useRef<1 | -1>(1);
-  const [showBgMenu, setShowBgMenu] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+
+  // --- Display & Performance Performance Options ---
+  const [livePreviewEnabled, setLivePreviewEnabled] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('pixelator-live-preview');
+      return stored !== null ? stored === 'true' : true;
+    }
+    return true;
+  });
+
+  const [autoSleepEnabled, setAutoSleepEnabled] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('pixelator-live-preview-autosleep');
+      return stored !== null ? stored === 'true' : true;
+    }
+    return true;
+  });
+
+  const [isAsleep, setIsAsleep] = useState<boolean>(false);
+  const lastTweakTimeRef = useRef<number>(Date.now());
+
+  // High performance cache to store pre-rendered ImageBitmaps
+  const processedCacheRef = useRef<Map<string, ImageBitmap>>(new Map());
+  const currentOptionsHashRef = useRef<string>('');
+
+  const clearProcessedCache = useCallback(() => {
+    processedCacheRef.current.forEach(bitmap => {
+      try { bitmap.close(); } catch {}
+    });
+    processedCacheRef.current.clear();
+  }, []);
+
+  // Compute a distinct hash to check when settings change
+  const getOptionsHash = (outlineOpts: any, pixelatorOpts: any) => {
+    return `${JSON.stringify(outlineOpts || {})}|${JSON.stringify(pixelatorOpts || {})}`;
+  };
+
+  // Watch for adjustments to immediately wake and invalidate cache
+  useEffect(() => {
+    const hash = getOptionsHash(outlineOptions, pixelatorOptions);
+    if (currentOptionsHashRef.current !== hash) {
+      clearProcessedCache();
+      currentOptionsHashRef.current = hash;
+    }
+    
+    lastTweakTimeRef.current = Date.now();
+    setIsAsleep(false);
+  }, [outlineOptions, pixelatorOptions, clearProcessedCache]);
+
+  // Handle auto-sleep timer when user is idle
+  useEffect(() => {
+    if (!autoSleepEnabled) {
+      setIsAsleep(false);
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - lastTweakTimeRef.current;
+      if (elapsed > 4000) { // 4 seconds idle threshold
+        setIsAsleep(true);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [autoSleepEnabled]);
+
+  // Clean cache on unmount or when source frames change
+  useEffect(() => {
+    return () => {
+      clearProcessedCache();
+    };
+  }, [frames, clearProcessedCache]);
+
+  const handleToggleLivePreview = (val: boolean) => {
+    setLivePreviewEnabled(val);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pixelator-live-preview', val ? 'true' : 'false');
+    }
+    if (!val) {
+      clearProcessedCache();
+    }
+  };
+
+  const handleToggleAutoSleep = (val: boolean) => {
+    setAutoSleepEnabled(val);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pixelator-live-preview-autosleep', val ? 'true' : 'false');
+    }
+    if (!val) {
+      setIsAsleep(false);
+    }
+  };
 
   // Check if bitmap is still valid (not closed)
   const isBitmapValid = (bitmap: ImageBitmap): boolean => {
@@ -65,7 +161,7 @@ export function PreviewPlayer({
     }
   };
 
-  // Draw current frame to canvas with outline and background options
+  // Draw current frame to canvas with full caching, outline, and pixelation options
   useEffect(() => {
     const drawFrame = async () => {
       const canvas = canvasRef.current;
@@ -93,25 +189,63 @@ export function PreviewPlayer({
           ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        // Apply outline if options provided and enabled
         let displayBitmap = frame.bitmap;
-        if (outlineOptions?.enabled) {
-          displayBitmap = await addOutline(frame.bitmap, outlineOptions);
+        let outlineBitmap: ImageBitmap | null = null;
+        let pixelatedBitmap: ImageBitmap | null = null;
+
+        // Determine if we should process this tick
+        const isRealTime = livePreviewEnabled && (!isAsleep || processedCacheRef.current.has(frame.id));
+
+        if (isRealTime) {
+          const cached = processedCacheRef.current.get(frame.id);
+          if (cached && isBitmapValid(cached)) {
+            displayBitmap = cached;
+          } else {
+            // Apply outline
+            if (outlineOptions?.enabled) {
+              displayBitmap = await addOutline(frame.bitmap, outlineOptions);
+              outlineBitmap = displayBitmap;
+            }
+
+            // Apply real-time pixelation
+            if (pixelatorOptions?.enabled) {
+              displayBitmap = await pixelateImage(displayBitmap, pixelatorOptions);
+              pixelatedBitmap = displayBitmap;
+            }
+
+            // Populate high speed loop cache
+            if (isBitmapValid(displayBitmap)) {
+              try {
+                const cacheCanvas = document.createElement('canvas');
+                cacheCanvas.width = displayBitmap.width;
+                cacheCanvas.height = displayBitmap.height;
+                const cacheCtx = cacheCanvas.getContext('2d')!;
+                cacheCtx.drawImage(displayBitmap, 0, 0);
+                const cacheClone = await createImageBitmap(cacheCanvas);
+                processedCacheRef.current.set(frame.id, cacheClone);
+              } catch (e) {
+                console.warn('Failed to cache pre-rendered frame:', frame.id, e);
+              }
+            }
+          }
         }
 
         ctx.drawImage(displayBitmap, 0, 0);
 
-        // Close the processed bitmap if different from original
-        if (displayBitmap !== frame.bitmap) {
-          displayBitmap.close();
+        // Clean up temporary bitmaps safely to prevent memory leaks
+        if (outlineBitmap) {
+          try { outlineBitmap.close(); } catch {}
+        }
+        if (pixelatedBitmap) {
+          try { pixelatedBitmap.close(); } catch {}
         }
       } catch (error) {
-        console.debug('Frame bitmap unavailable:', error);
+        console.debug('Frame bitmap drawing unavailable:', error);
       }
     };
 
     drawFrame();
-  }, [frames, currentFrame, outlineOptions, backgroundMode, backgroundColor]);
+  }, [frames, currentFrame, outlineOptions, backgroundMode, backgroundColor, pixelatorOptions, livePreviewEnabled, isAsleep]);
 
   // Animation loop with loop mode support
   useEffect(() => {
@@ -198,7 +332,7 @@ export function PreviewPlayer({
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <polygon points="5 3 19 12 5 21 5 3" />
             </svg>
-            <p>Load a video to preview</p>
+            <p>Load a video or spritesheet to preview</p>
           </div>
         )}
         {hasFrames && (
@@ -206,42 +340,102 @@ export function PreviewPlayer({
             <div className={styles.loopIndicator} title={`Loop: ${loopMode}`}>
               {loopModeLabel}
             </div>
+
+            {/* Glowing Engine Status Bar Indicator */}
+            <div className={styles.statusIndicator}>
+              <span className={`${styles.statusDot} ${
+                !livePreviewEnabled 
+                  ? styles.disabled 
+                  : isAsleep 
+                    ? styles.sleep 
+                    : styles.active
+              }`} />
+              <span>
+                {!livePreviewEnabled 
+                  ? 'Live Preview: OFF' 
+                  : isAsleep 
+                    ? 'Live Preview: Sleeping (Idle)' 
+                    : 'Live Preview: Active'}
+              </span>
+            </div>
+
+            {/* Premium Settings dropdown menu */}
             <button 
               className={styles.bgToggle}
-              onClick={() => setShowBgMenu(!showBgMenu)}
-              title="Background options"
-              aria-label="Background options"
+              onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+              title="Display & Performance settings"
+              aria-label="Display & Performance settings"
             >
-              <span aria-hidden="true">🎨</span>
+              <span aria-hidden="true">⚙️</span>
             </button>
-            {showBgMenu && (
-              <div className={styles.bgMenu}>
-                <button
-                  className={`${styles.bgOption} ${backgroundMode === 'none' ? styles.active : ''}`}
-                  onClick={() => { onBackgroundModeChange?.('none'); setShowBgMenu(false); }}
-                >
-                  None (Dark)
-                </button>
-                <button
-                  className={`${styles.bgOption} ${backgroundMode === 'checkerboard' ? styles.active : ''}`}
-                  onClick={() => { onBackgroundModeChange?.('checkerboard'); setShowBgMenu(false); }}
-                >
-                  Checkerboard
-                </button>
-                <button
-                  className={`${styles.bgOption} ${backgroundMode === 'color' ? styles.active : ''}`}
-                  onClick={() => { onBackgroundModeChange?.('color'); setShowBgMenu(false); }}
-                >
-                  Custom Color
-                </button>
-                {backgroundMode === 'color' && (
-                  <input
-                    type="color"
-                    value={backgroundColor}
-                    onChange={(e) => onBackgroundColorChange?.(e.target.value)}
-                    className={styles.bgColorPicker}
-                  />
-                )}
+            {showSettingsMenu && (
+              <div className={styles.settingsMenu} onClick={(e) => e.stopPropagation()}>
+                <div className={styles.settingsSection}>
+                  <div className={styles.settingsTitle}>Real-Time Preview</div>
+                  
+                  {/* Live Preview Toggle Switch */}
+                  <div className={styles.toggleRow} onClick={() => handleToggleLivePreview(!livePreviewEnabled)}>
+                    <div className={styles.toggleLabel}>
+                      <span>Live Preview</span>
+                      <span className={styles.toggleDesc}>Process adjustments live</span>
+                    </div>
+                    <label className={styles.switch}>
+                      <input 
+                        type="checkbox" 
+                        checked={livePreviewEnabled} 
+                        onChange={(e) => handleToggleLivePreview(e.target.checked)}
+                      />
+                      <span className={styles.sliderRound}></span>
+                    </label>
+                  </div>
+
+                  {/* Auto-Sleep Toggle Switch */}
+                  <div className={styles.toggleRow} onClick={() => handleToggleAutoSleep(!autoSleepEnabled)}>
+                    <div className={styles.toggleLabel}>
+                      <span>Auto-Sleep Mode</span>
+                      <span className={styles.toggleDesc}>Save CPU when idle (4s)</span>
+                    </div>
+                    <label className={styles.switch}>
+                      <input 
+                        type="checkbox" 
+                        checked={autoSleepEnabled} 
+                        onChange={(e) => handleToggleAutoSleep(e.target.checked)}
+                        disabled={!livePreviewEnabled}
+                      />
+                      <span className={styles.sliderRound}></span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className={styles.settingsSection}>
+                  <div className={styles.settingsTitle}>Background Mode</div>
+                  <button
+                    className={`${styles.bgOption} ${backgroundMode === 'none' ? styles.active : ''}`}
+                    onClick={() => { onBackgroundModeChange?.('none'); }}
+                  >
+                    None (Dark)
+                  </button>
+                  <button
+                    className={`${styles.bgOption} ${backgroundMode === 'checkerboard' ? styles.active : ''}`}
+                    onClick={() => { onBackgroundModeChange?.('checkerboard'); }}
+                  >
+                    Checkerboard
+                  </button>
+                  <button
+                    className={`${styles.bgOption} ${backgroundMode === 'color' ? styles.active : ''}`}
+                    onClick={() => { onBackgroundModeChange?.('color'); }}
+                  >
+                    Custom Color
+                  </button>
+                  {backgroundMode === 'color' && (
+                    <input
+                      type="color"
+                      value={backgroundColor}
+                      onChange={(e) => onBackgroundColorChange?.(e.target.value)}
+                      className={styles.bgColorPicker}
+                    />
+                  )}
+                </div>
               </div>
             )}
           </>
