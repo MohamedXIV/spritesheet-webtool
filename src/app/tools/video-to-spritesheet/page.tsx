@@ -55,6 +55,20 @@ export default function EditorPage() {
   const [previewBgColor, setPreviewBgColor] = useState('#1a1a2e');
   const [previewOutline, setPreviewOutline] = useState<Partial<OutlineOptions>>({ enabled: false });
   
+  // Active Real-Time Pixelator State Hooks
+  const [pixelatorEnabled, setPixelatorEnabled] = useState(true);
+  const [pixelSize, setPixelSize] = useState(8);
+  const [pixelatorPalette, setPixelatorPalette] = useState<any>('none');
+  const [pixelatorDitherType, setPixelatorDitherType] = useState<any>('none');
+  const [pixelatorDitherAmount, setPixelatorDitherAmount] = useState(50);
+  const [pixelatorPixelShape, setPixelatorPixelShape] = useState<any>('square');
+  const [pixelatorOutlineEnabled, setPixelatorOutlineEnabled] = useState(false);
+  const [pixelatorOutlineColor, setPixelatorOutlineColor] = useState('#000000');
+  const [pixelatorOutlineThickness, setPixelatorOutlineThickness] = useState(1);
+  const [pixelatorContrast, setPixelatorContrast] = useState(0);
+  const [pixelatorSaturation, setPixelatorSaturation] = useState(0);
+  const [pixelatorBrightness, setPixelatorBrightness] = useState(0);
+  
   // Panel visibility tracking
   const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set([
     'media-loader', 'frame-grid', 'preview', 'timeline',
@@ -427,16 +441,22 @@ export default function EditorPage() {
       if (processed) {
         // Save original if not already saved
         if (!originalFramesRef.current.has(frame.id)) {
-          const canvas = document.createElement('canvas');
-          canvas.width = frame.bitmap.width;
-          canvas.height = frame.bitmap.height;
-          const ctx = canvas.getContext('2d')!;
-          ctx.drawImage(frame.bitmap, 0, 0);
-          createImageBitmap(canvas).then(clone => {
-            originalFramesRef.current.set(frame.id, clone);
-          });
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = frame.bitmap.width;
+            canvas.height = frame.bitmap.height;
+            const ctx = canvas.getContext('2d')!;
+            ctx.drawImage(frame.bitmap, 0, 0);
+            createImageBitmap(canvas).then(clone => {
+              originalFramesRef.current.set(frame.id, clone);
+            });
+          } catch (err) {
+            console.warn(`Failed to backup frame ${frame.id} on-the-fly:`, err);
+          }
         }
-        frame.bitmap.close();
+        try {
+          frame.bitmap.close();
+        } catch {}
         return { ...frame, bitmap: processed };
       }
       return frame;
@@ -559,6 +579,34 @@ export default function EditorPage() {
     visiblePanels,
     togglePanel,
     resetLayout,
+
+    // Inject Active Real-time Pixelator options
+    activePixelatorOptions: {
+      enabled: pixelatorEnabled,
+      pixelSize,
+      palette: pixelatorPalette,
+      ditherType: pixelatorDitherType,
+      ditherAmount: pixelatorDitherAmount,
+      pixelShape: pixelatorPixelShape,
+      outlineEnabled: pixelatorOutlineEnabled,
+      outlineColor: pixelatorOutlineColor,
+      outlineThickness: pixelatorOutlineThickness,
+      contrast: pixelatorContrast,
+      saturation: pixelatorSaturation,
+      brightness: pixelatorBrightness,
+      setEnabled: setPixelatorEnabled,
+      setPixelSize,
+      setPalette: setPixelatorPalette,
+      setDitherType: setPixelatorDitherType,
+      setDitherAmount: setPixelatorDitherAmount,
+      setPixelShape: setPixelatorPixelShape,
+      setOutlineEnabled: setPixelatorOutlineEnabled,
+      setOutlineColor: setPixelatorOutlineColor,
+      setOutlineThickness: setPixelatorOutlineThickness,
+      setContrast: setPixelatorContrast,
+      setSaturation: setPixelatorSaturation,
+      setBrightness: setPixelatorBrightness
+    }
   }), [
     editorState,
     progress,
@@ -595,6 +643,18 @@ export default function EditorPage() {
     visiblePanels,
     togglePanel,
     resetLayout,
+    pixelatorEnabled,
+    pixelSize,
+    pixelatorPalette,
+    pixelatorDitherType,
+    pixelatorDitherAmount,
+    pixelatorPixelShape,
+    pixelatorOutlineEnabled,
+    pixelatorOutlineColor,
+    pixelatorOutlineThickness,
+    pixelatorContrast,
+    pixelatorSaturation,
+    pixelatorBrightness
   ]);
 
   return (

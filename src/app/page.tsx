@@ -4,132 +4,106 @@ import styles from './page.module.css';
 export default function Home() {
   return (
     <main className={styles.main}>
-      {/* Hero Section */}
-      <section className={styles.hero}>
-        <div className={styles.heroBackground}>
-          <div className={styles.gradientOrb1} />
-          <div className={styles.gradientOrb2} />
+      {/* Premium Background Orbs */}
+      <div className={styles.heroBackground}>
+        <div className={styles.gradientOrb1} />
+        <div className={styles.gradientOrb2} />
+      </div>
+
+      {/* Hero Header */}
+      <header className={styles.header}>
+        <div className={styles.badge}>
+          <span className={styles.badgeDot} />
+          100% Client-Side Engine
         </div>
-        
-        <div className={styles.heroContent}>
-          <div className={styles.badge}>
-            <span className={styles.badgeDot} />
-            100% Client-Side
+        <h1 className={styles.title}>
+          SpriteCraft <span className={styles.highlight}>Webtools</span>
+        </h1>
+        <p className={styles.subtitle}>
+          Professional-grade local workspace utilities for game developers and pixel artists.
+          <strong> No uploads. No servers. Completely private.</strong>
+        </p>
+      </header>
+
+      {/* Tools Portal Cards */}
+      <section className={styles.toolsSuite}>
+        <div className={styles.toolCard}>
+          <div className={styles.toolIcon}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="2" y="2" width="20" height="20" rx="2" ry="2" />
+              <line x1="7" y1="2" x2="7" y2="22" />
+              <line x1="17" y1="2" x2="17" y2="22" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+            </svg>
           </div>
-          
-          <h1 className={styles.title}>
-            Video to <span className={styles.highlight}>Spritesheet</span>
-          </h1>
-          
-          <p className={styles.subtitle}>
-            Extract frames from any video, select and reorder them, 
-            then export as a game-ready spritesheet. 
-            <strong> No uploads. No servers. Completely free.</strong>
+          <h2 className={styles.toolTitle}>Video to Spritesheet</h2>
+          <p className={styles.toolDesc}>
+            Load video files (MP4, WebM) or individual images, extract precise frames, 
+            remove backgrounds, and compile them into a game-ready spritesheet with JSON metadata.
           </p>
-          
-          <div className={styles.cta}>
-            <Link href="/editor" className={styles.ctaButton}>
-              <span>Start Creating</span>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </Link>
+          <ul className={styles.toolFeatures}>
+            <li>✦ FPS-controlled custom frame extraction</li>
+            <li>✦ AI background & watermark removals</li>
+            <li>✦ Sprite outline stroke customizations</li>
+            <li>✦ VS Code-style dockable tabs interface</li>
+          </ul>
+          <Link href="/tools/video-to-spritesheet" className={styles.toolCta}>
+            Launch Spritesheet Editor
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </div>
+
+        <div className={styles.toolCard}>
+          <div className={`${styles.toolIcon} ${styles.iconPixel}`}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="1" />
+              <path d="M7 7h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z" fill="currentColor"/>
+            </svg>
           </div>
+          <h2 className={styles.toolTitle}>Sprite Pixelator</h2>
+          <p className={styles.toolDesc}>
+            Convert packed spritesheets, high-res images, or video clips into retro pixel art. 
+            Specify slicing dimensions, apply classic palettes, and dither grids.
+          </p>
+          <ul className={styles.toolFeatures}>
+            <li>✦ Grid-based or dimension-based sprite slicing</li>
+            <li>✦ Presets: NES, PICO-8, Commodore 64, GameBoy</li>
+            <li>✦ Bayer and Floyd-Steinberg dither models</li>
+            <li>✦ Custom pixel layouts (Blocks, Circles, Diamonds)</li>
+          </ul>
+          <Link href="/tools/pixelator" className={`${styles.toolCta} ${styles.ctaPixel}`}>
+            Launch Sprite Pixelator
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </Link>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className={styles.features}>
-        <h2 className={styles.sectionTitle}>Everything You Need</h2>
-        
+      {/* Hub Features grid */}
+      <section className={styles.featuresSection}>
+        <h3 className={styles.featuresHeader}>Engine Highlights</h3>
         <div className={styles.featureGrid}>
           <div className={styles.feature}>
-            <div className={styles.featureIcon}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18" />
-                <line x1="7" y1="2" x2="7" y2="22" />
-                <line x1="17" y1="2" x2="17" y2="22" />
-                <line x1="2" y1="12" x2="22" y2="12" />
-                <line x1="2" y1="7" x2="7" y2="7" />
-                <line x1="2" y1="17" x2="7" y2="17" />
-                <line x1="17" y1="17" x2="22" y2="17" />
-                <line x1="17" y1="7" x2="22" y2="7" />
-              </svg>
-            </div>
-            <h3>Frame Extraction</h3>
-            <p>Load any video and extract frames at your desired FPS. Works with MP4, WebM, and more.</p>
+            <h4>100% Client-Side</h4>
+            <p>Everything processes in your browser thread using GPU-accelerated canvas API and WebCodecs decoders. No files ever touch our servers.</p>
           </div>
-          
           <div className={styles.feature}>
-            <div className={styles.featureIcon}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-              </svg>
-            </div>
-            <h3>Visual Editor</h3>
-            <p>Select, reorder, and delete frames with an intuitive drag-and-drop interface.</p>
+            <h4>Game Engine Compatible</h4>
+            <p>Export all outputs in optimized PNG spritesheets together with industry-standard JSON coordinate files compatible with Unity, Godot, Phaser, and Unreal.</p>
           </div>
-          
           <div className={styles.feature}>
-            <div className={styles.featureIcon}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <polygon points="5 3 19 12 5 21 5 3" />
-              </svg>
-            </div>
-            <h3>Live Preview</h3>
-            <p>Preview your animation in real-time with adjustable FPS before exporting.</p>
+            <h4>Advanced Shaders</h4>
+            <p>Experience fast and smooth pixel filters, ordered matrices, outline generation, and color modifications processing in milliseconds.</p>
           </div>
-          
-          <div className={styles.feature}>
-            <div className={styles.featureIcon}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-            </div>
-            <h3>PNG + JSON Export</h3>
-            <p>Download your spritesheet as PNG with optional JSON metadata for game engines.</p>
-          </div>
-          
-          <div className={styles.feature}>
-            <div className={styles.featureIcon}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-            </div>
-            <h3>Privacy First</h3>
-            <p>Your files never leave your computer. Everything runs locally in your browser.</p>
-          </div>
-          
-          <div className={styles.feature}>
-            <div className={styles.featureIcon}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 6v6l4 2" />
-              </svg>
-            </div>
-            <h3>Fast & Free</h3>
-            <p>No sign-up, no watermarks, no limits. Just drag, drop, and create.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className={styles.ctaSection}>
-        <div className={styles.ctaCard}>
-          <h2>Ready to Create?</h2>
-          <p>Turn your videos into game-ready spritesheets in seconds.</p>
-          <Link href="/editor" className={styles.ctaButtonSecondary}>
-            Open Editor
-          </Link>
         </div>
       </section>
 
       {/* Footer */}
       <footer className={styles.footer}>
-        <p>Built with Next.js • Open Source • Made for Game Developers</p>
+        <p>Built with Next.js • Client-Side WASM & Canvas Decoders • Open Source & Ad-Free</p>
       </footer>
     </main>
   );
