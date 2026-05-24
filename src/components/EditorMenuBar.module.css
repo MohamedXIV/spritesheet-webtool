@@ -60,6 +60,12 @@
   font-size: 0.85rem;
   color: var(--text-color, #f1f5f9);
   transition: background-color 0.1s;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  box-sizing: border-box;
 }
 
 .item:hover {
@@ -94,4 +100,24 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.dirtyDot {
+  color: #fbbf24; /* amber-400 */
+  font-size: 0.65rem;
+  margin-left: 6px;
+  filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.6));
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 0.6; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.item:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background-color: transparent !important;
+  color: var(--text-muted, #9ca3af) !important;
 }

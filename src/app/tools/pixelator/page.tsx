@@ -14,6 +14,7 @@ import { EditorProvider } from '@/contexts/EditorContext';
 import { LoopMode } from '@/components/Timeline';
 import { BackgroundMode } from '@/components/PreviewPlayer';
 import styles from './page.module.css';
+import { useFrameHistory } from '@/hooks/useFrameHistory';
 
 export default function StandalonePixelatorPage() {
   // 1. Slicing state variables
@@ -27,8 +28,19 @@ export default function StandalonePixelatorPage() {
   const [cellHeight, setCellHeight] = useState(64);
   const [isSlicing, setIsSlicing] = useState(false);
 
-  // 2. Heavyweight Unified Frame State
-  const [frameState, setFrameState] = useState<FrameState | null>(null);
+  // 2. Heavyweight Bounded History Frame State (Memory-safe VRAM Garbage Collector)
+  const {
+    state: frameState,
+    setState: setFrameState,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    isDirty,
+    markSaved,
+    resetHistory,
+    clearHistory
+  } = useFrameHistory(8); // strict depth of 8 steps of history
   const [processingFrameIds, setProcessingFrameIds] = useState<Set<string>>(new Set());
 
   // 3. Playback State
@@ -84,16 +96,12 @@ export default function StandalonePixelatorPage() {
 
   // Clean and release bitmaps
   const disposeAllFrames = useCallback(() => {
-    if (frameState) {
-      frameState.frames.forEach(f => {
-        try { f.bitmap.close(); } catch {}
-      });
-    }
+    // Note: useFrameHistory handles closing active frameState bitmaps automatically!
     originalFramesRef.current.forEach(b => {
       try { b.close(); } catch {}
     });
     originalFramesRef.current.clear();
-  }, [frameState]);
+  }, []);
 
   // Clean on unmount
   useEffect(() => {
@@ -110,7 +118,7 @@ export default function StandalonePixelatorPage() {
       URL.revokeObjectURL(originalImgSrc);
     }
     disposeAllFrames();
-    setFrameState(null);
+    resetHistory(null);
 
     const src = URL.createObjectURL(newFile);
     setOriginalImgSrc(src);
@@ -134,7 +142,7 @@ export default function StandalonePixelatorPage() {
 
   const handleResetImage = () => {
     disposeAllFrames();
-    setFrameState(null);
+    resetHistory(null);
     setFile(null);
     if (originalImgSrc) {
       URL.revokeObjectURL(originalImgSrc);
@@ -174,7 +182,7 @@ export default function StandalonePixelatorPage() {
         }
       }
 
-      setFrameState({
+      resetHistory({
         frames: result.frames,
         folders: [
           {
@@ -231,7 +239,7 @@ export default function StandalonePixelatorPage() {
     setFrameState(prev => {
       if (!prev) return null;
       const remaining = prev.frames.filter(f => !prev.selectedIds.has(f.id));
-      prev.frames.filter(f => prev.selectedIds.has(f.id)).forEach(f => f.bitmap.close());
+      // Frame bitmaps are kept alive in the 'past' stack for Undo, closed automatically when evicted!
       const remainingIds = remaining.map(f => f.id);
 
       const updatedFolders = prev.folders.map(folder => ({
@@ -277,9 +285,7 @@ export default function StandalonePixelatorPage() {
               console.warn(`Failed to backup frame ${frame.id} on-the-fly:`, err);
             }
           }
-          try {
-            frame.bitmap.close();
-          } catch {}
+          // Old frame bitmap is kept alive in the 'past' stack for Undo, closed automatically when evicted!
           return { ...frame, bitmap: processed };
         }
         return frame;
@@ -318,7 +324,7 @@ export default function StandalonePixelatorPage() {
       const updatedFrames = prev.frames.map(frame => {
         const reverted = revertedFrames.get(frame.id);
         if (reverted) {
-          frame.bitmap.close();
+          // Old frame bitmap is kept alive in the 'past' stack for Undo, closed automatically when evicted!
           return { ...frame, bitmap: reverted };
         }
         return frame;
@@ -346,6 +352,40 @@ export default function StandalonePixelatorPage() {
       'spritesheet-slicer', 'frame-grid', 'preview', 'timeline', 'pixelate', 'bg-removal', 'watermark', 'export'
     ]));
   }, []);
+
+  // 6. Keyboard Shortcuts for Undo/Redo (Ctrl+Z / Ctrl+Y)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        if (e.key === 'z' || e.key === 'Z') {
+          e.preventDefault();
+          undo();
+        } else if (e.key === 'y' || e.key === 'Y') {
+          e.preventDefault();
+          redo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        redo(); // Support Ctrl+Shift+Z for redo
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
+
+  // 7. Warn before tab close with unsaved modifications
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
 
   // Map state to unified Context value
   const editorContextValue = useMemo(() => ({
@@ -391,6 +431,13 @@ export default function StandalonePixelatorPage() {
     visiblePanels,
     togglePanel,
     resetLayout,
+    
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    isDirty,
+    markSaved,
     
     // Inject Custom Pixelator Slicing Namespace hook
     pixelatorSlicer: {
@@ -481,35 +528,36 @@ export default function StandalonePixelatorPage() {
     pixelatorOutlineThickness,
     pixelatorContrast,
     pixelatorSaturation,
-    pixelatorBrightness
+    pixelatorBrightness,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    isDirty,
+    markSaved
   ]);
 
   return (
-    <div className={styles.dockContainer}>
-      {/* 1. Glassmorphic Menubar */}
-      <header className={styles.header}>
-        <PixelatorMenuBar
-          visiblePanels={visiblePanels}
-          onTogglePanel={togglePanel}
-          onResetLayout={resetLayout}
-          onResetWorkspace={handleResetImage}
-        />
-        <div className={styles.headerInfo}>
-          {frameState && (
-            <span className={styles.frameCount}>
-              {selectedFrames.length} / {orderedFrames.length} frames selected
-            </span>
-          )}
-        </div>
-      </header>
+    <EditorProvider value={editorContextValue}>
+      <div className={styles.dockContainer}>
+        {/* 1. Glassmorphic Menubar */}
+        <header className={styles.header}>
+          <PixelatorMenuBar />
+          <div className={styles.headerInfo}>
+            {frameState && (
+              <span className={styles.frameCount}>
+                {selectedFrames.length} / {orderedFrames.length} frames selected
+              </span>
+            )}
+          </div>
+        </header>
 
-      {/* 2. Flexlayout Draggable Panel Layouts */}
-      <EditorProvider value={editorContextValue}>
+        {/* 2. Flexlayout Draggable Panel Layouts */}
         <PixelatorDockLayout
           ref={dockLayoutRef}
           onVisiblePanelsChange={setVisiblePanels}
         />
-      </EditorProvider>
-    </div>
+      </div>
+    </EditorProvider>
   );
 }

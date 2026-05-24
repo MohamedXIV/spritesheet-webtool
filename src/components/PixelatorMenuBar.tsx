@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
+import { useEditorContext } from '@/contexts/EditorContext';
 import styles from './PixelatorMenuBar.module.css';
 
 const PANELS = [
@@ -16,19 +17,19 @@ const PANELS = [
   { id: 'export', name: 'Export' },
 ] as const;
 
-interface PixelatorMenuBarProps {
-  visiblePanels: Set<string>;
-  onTogglePanel: (panelId: string) => void;
-  onResetLayout: () => void;
-  onResetWorkspace: () => void;
-}
+export function PixelatorMenuBar() {
+  const {
+    visiblePanels,
+    togglePanel,
+    resetLayout,
+    pixelatorSlicer,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    isDirty
+  } = useEditorContext();
 
-export function PixelatorMenuBar({
-  visiblePanels,
-  onTogglePanel,
-  onResetLayout,
-  onResetWorkspace,
-}: PixelatorMenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -67,6 +68,7 @@ export function PixelatorMenuBar({
         >
           <span className={styles.logoBullet}>◆</span>
           Sprite Pixelator
+          {isDirty && <span className={styles.dirtyDot} title="Unsaved changes">●</span>}
         </div>
         {activeMenu === 'app' && (
           <div className={styles.dropdown}>
@@ -95,7 +97,7 @@ export function PixelatorMenuBar({
             <button 
               className={styles.item} 
               onClick={() => {
-                onResetWorkspace();
+                pixelatorSlicer?.handleResetImage();
                 closeMenu();
               }}
             >
@@ -105,6 +107,43 @@ export function PixelatorMenuBar({
             <Link href="/" className={styles.item} onClick={closeMenu}>
               Exit to Portal Hub
             </Link>
+          </div>
+        )}
+      </div>
+
+      {/* Edit Dropdown */}
+      <div className={styles.menuItem}>
+        <div 
+          className={`${styles.menuTrigger} ${activeMenu === 'edit' ? styles.menuTriggerActive : ''}`}
+          onClick={() => toggleMenu('edit')}
+          onMouseEnter={() => onMouseEnter('edit')}
+        >
+          Edit
+        </div>
+        {activeMenu === 'edit' && (
+          <div className={styles.dropdown}>
+            <button 
+              className={styles.item} 
+              disabled={!canUndo}
+              onClick={() => {
+                undo?.();
+                closeMenu();
+              }}
+            >
+              <span className={styles.itemLabel}>Undo</span>
+              <span className={styles.itemHotkey}>Ctrl+Z</span>
+            </button>
+            <button 
+              className={styles.item} 
+              disabled={!canRedo}
+              onClick={() => {
+                redo?.();
+                closeMenu();
+              }}
+            >
+              <span className={styles.itemLabel}>Redo</span>
+              <span className={styles.itemHotkey}>Ctrl+Y</span>
+            </button>
           </div>
         )}
       </div>
@@ -128,7 +167,7 @@ export function PixelatorMenuBar({
                   key={panel.id}
                   className={styles.itemWithCheck}
                   onClick={() => {
-                    onTogglePanel(panel.id);
+                    togglePanel(panel.id);
                   }}
                 >
                   <span className={styles.checkWrapper}>
@@ -142,7 +181,7 @@ export function PixelatorMenuBar({
             <button 
               className={styles.item}
               onClick={() => {
-                onResetLayout();
+                resetLayout();
                 closeMenu();
               }}
             >

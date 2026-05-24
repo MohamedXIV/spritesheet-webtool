@@ -120,6 +120,14 @@ interface EditorContextValue {
     setSaturation: (val: number) => void;
     setBrightness: (val: number) => void;
   };
+
+  // Undo/Redo & Save Subsystem
+  undo?: () => void;
+  redo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  isDirty?: boolean;
+  markSaved?: () => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);

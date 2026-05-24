@@ -34,6 +34,7 @@ import {
 } from '@/lib/frameStore';
 import { FrameData, ExtractionProgress, SourceInfo, SOURCE_COLORS, Folder } from '@/types';
 import styles from './page.module.css';
+import { useFrameHistory } from '@/hooks/useFrameHistory';
 
 type EditorState = 'idle' | 'extracting' | 'ready';
 
@@ -41,7 +42,19 @@ const FRAME_WARNING_THRESHOLD = 240;
 
 export default function EditorPage() {
   const [editorState, setEditorState] = useState<EditorState>('idle');
-  const [frameState, setFrameState] = useState<FrameState | null>(null);
+  // 2. Heavyweight Bounded History Frame State (Memory-safe VRAM Garbage Collector)
+  const {
+    state: frameState,
+    setState: setFrameState,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    isDirty,
+    markSaved,
+    resetHistory,
+    clearHistory
+  } = useFrameHistory(8); // strict depth of 8 steps of history
   const [progress, setProgress] = useState<ExtractionProgress | null>(null);
   const [fps, setFps] = useState(12);
   const [currentFrame, setCurrentFrame] = useState(0);
@@ -192,8 +205,12 @@ export default function EditorPage() {
   // Cleanup on unmount only
   useEffect(() => {
     return () => {
+      originalFramesRef.current.forEach(b => {
+        try { b.close(); } catch {}
+      });
+      originalFramesRef.current.clear();
       if (frameStateRef.current) {
-        disposeFrames(frameStateRef.current);
+        try { disposeFrames(frameStateRef.current); } catch {}
       }
     };
   }, []);
@@ -322,7 +339,7 @@ export default function EditorPage() {
       const allFolders = [...existingFolders, ...incomingFolders];
 
       setLoadedSources(newSources);
-      setFrameState({
+      resetHistory({
         frames: allFrames,
         folders: allFolders.length > 0 ? allFolders : [
           {
@@ -361,10 +378,7 @@ export default function EditorPage() {
         .map(f => f.id)
     );
 
-    // Close bitmaps of removed frames
-    frameState.frames
-      .filter(f => f.sourceId === sourceId)
-      .forEach(f => f.bitmap.close());
+    // Frame bitmaps are kept alive in the 'past' stack for Undo, closed automatically when evicted!
 
     const remainingFrames = frameState.frames.filter(f => f.sourceId !== sourceId);
 
@@ -400,7 +414,7 @@ export default function EditorPage() {
         ),
       });
     } else {
-      setFrameState(null);
+      resetHistory(null);
       setEditorState('idle');
     }
 
@@ -454,10 +468,8 @@ export default function EditorPage() {
             console.warn(`Failed to backup frame ${frame.id} on-the-fly:`, err);
           }
         }
-        try {
-          frame.bitmap.close();
-        } catch {}
-        return { ...frame, bitmap: processed };
+          // Old frame bitmap is kept alive in the 'past' stack for Undo, closed automatically when evicted!
+          return { ...frame, bitmap: processed };
       }
       return frame;
     });
@@ -498,7 +510,7 @@ export default function EditorPage() {
     const updatedFrames = frameState.frames.map(frame => {
       const reverted = revertedFrames.get(frame.id);
       if (reverted) {
-        frame.bitmap.close();
+        // Old frame bitmap is kept alive in the 'past' stack for Undo, closed automatically when evicted!
         return { ...frame, bitmap: reverted };
       }
       return frame;
@@ -534,6 +546,40 @@ export default function EditorPage() {
       'media-loader', 'bg-removal', 'outline', 'watermark', 'export'
     ]));
   }, []);
+
+  // 6. Keyboard Shortcuts for Undo/Redo (Ctrl+Z / Ctrl+Y)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        if (e.key === 'z' || e.key === 'Z') {
+          e.preventDefault();
+          undo();
+        } else if (e.key === 'y' || e.key === 'Y') {
+          e.preventDefault();
+          redo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        redo(); // Support Ctrl+Shift+Z for redo
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
+
+  // 7. Warn before tab close with unsaved modifications
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirty) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
 
   // Context value for all dock panels
   const editorContextValue = useMemo(() => ({
@@ -579,6 +625,13 @@ export default function EditorPage() {
     visiblePanels,
     togglePanel,
     resetLayout,
+    
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    isDirty,
+    markSaved,
 
     // Inject Active Real-time Pixelator options
     activePixelatorOptions: {
@@ -654,50 +707,50 @@ export default function EditorPage() {
     pixelatorOutlineThickness,
     pixelatorContrast,
     pixelatorSaturation,
-    pixelatorBrightness
+    pixelatorBrightness,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    isDirty,
+    markSaved
   ]);
 
   return (
-    <div className={styles.dockContainer}>
-      {/* Header with Menu Bar */}
-      <header className={styles.header}>
-        <EditorMenuBar
-          visiblePanels={visiblePanels}
-          onTogglePanel={togglePanel}
-          onResetLayout={resetLayout}
-          onOpenVideo={() => {}}
-          onExport={() => {}}
-        />
-        <div className={styles.headerInfo}>
-          {decoderType && (
-            <span className={styles.decoderBadge}>
-              {decoderType === 'webcodecs' ? '⚡ WebCodecs' : '🎬 Canvas Fallback'}
-            </span>
-          )}
-          {editorState === 'ready' && (
-            <span className={styles.frameCount}>
-              {selectedFrames.length} / {orderedFrames.length} frames selected
-            </span>
-          )}
-        </div>
-      </header>
+    <EditorProvider value={editorContextValue}>
+      <div className={styles.dockContainer}>
+        {/* Header with Menu Bar */}
+        <header className={styles.header}>
+          <EditorMenuBar />
+          <div className={styles.headerInfo}>
+            {decoderType && (
+              <span className={styles.decoderBadge}>
+                {decoderType === 'webcodecs' ? '⚡ WebCodecs' : '🎬 Canvas Fallback'}
+              </span>
+            )}
+            {editorState === 'ready' && (
+              <span className={styles.frameCount}>
+                {selectedFrames.length} / {orderedFrames.length} frames selected
+              </span>
+            )}
+          </div>
+        </header>
 
-      {showFrameWarning && orderedFrames.length > 0 && (
-        <div className={styles.warning}>
-          ⚠️ {orderedFrames.length} frames extracted. Consider selecting fewer frames for better performance.
-          <button 
-            onClick={() => setShowFrameWarning(false)} 
-            className={styles.warningClose}
-          >
-            ×
-          </button>
-        </div>
-      )}
+        {showFrameWarning && orderedFrames.length > 0 && (
+          <div className={styles.warning}>
+            ⚠️ {orderedFrames.length} frames extracted. Consider selecting fewer frames for better performance.
+            <button 
+              onClick={() => setShowFrameWarning(false)} 
+              className={styles.warningClose}
+            >
+              ×
+            </button>
+          </div>
+        )}
 
-      {/* Dock Layout */}
-      <EditorProvider value={editorContextValue}>
+        {/* Dock Layout */}
         <DockLayout ref={dockLayoutRef} onVisiblePanelsChange={setVisiblePanels} />
-      </EditorProvider>
-    </div>
+      </div>
+    </EditorProvider>
   );
 }

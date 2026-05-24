@@ -6,8 +6,10 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import styles from './EditorMenuBar.module.css';
+import Link from 'next/link';
 import { Check } from 'lucide-react';
+import { useEditorContext } from '@/contexts/EditorContext';
+import styles from './EditorMenuBar.module.css';
 
 // Panel definitions for the View menu
 const PANELS = [
@@ -22,21 +24,18 @@ const PANELS = [
   { id: 'export', name: 'Export' },
 ] as const;
 
-interface EditorMenuBarProps {
-  visiblePanels: Set<string>;
-  onTogglePanel: (panelId: string) => void;
-  onResetLayout: () => void;
-  onOpenVideo: () => void;
-  onExport: () => void;
-}
+export function EditorMenuBar() {
+  const {
+    visiblePanels,
+    togglePanel,
+    resetLayout,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    isDirty
+  } = useEditorContext();
 
-export function EditorMenuBar({
-  visiblePanels,
-  onTogglePanel,
-  onResetLayout,
-  onOpenVideo,
-  onExport,
-}: EditorMenuBarProps) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -73,18 +72,19 @@ export function EditorMenuBar({
           onClick={() => toggleMenu('app')}
           onMouseEnter={() => onMouseEnter('app')}
         >
-          <span className="text-primary">◆</span>
+          <span style={{ color: '#a855f7', filter: 'drop-shadow(0 0 5px rgba(168, 85, 247, 0.5))' }}>◆</span>
           Spritesheet Creator
+          {isDirty && <span className={styles.dirtyDot} title="Unsaved changes">●</span>}
         </div>
         {activeMenu === 'app' && (
           <div className={styles.dropdown}>
             <div className={`${styles.item} ${styles.itemDisabled}`}>
-              Version 0.1.0
+              Version 0.1.0 (Beta)
             </div>
             <div className={styles.separator} />
-            <div className={styles.item} onClick={closeMenu}>
-              About
-            </div>
+            <Link href="/" className={styles.item} onClick={closeMenu}>
+              ← Back to Portal Hub
+            </Link>
           </div>
         )}
       </div>
@@ -100,27 +100,50 @@ export function EditorMenuBar({
         </div>
         {activeMenu === 'file' && (
           <div className={styles.dropdown}>
-            <div 
-              className={styles.item} 
-              onClick={() => {
-                onOpenVideo();
-                closeMenu();
-              }}
-            >
-              Open Video...
-              <span className={styles.shortcut}>Ctrl+O</span>
+            <div className={`${styles.item} ${styles.itemDisabled}`}>
+              Open video/images in Load Video panel
             </div>
             <div className={styles.separator} />
-            <div 
+            <Link href="/" className={styles.item} onClick={closeMenu}>
+              Exit to Portal Hub
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* Edit Menu */}
+      <div className={styles.menuItem}>
+        <div 
+          className={`${styles.menuTrigger} ${activeMenu === 'edit' ? styles.menuTriggerActive : ''}`}
+          onClick={() => toggleMenu('edit')}
+          onMouseEnter={() => onMouseEnter('edit')}
+        >
+          Edit
+        </div>
+        {activeMenu === 'edit' && (
+          <div className={styles.dropdown}>
+            <button 
               className={styles.item} 
+              disabled={!canUndo}
               onClick={() => {
-                onExport();
+                undo?.();
                 closeMenu();
               }}
             >
-              Export...
-              <span className={styles.shortcut}>Ctrl+E</span>
-            </div>
+              <span>Undo</span>
+              <span className={styles.shortcut}>Ctrl+Z</span>
+            </button>
+            <button 
+              className={styles.item} 
+              disabled={!canRedo}
+              onClick={() => {
+                redo?.();
+                closeMenu();
+              }}
+            >
+              <span>Redo</span>
+              <span className={styles.shortcut}>Ctrl+Y</span>
+            </button>
           </div>
         )}
       </div>
@@ -136,35 +159,35 @@ export function EditorMenuBar({
         </div>
         {activeMenu === 'view' && (
           <div className={styles.dropdown}>
-            {PANELS.map((panel) => (
-              <div
-                key={panel.id}
-                className={styles.item}
-                onClick={() => {
-                  onTogglePanel(panel.id);
-                  // Don't close menu to allow multiple toggles, or close if standard behavior? 
-                  // Standard behavior usually keeps open for checkboxes but single click for actions.
-                  // I'll keep it open for convenience.
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <div className={styles.checkContainer}>
-                    {visiblePanels.has(panel.id) && <Check size={14} />}
+            {PANELS.map((panel) => {
+              const isChecked = visiblePanels.has(panel.id);
+              return (
+                <button
+                  key={panel.id}
+                  className={styles.item}
+                  onClick={() => {
+                    togglePanel(panel.id);
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div className={styles.checkContainer}>
+                      {isChecked && <Check size={14} style={{ color: '#c084fc' }} />}
+                    </div>
+                    {panel.name}
                   </div>
-                  {panel.name}
-                </div>
-              </div>
-            ))}
+                </button>
+              );
+            })}
             <div className={styles.separator} />
-            <div 
+            <button 
               className={styles.item} 
               onClick={() => {
-                onResetLayout();
+                resetLayout();
                 closeMenu();
               }}
             >
               Reset Layout
-            </div>
+            </button>
           </div>
         )}
       </div>

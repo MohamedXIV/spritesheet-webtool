@@ -9,6 +9,7 @@ import { FrameData, SpritesheetConfig } from '@/types';
 import { packFrames, calculateOptimalColumns } from '@/lib/spritesheetPacker';
 import { exportSpritesheetPng, exportMetadataJson, exportAll } from '@/lib/exporter';
 import { LoopMode } from './Timeline';
+import { useOptionalEditorContext } from '@/contexts/EditorContext';
 import styles from './ExportPanel.module.css';
 
 interface ExportPanelProps {
@@ -19,6 +20,7 @@ interface ExportPanelProps {
 }
 
 export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: ExportPanelProps) {
+  const context = useOptionalEditorContext();
   const [columns, setColumns] = useState(0); // 0 = auto
   const [padding, setPadding] = useState(0);
   const [backgroundColor, setBackgroundColor] = useState('transparent');
@@ -85,6 +87,7 @@ export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: E
     try {
       const { canvas } = packFrames(exportFrames, config, fps);
       await exportSpritesheetPng(canvas);
+      context?.markSaved?.();
     } catch (error) {
       console.error('Export failed:', error);
       alert('Failed to export spritesheet');
@@ -100,6 +103,7 @@ export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: E
     try {
       const { metadata } = packFrames(exportFrames, config, fps);
       exportMetadataJson(metadata);
+      context?.markSaved?.();
     } catch (error) {
       console.error('Export failed:', error);
       alert('Failed to export metadata');
@@ -114,6 +118,7 @@ export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: E
     try {
       const { canvas, metadata } = packFrames(exportFrames, config, fps);
       await exportAll(canvas, metadata);
+      context?.markSaved?.();
     } catch (error) {
       console.error('Export failed:', error);
       alert('Failed to export files');

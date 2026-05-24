@@ -332,3 +332,66 @@ export function disposeFrames(state: FrameState): void {
     }
   });
 }
+
+export interface SerializedFrame {
+  id: string;
+  index: number;
+  timestamp: number;
+  sourceId: string;
+  sourceColor: string;
+  blob: Blob;
+}
+
+export interface SerializedProject {
+  metadata: {
+    folders: Folder[];
+    selectedIds: string[];
+    fps?: number;
+  };
+  frames: SerializedFrame[];
+}
+
+/**
+ * Compiles and serializes the current frame state (metadata + frame bitmaps converted to blobs)
+ * to prepare for local storage, zip packaging, or IndexedDB storage.
+ */
+export async function serializeProject(
+  state: FrameState,
+  fps?: number
+): Promise<SerializedProject> {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const serializedFrames: SerializedFrame[] = [];
+
+  for (const frame of state.frames) {
+    canvas.width = frame.bitmap.width;
+    canvas.height = frame.bitmap.height;
+    ctx?.clearRect(0, 0, canvas.width, canvas.height);
+    ctx?.drawImage(frame.bitmap, 0, 0);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((b) => resolve(b), 'image/png');
+    });
+
+    if (blob) {
+      serializedFrames.push({
+        id: frame.id,
+        index: frame.index,
+        timestamp: frame.timestamp,
+        sourceId: frame.sourceId,
+        sourceColor: frame.sourceColor,
+        blob,
+      });
+    }
+  }
+
+  return {
+    metadata: {
+      folders: state.folders,
+      selectedIds: Array.from(state.selectedIds),
+      fps,
+    },
+    frames: serializedFrames,
+  };
+}
+
