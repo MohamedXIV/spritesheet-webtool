@@ -79,20 +79,21 @@ export default function Home() {
       <header className={styles.header}>
         <div className={styles.badge}>
           <span className={styles.badgeDot} />
-          100% Client-Side Engine
+          OPERATOR CONSOLE: STATUS [ONLINE]
         </div>
         <h1 className={styles.title}>
-          SpriteCraft <span className={styles.highlight}>Webtools</span>
+          SpriteCraft <span className={styles.highlight}>Studio</span>
         </h1>
         <p className={styles.subtitle}>
-          Professional-grade local workspace utilities for game developers and pixel artists.
-          <strong> No uploads. No servers. Completely private.</strong>
+          Precision-engineered local workspace utilities for game developers and pixel technicians. 
+          <strong> CORE v1.0.4 // Zero server uploads. Fully private.</strong>
         </p>
       </header>
 
       {/* Tools Portal Cards */}
       <section className={styles.toolsSuite}>
         <div className={styles.toolCard}>
+          <div className={styles.scanline} />
           <div className={styles.toolIcon}>
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <rect x="2" y="2" width="20" height="20" rx="2" ry="2" />
@@ -121,6 +122,7 @@ export default function Home() {
         </div>
 
         <div className={styles.toolCard}>
+          <div className={styles.scanline} />
           <div className={`${styles.toolIcon} ${styles.iconPixel}`}>
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <rect x="3" y="3" width="18" height="18" rx="1" />
@@ -147,6 +149,7 @@ export default function Home() {
         </div>
 
         <div className={styles.toolCard}>
+          <div className={styles.scanline} />
           <div className={`${styles.toolIcon} ${styles.icon3d}`}>
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <polygon points="12 2 2 7 12 12 22 7 12 2" />

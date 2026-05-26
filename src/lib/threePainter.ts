@@ -454,6 +454,7 @@ export class ThreePainter {
 
     // Keyboard bindings for framing the viewport: "f" (Maya) and "." (Blender)
     this.handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
       if (activeEl && (
         activeEl.tagName === 'INPUT' ||
         activeEl.tagName === 'TEXTAREA' ||
