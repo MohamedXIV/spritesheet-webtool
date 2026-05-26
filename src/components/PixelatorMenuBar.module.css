@@ -21,7 +21,7 @@
 
 .menuTrigger {
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted, #A0A0B0);
@@ -45,7 +45,7 @@
 }
 
 .appTitle {
-  font-weight: 900;
+  font-weight: 700;
   color: var(--primary-color, #CCFF00);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -86,7 +86,7 @@
 
 .dropdownHeader {
   font-size: 0.65rem;
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
   color: var(--text-muted, #A0A0B0);
   padding: 4px 8px;
@@ -99,7 +99,7 @@
   width: 100%;
   padding: 6px 12px;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--text-color, #F4F4F9);

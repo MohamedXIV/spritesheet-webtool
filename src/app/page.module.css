@@ -94,7 +94,7 @@
   gap: 8px;
   color: var(--text-muted, #A0A0B0);
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -135,7 +135,7 @@
   border: 2px solid var(--primary-color, #CCFF00);
   border-radius: var(--radius-lg, 16px);
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--primary-color, #CCFF00);
   margin-bottom: 28px;
   box-shadow: var(--shadow-sm);
@@ -159,7 +159,7 @@
 
 .title {
   font-size: clamp(2.6rem, 7vw, 4.2rem);
-  font-weight: 900;
+  font-weight: 700;
   line-height: 1.1;
   margin-bottom: 16px;
   letter-spacing: -0.03em;
@@ -182,7 +182,7 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  font-weight: 950;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -196,14 +196,14 @@
 
 .subtitle strong {
   color: var(--accent-color, #00F0FF);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* ZZZ Graphic Diagonal Ribbon banner */
 .ribbon {
   background: var(--primary-color, #CCFF00);
   color: #0B0B0F;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
   padding: 6px 20px;
   transform: rotate(-1.5deg);
@@ -257,7 +257,7 @@
   top: 16px;
   font-size: 0.65rem;
   color: var(--text-muted, #A0A0B0);
-  font-weight: 800;
+  font-weight: 600;
   opacity: 0.4;
   letter-spacing: 0.05em;
 }
@@ -314,7 +314,7 @@
 
 .toolTitle {
   font-size: 1.45rem;
-  font-weight: 900;
+  font-weight: 700;
   color: #ffffff;
   margin: 0;
   letter-spacing: -0.02em;
@@ -359,7 +359,7 @@
   background: var(--primary-color, #CCFF00);
   border-radius: var(--radius-md, 12px);
   font-size: 0.9rem;
-  font-weight: 900;
+  font-weight: 700;
   color: #0B0B0F;
   text-decoration: none;
   transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -408,7 +408,7 @@
 
 .projectsHeader {
   font-size: 1.35rem;
-  font-weight: 900;
+  font-weight: 700;
   margin-bottom: 28px;
   color: #ffffff;
   display: flex;
@@ -454,7 +454,7 @@
 
 .projectTypeBadge {
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
   padding: 4px 10px;
   border-radius: var(--radius-sm, 6px);
@@ -512,7 +512,7 @@
 
 .projectName {
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 600;
   color: #ffffff;
   margin: 0;
   text-overflow: ellipsis;
@@ -545,7 +545,7 @@
   border: 2px solid var(--border-color, #2E2E38);
   border-radius: var(--radius-sm, 6px);
   font-size: 0.8rem;
-  font-weight: 800;
+  font-weight: 600;
   color: var(--text-color, #F4F4F9);
   text-decoration: none;
   text-align: center;
@@ -584,7 +584,7 @@
 .featuresHeader {
   text-align: center;
   font-size: 1.35rem;
-  font-weight: 900;
+  font-weight: 700;
   margin-bottom: 36px;
   text-transform: uppercase;
   letter-spacing: 3px;
@@ -609,7 +609,7 @@
 .feature h4 {
   margin: 0 0 12px;
   font-size: 1.02rem;
-  font-weight: 900;
+  font-weight: 700;
   color: var(--accent-color, #00F0FF);
   text-transform: uppercase;
   letter-spacing: 0.05em;

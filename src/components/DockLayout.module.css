@@ -21,7 +21,7 @@
   padding: 6px 14px;
   border-radius: var(--radius-sm, 8px);
   font-size: 0.82rem;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -91,7 +91,7 @@
 .extractionText {
   color: var(--text-color, #F4F4F9);
   font-size: 0.95rem;
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -148,7 +148,7 @@
   border: none !important;
   padding: 8px 16px !important;
   font-size: 0.85rem !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.05em !important;
 }
