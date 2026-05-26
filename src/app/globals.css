@@ -39,8 +39,10 @@
   --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.6);
   --shadow-glow: 0 0 15px rgba(204, 255, 0, 0.25);
 
-  /* Typography - Geist Sans and Inter */
-  --font-family: var(--font-geist), var(--font-inter), sans-serif;
+  /* Typography - Geist Sans and Inter with system fallback variables */
+  --font-geist: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-inter: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-family: var(--font-geist, sans-serif), var(--font-inter, sans-serif), sans-serif;
 
   /* Spacing */
   --spacing-xs: 4px;
