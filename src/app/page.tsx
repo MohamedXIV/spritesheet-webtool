@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Trash2, Edit2, FolderOpen, Clock, Settings, FileSpreadsheet, Image } from 'lucide-react';
+import { Trash2, Edit2, FolderOpen, Clock, Settings, FileSpreadsheet, Image as ImageIcon } from 'lucide-react';
 import { getAllProjectsSummary, deleteProject, renameProject, ProjectSummary } from '@/lib/projectDatabase';
 import styles from './page.module.css';
 
@@ -75,18 +75,48 @@ export default function Home() {
         <div className={styles.gradientOrb2} />
       </div>
 
+      {/* ZZZ Filmstrip Header Decoration */}
+      <div className={styles.filmstripRow}>
+        <div className={styles.filmstripTrack}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <React.Fragment key={i}>
+              <span className={styles.filmstripUnit}>
+                <span className={styles.filmstripPunch} />
+                HDD DATA INTER-KNOT SECURED
+              </span>
+              <span className={styles.filmstripUnit}>
+                <span className={styles.filmstripPunch} />
+                <span className={styles.filmstripText}>PROXY PROTOCOL v1.0.4</span>
+              </span>
+              <span className={styles.filmstripUnit}>
+                <span className={styles.filmstripPunch} />
+                DRIP LEVEL: MAX
+              </span>
+              <span className={styles.filmstripUnit}>
+                <span className={styles.filmstripPunch} />
+                <span className={styles.filmstripTextAlt}>LOCAL CLIENT-SIDE PROCESSING</span>
+              </span>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
       {/* Hero Header */}
       <header className={styles.header}>
         <div className={styles.badge}>
           <span className={styles.badgeDot} />
-          OPERATOR CONSOLE: STATUS [ONLINE]
+          OPERATOR CONSOLE: HUB STATUS [ONLINE]
         </div>
         <h1 className={styles.title}>
-          SpriteCraft <span className={styles.highlight}>Studio</span>
+          <span className={styles.titleMain}>SPRITECRAFT</span>
+          <span className={styles.highlight}>PROXY SYSTEM</span>
         </h1>
+        <div className={styles.ribbon}>
+          HDD STORAGE: LOCAL // ZERO SERVER UPLOADS
+        </div>
         <p className={styles.subtitle}>
-          Precision-engineered local workspace utilities for game developers and pixel technicians. 
-          <strong> CORE v1.0.4 // Zero server uploads. Fully private.</strong>
+          Revamped high-performance client-side asset manipulators for modern proxies and game developers. 
+          <strong> Fully Private. Zero server uploads. GPU Accelerated.</strong>
         </p>
       </header>
 
@@ -95,8 +125,8 @@ export default function Home() {
         <div className={styles.toolCard}>
           <div className={styles.scanline} />
           <div className={styles.toolIcon}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="2" y="2" width="20" height="20" rx="2" ry="2" />
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="2" y="2" width="20" height="20" rx="4" />
               <line x1="7" y1="2" x2="7" y2="22" />
               <line x1="17" y1="2" x2="17" y2="22" />
               <line x1="2" y1="12" x2="22" y2="12" />
@@ -108,14 +138,14 @@ export default function Home() {
             remove backgrounds, and compile them into a game-ready spritesheet with JSON metadata.
           </p>
           <ul className={styles.toolFeatures}>
-            <li>✦ FPS-controlled custom frame extraction</li>
-            <li>✦ AI background & watermark removals</li>
-            <li>✦ Sprite outline stroke customizations</li>
-            <li>✦ VS Code-style dockable tabs interface</li>
+            <li>► FPS-controlled custom frame extraction</li>
+            <li>► AI background & watermark removals</li>
+            <li>► Sprite outline stroke customizations</li>
+            <li>► modern dockable tabbed workspace layout</li>
           </ul>
           <Link href="/tools/video-to-spritesheet" className={styles.toolCta}>
             Launch Spritesheet Editor
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
           </Link>
@@ -124,8 +154,8 @@ export default function Home() {
         <div className={styles.toolCard}>
           <div className={styles.scanline} />
           <div className={`${styles.toolIcon} ${styles.iconPixel}`}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="3" y="3" width="18" height="18" rx="1" />
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="18" height="18" rx="3" />
               <path d="M7 7h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z" fill="currentColor"/>
             </svg>
           </div>
@@ -135,14 +165,14 @@ export default function Home() {
             Specify slicing dimensions, apply classic palettes, and dither grids.
           </p>
           <ul className={styles.toolFeatures}>
-            <li>✦ Grid-based or dimension-based sprite slicing</li>
-            <li>✦ Presets: NES, PICO-8, Commodore 64, GameBoy</li>
-            <li>✦ Bayer and Floyd-Steinberg dither models</li>
-            <li>✦ Custom pixel layouts (Blocks, Circles, Diamonds)</li>
+            <li>► Grid-based or dimension-based sprite slicing</li>
+            <li>► Presets: NES, PICO-8, Commodore 64, GameBoy</li>
+            <li>► Bayer and Floyd-Steinberg dither models</li>
+            <li>► Custom pixel layouts (Blocks, Circles, Diamonds)</li>
           </ul>
           <Link href="/tools/pixelator" className={`${styles.toolCta} ${styles.ctaPixel}`}>
             Launch Sprite Pixelator
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
           </Link>
@@ -151,7 +181,7 @@ export default function Home() {
         <div className={styles.toolCard}>
           <div className={styles.scanline} />
           <div className={`${styles.toolIcon} ${styles.icon3d}`}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polygon points="12 2 2 7 12 12 22 7 12 2" />
               <polyline points="2 17 12 22 22 17" />
               <polyline points="2 12 12 17 22 12" />
@@ -164,14 +194,14 @@ export default function Home() {
             and apply authentic console-style vertex snaps, wobbly texture coordinates, and dither filters.
           </p>
           <ul className={styles.toolFeatures}>
-            <li>✦ Import GLTF, GLB, OBJ, and FBX meshes</li>
-            <li>✦ 5-layer compositor with opacity & blend modes</li>
-            <li>✦ Maya-style paint (LMB) & navigate (RMB/MMB)</li>
-            <li>✦ Viewport-level classic PSX hardware shader</li>
+            <li>► Import GLTF, GLB, OBJ, and FBX meshes</li>
+            <li>► 5-layer compositor with opacity & blend modes</li>
+            <li>► Maya-style paint & viewport navigation</li>
+            <li>► Viewport-level classic PSX hardware shader</li>
           </ul>
           <Link href="/tools/3d-pixelator" className={`${styles.toolCta} ${styles.cta3d}`}>
             Launch 3D Pixel-Painter
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
           </Link>
@@ -181,17 +211,17 @@ export default function Home() {
       {/* Recent Local Projects Dashboard Section */}
       <section className={styles.recentProjectsSection}>
         <h3 className={styles.projectsHeader}>
-          <FolderOpen size={20} style={{ color: '#a855f7' }} />
-          Recent Local Projects
+          <FolderOpen size={22} style={{ color: 'var(--danger-color, #FF007F)' }} />
+          Recent Local Proxy Operations
         </h3>
 
         {isLoading ? (
           <div className={styles.emptyState}>
-            <p>Scanning browser database store...</p>
+            <p>Scanning Inter-Knot database store...</p>
           </div>
         ) : projects.length === 0 ? (
           <div className={styles.emptyState}>
-            <p>No local projects found. Create one by saving your workspace (Ctrl+S) in any tool above!</p>
+            <p>No local operations found. Create one by saving your workspace (Ctrl+S) in any tool above!</p>
           </div>
         ) : (
           <div className={styles.projectsGrid}>
@@ -223,14 +253,14 @@ export default function Home() {
                       <button 
                         className={styles.actionButton}
                         onClick={() => startRename(proj.id, proj.name)}
-                        title="Rename Project"
+                        title="Rename Operation"
                       >
                         <Edit2 size={13} />
                       </button>
                       <button 
                         className={`${styles.actionButton} ${styles.deleteButton}`}
                         onClick={() => handleDelete(proj.id, proj.name)}
-                        title="Delete Project"
+                        title="Delete Operation"
                       >
                         <Trash2 size={13} />
                       </button>
@@ -250,26 +280,29 @@ export default function Home() {
                         style={{
                           flex: 1,
                           background: 'rgba(0, 0, 0, 0.4)',
-                          border: '1px solid rgba(139, 92, 246, 0.4)',
+                          border: '2px solid var(--primary-color, #CCFF00)',
                           color: '#ffffff',
-                          padding: '4px 8px',
-                          borderRadius: '6px',
+                          padding: '6px 10px',
+                          borderRadius: '8px',
                           fontSize: '0.85rem',
-                          outline: 'none'
+                          outline: 'none',
+                          fontFamily: 'var(--font-family)'
                         }}
                         autoFocus
                       />
                       <button 
                         onClick={() => handleRenameSubmit(proj.id)}
                         style={{
-                          background: '#6366f1',
-                          border: 'none',
-                          color: '#ffffff',
-                          borderRadius: '6px',
-                          padding: '4px 8px',
-                          fontSize: '0.75rem',
-                          fontWeight: 650,
-                          cursor: 'pointer'
+                          background: 'var(--primary-color, #CCFF00)',
+                          border: '2px solid #0b0b0f',
+                          color: '#0b0b0f',
+                          borderRadius: '8px',
+                          padding: '6px 12px',
+                          fontSize: '0.78rem',
+                          fontWeight: 900,
+                          cursor: 'pointer',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em'
                         }}
                       >
                         Save
@@ -284,7 +317,7 @@ export default function Home() {
                   <div className={styles.projectMetadata}>
                     <div className={styles.projectMetaRow}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Clock size={11} /> Saved:
+                        <Clock size={12} /> Saved:
                       </span>
                       <strong>{formatDate(proj.updatedAt)}</strong>
                     </div>
@@ -307,22 +340,48 @@ export default function Home() {
 
       {/* Hub Features grid */}
       <section className={styles.featuresSection}>
-        <h3 className={styles.featuresHeader}>Engine Highlights</h3>
+        <h3 className={styles.featuresHeader}>Proxy Engine Core Highlights</h3>
         <div className={styles.featureGrid}>
           <div className={styles.feature}>
-            <h4>100% Client-Side</h4>
-            <p>Everything processes in your browser thread using GPU-accelerated canvas API and WebCodecs decoders. No files ever touch our servers.</p>
+            <h4>100% Client-Side Pipeline</h4>
+            <p>Everything processes locally in your browser thread using GPU-accelerated canvas API and WebCodecs decoders. No files ever touch outer servers.</p>
           </div>
           <div className={styles.feature}>
             <h4>Game Engine Compatible</h4>
-            <p>Export all outputs in optimized PNG spritesheets together with industry-standard JSON coordinate files compatible with Unity, Godot, Phaser, and Unreal.</p>
+            <p>Export compiled Spritesheets as standard PNG alongside industry-standard JSON coordinates compatible with Unity, Godot, Unreal, and WebGL players.</p>
           </div>
           <div className={styles.feature}>
-            <h4>Advanced Shaders</h4>
-            <p>Experience fast and smooth pixel filters, ordered matrices, outline generation, and color modifications processing in milliseconds.</p>
+            <h4>Advanced Hardware Shaders</h4>
+            <p>Experience super fast retro pixelation filters, Bayer and custom ordered dithering, wobbly PSX Snaps, and layers compositing in microseconds.</p>
           </div>
         </div>
       </section>
+
+      {/* Bottom Filmstrip Divider */}
+      <div className={styles.filmstripRow} style={{ marginTop: 'auto', borderBottom: 'none' }}>
+        <div className={styles.filmstripTrack}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <React.Fragment key={i}>
+              <span className={styles.filmstripUnit}>
+                <span className={styles.filmstripPunch} />
+                SPRITECRAFT DECODERS ACTIVE
+              </span>
+              <span className={styles.filmstripUnit}>
+                <span className={styles.filmstripPunch} />
+                <span className={styles.filmstripText}>GPU RENDERING OK</span>
+              </span>
+              <span className={styles.filmstripUnit}>
+                <span className={styles.filmstripPunch} />
+                DRIP LEVEL: MAX
+              </span>
+              <span className={styles.filmstripUnit}>
+                <span className={styles.filmstripPunch} />
+                <span className={styles.filmstripTextAlt}>LOCAL SECURE</span>
+              </span>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
 
       {/* Footer */}
       <footer className={styles.footer}>

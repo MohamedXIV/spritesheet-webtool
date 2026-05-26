@@ -1,10 +1,9 @@
 .menubar {
   display: flex;
   align-items: center;
-  height: 40px;
-  background: rgba(13, 13, 21, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+  height: 44px;
+  background: var(--background-color, #0B0B0F);
+  border-bottom: 2px solid var(--border-color, #2E2E38);
   padding: 0 16px;
   font-family: inherit;
   user-select: none;
@@ -22,30 +21,34 @@
 
 .menuTrigger {
   font-size: 0.8rem;
-  font-weight: 500;
-  color: #94a3b8;
-  padding: 0 10px;
-  height: 26px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted, #A0A0B0);
+  padding: 0 12px;
+  height: 28px;
   display: flex;
   align-items: center;
-  border-radius: 4px;
+  border-radius: var(--radius-sm, 8px);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .menuTrigger:hover {
-  background: rgba(139, 92, 246, 0.08);
-  color: #f1f5f9;
+  background: var(--surface-hover, #21212B);
+  color: var(--text-color, #F4F4F9);
 }
 
 .menuTriggerActive {
-  background: rgba(139, 92, 246, 0.15) !important;
-  color: #ffffff !important;
+  background: var(--surface-hover, #21212B) !important;
+  color: var(--primary-color, #CCFF00) !important;
 }
 
 .appTitle {
-  font-weight: 700;
-  color: #f8fafc;
+  font-weight: 900;
+  color: var(--primary-color, #CCFF00);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -56,24 +59,23 @@
 }
 
 .logoBullet {
-  color: #a855f7;
-  filter: drop-shadow(0 0 5px rgba(168, 85, 247, 0.5));
+  color: var(--primary-color, #CCFF00);
+  filter: drop-shadow(0 0 5px rgba(204, 255, 0, 0.5));
 }
 
 .dropdown {
   position: absolute;
-  top: 36px;
+  top: 38px;
   left: 0;
-  background: rgba(18, 18, 30, 0.98);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  border-radius: 6px;
+  background: var(--surface-color, #16161E);
+  border: 2px solid var(--border-color, #2E2E38);
+  border-radius: var(--radius-md, 12px);
   padding: 6px;
-  min-width: 180px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  min-width: 190px;
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   animation: fadeIn 0.15s ease-out;
 }
 
@@ -84,9 +86,9 @@
 
 .dropdownHeader {
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--text-muted, #A0A0B0);
   padding: 4px 8px;
   letter-spacing: 0.05em;
 }
@@ -95,10 +97,13 @@
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 6px 10px;
+  padding: 6px 12px;
   font-size: 0.78rem;
-  color: #cbd5e1;
-  border-radius: 4px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-color, #F4F4F9);
+  border-radius: var(--radius-sm, 8px);
   text-align: left;
   border: none;
   background: transparent;
@@ -108,18 +113,18 @@
 }
 
 .item:hover, .itemWithCheck:hover {
-  background: rgba(139, 92, 246, 0.2);
-  color: #ffffff;
+  background: var(--primary-color, #CCFF00);
+  color: #0B0B0F !important;
 }
 
 .itemDisabled {
-  color: #475569;
+  color: var(--text-muted, #A0A0B0);
   cursor: default;
 }
 
 .itemDisabled:hover {
   background: transparent;
-  color: #475569;
+  color: var(--text-muted, #A0A0B0);
 }
 
 .itemWithCheck {
@@ -135,13 +140,17 @@
 }
 
 .checkIcon {
-  color: #c084fc;
+  color: var(--primary-color, #CCFF00);
+}
+
+.item:hover .checkIcon {
+  color: #0B0B0F;
 }
 
 .separator {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.06);
-  margin: 4px 0;
+  height: 2px;
+  background: var(--border-color, #2E2E38);
+  margin: 6px 0;
 }
 
 .itemLabel {
@@ -150,17 +159,17 @@
 
 .itemHotkey {
   font-size: 0.68rem;
-  color: #64748b;
+  color: var(--text-muted, #A0A0B0);
   margin-left: 16px;
   font-weight: 500;
   text-transform: uppercase;
 }
 
 .dirtyDot {
-  color: #fbbf24; /* amber-400 */
+  color: var(--warning-color, #FED639);
   font-size: 0.65rem;
   margin-left: 6px;
-  filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.6));
+  filter: drop-shadow(0 0 3px rgba(254, 214, 57, 0.6));
   animation: pulseDot 2s infinite ease-in-out;
 }
 
@@ -173,6 +182,6 @@
   opacity: 0.35;
   cursor: not-allowed;
   background: transparent !important;
-  color: #475569 !important;
+  color: var(--text-muted, #A0A0B0) !important;
 }
 

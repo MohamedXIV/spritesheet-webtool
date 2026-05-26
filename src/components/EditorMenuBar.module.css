@@ -1,12 +1,13 @@
 .menubar {
   display: flex;
   align-items: center;
-  height: 40px;
-  padding: 0 8px;
-  background-color: var(--background-color, #0a0a12);
-  border-bottom: 1px solid var(--border-color, #2a2a40);
-  gap: 4px;
+  height: 44px;
+  padding: 0 16px;
+  background-color: var(--background-color, #0B0B0F);
+  border-bottom: 2px solid var(--border-color, #2E2E38);
+  gap: 8px;
   user-select: none;
+  font-family: var(--font-family);
 }
 
 .menuItem {
@@ -16,50 +17,59 @@
 .menuTrigger {
   display: flex;
   align-items: center;
-  padding: 6px 12px;
-  border-radius: 2px;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm, 8px);
   cursor: default;
-  font-size: 0.9rem;
-  color: var(--text-color, #f1f5f9);
-  transition: background-color 0.15s ease;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-color, #F4F4F9);
+  transition: all 0.2s ease;
 }
 
 .appTitle {
-  font-weight: 600;
+  font-weight: 900;
   gap: 8px;
-  padding-left: 8px;
-  padding-right: 12px;
+  padding-left: 0;
+  padding-right: 16px;
+  color: var(--primary-color, #CCFF00);
+  letter-spacing: 0.08em;
 }
 
 .menuTrigger:hover,
 .menuTriggerActive {
-  background-color: var(--surface-hover, #1a1a2e);
+  background-color: var(--surface-hover, #21212B);
+  color: var(--primary-color, #CCFF00);
 }
 
 .dropdown {
   position: absolute;
   top: 100%;
   left: 0;
-  min-width: 220px;
-  background-color: var(--surface-color, #12121e);
-  border: 1px solid var(--border-color, #2a2a40);
-  border-radius: 2px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  padding: 4px;
+  min-width: 230px;
+  background-color: var(--surface-color, #16161E);
+  border: 2px solid var(--border-color, #2E2E38);
+  border-radius: var(--radius-md, 12px);
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.5);
+  padding: 6px;
   z-index: 1000;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  border-radius: 2px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm, 8px);
   cursor: pointer;
-  font-size: 0.85rem;
-  color: var(--text-color, #f1f5f9);
-  transition: background-color 0.1s;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-color, #F4F4F9);
+  transition: all 0.15s ease;
   border: none;
   background: transparent;
   width: 100%;
@@ -69,24 +79,29 @@
 }
 
 .item:hover {
-  background-color: var(--primary-color, #6366f1);
-  color: white;
+  background-color: var(--primary-color, #CCFF00);
+  color: #0B0B0F !important;
 }
 
 .itemDisabled {
-  opacity: 0.5;
+  opacity: 0.4;
   pointer-events: none;
 }
 
 .separator {
-  height: 1px;
-  background-color: var(--border-color, #2a2a40);
-  margin: 4px 0;
+  height: 2px;
+  background-color: var(--border-color, #2E2E38);
+  margin: 6px 0;
 }
 
 .shortcut {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 600;
   opacity: 0.6;
+}
+
+.item:hover .shortcut {
+  opacity: 0.9;
 }
 
 .icon {
@@ -103,21 +118,21 @@
 }
 
 .dirtyDot {
-  color: #fbbf24; /* amber-400 */
+  color: var(--warning-color, #FED639);
   font-size: 0.65rem;
   margin-left: 6px;
-  filter: drop-shadow(0 0 3px rgba(251, 191, 36, 0.6));
+  filter: drop-shadow(0 0 4px rgba(254, 214, 57, 0.6));
   animation: pulseDot 2s infinite ease-in-out;
 }
 
 @keyframes pulseDot {
   0%, 100% { opacity: 0.6; transform: scale(0.95); }
-  50% { opacity: 1; transform: scale(1.1); }
+  50% { opacity: 1; transform: scale(1.15); }
 }
 
 .item:disabled {
   opacity: 0.35;
   cursor: not-allowed;
   background-color: transparent !important;
-  color: var(--text-muted, #9ca3af) !important;
+  color: var(--text-muted, #A0A0B0) !important;
 }

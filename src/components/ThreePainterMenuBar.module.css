@@ -2,12 +2,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 52px;
-  background: rgba(18, 18, 20, 0.7);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  height: 48px;
+  background: var(--background-color, #0B0B0F);
+  border-bottom: 2px solid var(--border-color, #2E2E38);
   padding: 0 16px;
-  color: #e4e4e7;
+  color: var(--text-color, #F4F4F9);
   font-family: inherit;
   z-index: 50;
   user-select: none;
@@ -23,20 +22,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  color: #a1a1aa;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm, 8px);
+  background: var(--surface-color, #16161E);
+  border: 2px solid var(--border-color, #2E2E38);
+  color: var(--text-muted, #A0A0B0);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .backButton:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--surface-hover, #21212B);
+  color: var(--primary-color, #CCFF00);
+  border-color: var(--primary-color, #CCFF00);
 }
 
 .brand {
@@ -46,21 +45,24 @@
 }
 
 .badge {
-  background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
-  color: #ffffff;
+  background: var(--primary-color, #CCFF00);
+  color: #0B0B0F;
   font-size: 0.65rem;
-  font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm, 6px);
   letter-spacing: 0.5px;
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+  border: 1.5px solid #0B0B0F;
+  box-shadow: 2px 2px 0px var(--accent-color, #00F0FF);
 }
 
 .brandText {
   font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  background: linear-gradient(90deg, #ffffff, #d8b4fe);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: linear-gradient(90deg, #ffffff, var(--text-muted, #A0A0B0));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -74,39 +76,43 @@
 
 .projectName {
   font-size: 0.9rem;
-  font-weight: 600;
-  color: #e4e4e7;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-color, #F4F4F9);
   cursor: pointer;
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm, 8px);
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0;
+  border: 2px solid transparent;
 }
 
 .projectName:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
+  background: var(--surface-hover, #21212B);
+  border-color: var(--border-color, #2E2E38);
+  color: var(--primary-color, #CCFF00);
 }
 
 .dirtyDot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: #f59e0b;
-  box-shadow: 0 0 8px #f59e0b;
+  background: var(--warning-color, #FED639);
+  box-shadow: 0 0 8px var(--warning-color, #FED639);
   display: inline-block;
 }
 
 .projectNameInputWrapper {
   display: flex;
   align-items: center;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(139, 92, 246, 0.4);
-  border-radius: 6px;
-  padding: 2px 4px;
+  background: #0B0B0F;
+  border: 2px solid var(--primary-color, #CCFF00);
+  border-radius: var(--radius-sm, 8px);
+  padding: 2px 6px;
 }
 
 .projectNameInput {
@@ -114,11 +120,12 @@
   border: none;
   color: #ffffff;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 850;
   outline: none;
   padding: 2px 6px;
   text-align: center;
   width: 200px;
+  font-family: inherit;
 }
 
 .rightSection {
@@ -130,13 +137,15 @@
 .autosaveBadge {
   display: flex;
   align-items: center;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(52, 211, 153, 0.08);
+  border: 1.5px solid rgba(52, 211, 153, 0.3);
   color: #34d399;
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   animation: fadeOut 3s forwards;
 }
 
@@ -150,32 +159,35 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  color: #a1a1aa;
-  padding: 6px 12px;
-  font-size: 0.8rem;
-  font-weight: 550;
+  background: var(--surface-color, #16161E);
+  border: 2px solid var(--border-color, #2E2E38);
+  border-radius: var(--radius-sm, 8px);
+  color: var(--text-muted, #A0A0B0);
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .toolbarButton:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--surface-hover, #21212B);
+  color: var(--text-color, #F4F4F9);
+  border-color: var(--primary-color, #CCFF00);
 }
 
 .saveButton {
-  background: rgba(139, 92, 246, 0.1) !important;
-  border-color: rgba(139, 92, 246, 0.2) !important;
-  color: #d8b4fe !important;
+  background: var(--primary-color, #CCFF00) !important;
+  border-color: #0B0B0F !important;
+  color: #0B0B0F !important;
+  box-shadow: 2px 2px 0px var(--accent-color, #00F0FF);
 }
 
 .saveButton:hover:not(:disabled) {
-  background: rgba(139, 92, 246, 0.18) !important;
-  border-color: rgba(139, 92, 246, 0.3) !important;
+  background: #ffffff !important;
+  color: #0B0B0F !important;
 }
 
 .spinner {
@@ -188,9 +200,9 @@
 }
 
 .divider {
-  width: 1px;
+  width: 2px;
   height: 18px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--border-color, #2E2E38);
   margin: 0 4px;
 }
 
@@ -198,19 +210,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm, 8px);
   background: transparent;
   border: none;
-  color: #71717a;
+  color: var(--text-muted, #A0A0B0);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .iconButton:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
+  background: var(--surface-hover, #21212B);
+  color: var(--primary-color, #CCFF00);
 }
 
 .iconButton:disabled {
