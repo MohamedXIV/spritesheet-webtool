@@ -145,6 +145,34 @@ export default function Home() {
             </svg>
           </Link>
         </div>
+
+        <div className={styles.toolCard}>
+          <div className={`${styles.toolIcon} ${styles.icon3d}`}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <polygon points="12 2 2 7 12 12 22 7 12 2" />
+              <polyline points="2 17 12 22 22 17" />
+              <polyline points="2 12 12 17 22 12" />
+              <line x1="12" y1="12" x2="12" y2="22" />
+            </svg>
+          </div>
+          <h2 className={styles.toolTitle}>3D Pixel-Painter</h2>
+          <p className={styles.toolDesc}>
+            Import 3D models, paint directly on UV textures in real-time, composite paint layers, 
+            and apply authentic console-style vertex snaps, wobbly texture coordinates, and dither filters.
+          </p>
+          <ul className={styles.toolFeatures}>
+            <li>✦ Import GLTF, GLB, OBJ, and FBX meshes</li>
+            <li>✦ 5-layer compositor with opacity & blend modes</li>
+            <li>✦ Maya-style paint (LMB) & navigate (RMB/MMB)</li>
+            <li>✦ Viewport-level classic PSX hardware shader</li>
+          </ul>
+          <Link href="/tools/3d-pixelator" className={`${styles.toolCta} ${styles.cta3d}`}>
+            Launch 3D Pixel-Painter
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </div>
       </section>
 
       {/* Recent Local Projects Dashboard Section */}
@@ -166,19 +194,27 @@ export default function Home() {
           <div className={styles.projectsGrid}>
             {projects.map((proj) => {
               const isSpritesheet = proj.type === 'spritesheet';
-              const targetLink = isSpritesheet
-                ? `/tools/video-to-spritesheet?project=${proj.id}`
-                : `/tools/pixelator?project=${proj.id}`;
+              const isPixelator = proj.type === 'pixelator';
+              const isThreePainter = proj.type === '3d-painter';
+
+              let targetLink = '';
+              if (isSpritesheet) targetLink = `/tools/video-to-spritesheet?project=${proj.id}`;
+              else if (isPixelator) targetLink = `/tools/pixelator?project=${proj.id}`;
+              else if (isThreePainter) targetLink = `/tools/3d-pixelator?project=${proj.id}`;
 
               return (
                 <div key={proj.id} className={styles.projectCard}>
                   <div className={styles.projectHeader}>
                     <span 
                       className={`${styles.projectTypeBadge} ${
-                        isSpritesheet ? styles.badgeSpritesheet : styles.badgePixelator
+                        isSpritesheet 
+                          ? styles.badgeSpritesheet 
+                          : isPixelator 
+                            ? styles.badgePixelator 
+                            : styles.badge3d
                       }`}
                     >
-                      {isSpritesheet ? '🎬 Spritesheet' : '👾 Pixelator'}
+                      {isSpritesheet ? '🎬 Spritesheet' : isPixelator ? '👾 Pixelator' : '📦 3D Painter'}
                     </span>
                     <div className={styles.projectActions}>
                       <button 
@@ -250,8 +286,8 @@ export default function Home() {
                       <strong>{formatDate(proj.updatedAt)}</strong>
                     </div>
                     <div className={styles.projectMetaRow}>
-                      <span>Frames Count:</span>
-                      <strong>{proj.frameCount} frames</strong>
+                      <span>{isThreePainter ? 'Layers Count:' : 'Frames Count:'}</span>
+                      <strong>{proj.frameCount} {isThreePainter ? 'layers' : 'frames'}</strong>
                     </div>
                   </div>
 

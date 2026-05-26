@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { saveProject, DbProject, ProjectMetadata } from '@/lib/projectDatabase';
+import { saveProject, DbProject, ProjectMetadata, DbProjectFrame } from '@/lib/projectDatabase';
 import { serializeProject } from '@/lib/frameStore';
 import { FrameState } from '@/lib/frameStore';
 
@@ -10,8 +10,10 @@ export function useProjectSave(options: {
   setProjectId: (id: string) => void;
   projectName: string;
   setProjectName: (name: string) => void;
-  type: 'spritesheet' | 'pixelator';
+  type: 'spritesheet' | 'pixelator' | '3d-painter';
   frameState: FrameState | null;
+  customFrames?: () => Promise<DbProjectFrame[]>; // Optional custom frames serializer
+  threePainterOptions?: any; // Custom settings for 3D painter
   fps: number;
   loopMode: string;
   previewBgMode?: string;
@@ -40,23 +42,30 @@ export function useProjectSave(options: {
 
   const triggerSave = useCallback(async (customName?: string) => {
     const currentOpts = optionsRef.current;
-    if (!currentOpts.frameState) return;
+    if (!currentOpts.frameState && !currentOpts.customFrames) return;
 
     setIsSaving(true);
     try {
-      // 1. Serialize active frames using our safe compile PNG Blobs method
-      const serialized = await serializeProject(currentOpts.frameState, currentOpts.fps);
+      // 1. Serialize frames
+      let dbFrames: DbProjectFrame[] = [];
+      if (currentOpts.customFrames) {
+        dbFrames = await currentOpts.customFrames();
+      } else if (currentOpts.frameState) {
+        const serialized = await serializeProject(currentOpts.frameState, currentOpts.fps);
+        dbFrames = serialized.frames;
+      }
 
       // 2. Build the project metadata structure
       const metadata: ProjectMetadata = {
-        folders: currentOpts.frameState.folders,
-        selectedIds: Array.from(currentOpts.frameState.selectedIds),
+        folders: currentOpts.frameState ? currentOpts.frameState.folders : [],
+        selectedIds: currentOpts.frameState ? Array.from(currentOpts.frameState.selectedIds) : [],
         fps: currentOpts.fps,
         loopMode: currentOpts.loopMode,
         previewBgMode: currentOpts.previewBgMode,
         previewBgColor: currentOpts.previewBgColor,
         pixelatorOptions: currentOpts.pixelatorOptions,
         slicerOptions: currentOpts.slicerOptions,
+        threePainterOptions: currentOpts.threePainterOptions,
       };
 
       // 3. Construct DbProject record
@@ -68,7 +77,7 @@ export function useProjectSave(options: {
         createdAt: Date.now(), // IndexedDB will overwrite the record if the ID matches
         updatedAt: Date.now(),
         metadata,
-        frames: serialized.frames,
+        frames: dbFrames,
       };
 
       // 4. Save to IndexedDB
@@ -87,26 +96,33 @@ export function useProjectSave(options: {
 
   const triggerSaveAs = useCallback(async (newName: string) => {
     const currentOpts = optionsRef.current;
-    if (!currentOpts.frameState) return;
+    if (!currentOpts.frameState && !currentOpts.customFrames) return;
 
     setIsSaving(true);
     try {
       // 1. Generate a brand new unique project ID
       const newId = `${currentOpts.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-      // 2. Serialize frames using our safe compile PNG Blobs method
-      const serialized = await serializeProject(currentOpts.frameState, currentOpts.fps);
+      // 2. Serialize frames
+      let dbFrames: DbProjectFrame[] = [];
+      if (currentOpts.customFrames) {
+        dbFrames = await currentOpts.customFrames();
+      } else if (currentOpts.frameState) {
+        const serialized = await serializeProject(currentOpts.frameState, currentOpts.fps);
+        dbFrames = serialized.frames;
+      }
 
       // 3. Build the project metadata structure
       const metadata: ProjectMetadata = {
-        folders: currentOpts.frameState.folders,
-        selectedIds: Array.from(currentOpts.frameState.selectedIds),
+        folders: currentOpts.frameState ? currentOpts.frameState.folders : [],
+        selectedIds: currentOpts.frameState ? Array.from(currentOpts.frameState.selectedIds) : [],
         fps: currentOpts.fps,
         loopMode: currentOpts.loopMode,
         previewBgMode: currentOpts.previewBgMode,
         previewBgColor: currentOpts.previewBgColor,
         pixelatorOptions: currentOpts.pixelatorOptions,
         slicerOptions: currentOpts.slicerOptions,
+        threePainterOptions: currentOpts.threePainterOptions,
       };
 
       // 4. Construct DbProject record
@@ -117,7 +133,7 @@ export function useProjectSave(options: {
         createdAt: Date.now(),
         updatedAt: Date.now(),
         metadata,
-        frames: serialized.frames,
+        frames: dbFrames,
       };
 
       // 5. Save to IndexedDB
@@ -150,8 +166,9 @@ export function useProjectSave(options: {
 
     const timer = setInterval(() => {
       const currentOpts = optionsRef.current;
-      // Only autosave if there are frames loaded and the workspace is dirty!
-      if (currentOpts.frameState && currentOpts.frameState.frames.length > 0 && currentOpts.isDirty) {
+      // Only autosave if there are frames loaded/customFrames exists and the workspace is dirty!
+      const hasContent = currentOpts.customFrames || (currentOpts.frameState && currentOpts.frameState.frames.length > 0);
+      if (hasContent && currentOpts.isDirty) {
         triggerSave().then(() => {
           setAutosaveNotification('Autosaved');
           setTimeout(() => setAutosaveNotification(null), 3000);

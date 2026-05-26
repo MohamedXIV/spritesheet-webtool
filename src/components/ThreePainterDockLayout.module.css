@@ -1,0 +1,138 @@
+.container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #09090b;
+}
+
+.layoutWrapper {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.panelContent {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  background: #09090b;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.panelContent::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.panelContent::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.panelContent::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #a1a1aa;
+  font-size: 0.85rem;
+  background: #09090b;
+}
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  text-align: center;
+  padding: 24px;
+  box-sizing: border-box;
+  background: #09090b;
+}
+
+.placeholderContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.placeholderIcon {
+  color: #52525b;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
+}
+
+.placeholder p {
+  font-size: 0.8rem;
+  color: #52525b;
+  margin: 0;
+  line-height: 1.4;
+  max-width: 200px;
+}
+
+/* FlexLayout dark theme adjustments specifically for our glassmorphism app */
+:global(.flexlayout__layout) {
+  background-color: #09090b !important;
+}
+
+:global(.flexlayout__tabset) {
+  background-color: rgba(18, 18, 20, 0.5) !important;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+}
+
+:global(.flexlayout__tabset_header) {
+  background-color: rgba(18, 18, 20, 0.8) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  padding-left: 4px;
+}
+
+:global(.flexlayout__tab) {
+  background-color: #09090b !important;
+}
+
+:global(.flexlayout__tab_button) {
+  font-size: 0.75rem !important;
+  font-weight: 550 !important;
+  color: #71717a !important;
+  padding: 4px 12px !important;
+  border-radius: 6px 6px 0 0 !important;
+  transition: all 0.2s ease !important;
+}
+
+:global(.flexlayout__tab_button--selected) {
+  background-color: #09090b !important;
+  color: #d8b4fe !important;
+  font-weight: 600 !important;
+  border-bottom: 2px solid #8b5cf6 !important;
+}
+
+:global(.flexlayout__tab_button:hover) {
+  color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+:global(.flexlayout__splitter) {
+  background-color: #09090b !important;
+  transition: background-color 0.2s ease !important;
+}
+
+:global(.flexlayout__splitter:hover), :global(.flexlayout__splitter_drag) {
+  background-color: rgba(139, 92, 246, 0.3) !important;
+}

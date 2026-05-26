@@ -1,0 +1,869 @@
+'use client';
+
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useProjectSave } from '@/hooks/useProjectSave';
+import { DbProjectFrame } from '@/lib/projectDatabase';
+import { PixelatorOptions, DEFAULT_PIXELATOR_OPTIONS, pixelateImage, hexToRgb } from '@/lib/pixelator';
+import { ThreePainterProvider, PaintingLayer, BrushTool } from '@/contexts/ThreePainterContext';
+import { ThreePainterDockLayout, ThreePainterDockLayoutRef } from '@/components/ThreePainterDockLayout';
+import { ThreePainterMenuBar } from '@/components/ThreePainterMenuBar';
+import { ThreePainter } from '@/lib/threePainter';
+import styles from './page.module.css';
+
+export default function ThreePainterPage() {
+  // 1. Workspace Identity
+  const [projectId, setProjectId] = useState<string>('');
+  const [projectName, setProjectName] = useState<string>('Untitled 3D Paint Project');
+  const [isDirty, setIsDirty] = useState(false);
+
+  // 2. Loaders State
+  const [loadedModelName, setLoadedModelName] = useState<string | null>(null);
+  const [loadedModelSize, setLoadedModelSize] = useState<number | null>(null);
+  const [isLoadingModel, setIsLoadingModel] = useState(false);
+  const [loadProgress, setLoadProgress] = useState(0);
+
+  // 3. Viewport & Painter instances
+  const [painter, setPainter] = useState<ThreePainter | null>(null);
+  const [psxEnabled, setPsxEnabled] = useState(false);
+  const [isPaintMode, setIsPaintMode] = useState(true);
+
+  // 4. Layers Stack (Max 5, index 0 is Base)
+  const [layers, setLayers] = useState<PaintingLayer[]>([]);
+  const [activeLayerId, setActiveLayerId] = useState<string>('');
+
+  // 5. Brush configurations
+  const [activeTool, setActiveTool] = useState<BrushTool>('brush');
+  const [brushColor, setBrushColor] = useState('#8b5cf6');
+  const [brushSize, setBrushSize] = useState(8);
+  const [brushOpacity, setBrushOpacity] = useState(1.0);
+  const [brushHardness, setBrushHardness] = useState(0.8);
+
+  // 6. Retro Pixelator configurations
+  const [pixelatorOptions, setPixelatorOptions] = useState<PixelatorOptions>({
+    ...DEFAULT_PIXELATOR_OPTIONS,
+    enabled: true,
+    pixelSize: 4,
+    palette: 'pico8',
+  });
+
+  // Panel layout references
+  const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set([
+    '3d-preview', 'brush-panel', 'layers-panel', 'pixelate-panel', 'export-panel'
+  ]));
+  const dockLayoutRef = useRef<ThreePainterDockLayoutRef>(null);
+
+  // Undo / Redo history stacks (stores snapshots of layers canvas pixel data)
+  const undoStackRef = useRef<Array<Array<{ id: string; imgData: ImageData }>>>([]);
+  const redoStackRef = useRef<Array<Array<{ id: string; imgData: ImageData }>>>([]);
+  
+  // Model binary data backup
+  const modelFileBlobRef = useRef<Blob | null>(null);
+  const isModelLoaded = !!loadedModelName;
+
+  // Generate unique project ID on mount
+  useEffect(() => {
+    if (!projectId) {
+      setProjectId(`3d-painter-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+    }
+  }, [projectId]);
+
+  /**
+   * Helper to capture a deep snapshot of all current layer canvases for the Undo stack
+   */
+  const captureHistorySnapshot = useCallback((): Array<{ id: string; imgData: ImageData }> => {
+    return layers.map(layer => {
+      const canvas = document.getElementById(`layer-canvas-${layer.id}`) as HTMLCanvasElement;
+      const ctx = canvas?.getContext('2d');
+      const imgData = ctx 
+        ? ctx.getImageData(0, 0, canvas.width, canvas.height) 
+        : new ImageData(256, 256);
+      return { id: layer.id, imgData };
+    });
+  }, [layers]);
+
+  /**
+   * Apply a history snapshot back to the layer canvases
+   */
+  const applyHistorySnapshot = useCallback((snapshot: Array<{ id: string; imgData: ImageData }>) => {
+    snapshot.forEach(snap => {
+      const canvas = document.getElementById(`layer-canvas-${snap.id}`) as HTMLCanvasElement;
+      const ctx = canvas?.getContext('2d');
+      if (ctx) {
+        ctx.putImageData(snap.imgData, 0, 0);
+      }
+    });
+    // Trigger compositing & update WebGL texture
+    compositeAndPixelate();
+  }, [layers]);
+
+  const undo = useCallback(() => {
+    if (undoStackRef.current.length === 0) return;
+    const current = captureHistorySnapshot();
+    redoStackRef.current.push(current);
+
+    const prev = undoStackRef.current.pop()!;
+    applyHistorySnapshot(prev);
+    setIsDirty(true);
+  }, [captureHistorySnapshot, applyHistorySnapshot]);
+
+  const redo = useCallback(() => {
+    if (redoStackRef.current.length === 0) return;
+    const current = captureHistorySnapshot();
+    undoStackRef.current.push(current);
+
+    const next = redoStackRef.current.pop()!;
+    applyHistorySnapshot(next);
+    setIsDirty(true);
+  }, [captureHistorySnapshot, applyHistorySnapshot]);
+
+  const canUndo = undoStackRef.current.length > 0;
+  const canRedo = redoStackRef.current.length > 0;
+
+  /**
+   * Main Layer Compositor & Pixelate Filter Engine
+   * Draws layers bottom-to-top using blend modes, runs pixelation, and updates WebGL
+   */
+  const compositeAndPixelate = useCallback(async () => {
+    const compositeCanvas = document.getElementById('three-painter-composite-canvas') as HTMLCanvasElement;
+    const ctx = compositeCanvas?.getContext('2d');
+    if (!compositeCanvas || !ctx) return;
+
+    ctx.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
+
+    // 1. Draw layers bottom-to-top
+    layers.forEach((layer) => {
+      if (!layer.visible) return;
+      const layerCanvas = document.getElementById(`layer-canvas-${layer.id}`) as HTMLCanvasElement;
+      if (!layerCanvas) return;
+
+      ctx.save();
+      ctx.globalAlpha = layer.opacity;
+      
+      // Map blendMode to Canvas globalCompositeOperation
+      if (layer.blendMode === 'multiply') ctx.globalCompositeOperation = 'multiply';
+      else if (layer.blendMode === 'screen') ctx.globalCompositeOperation = 'screen';
+      else if (layer.blendMode === 'overlay') ctx.globalCompositeOperation = 'overlay';
+      else ctx.globalCompositeOperation = 'source-over';
+
+      ctx.drawImage(layerCanvas, 0, 0);
+      ctx.restore();
+    });
+
+    // 2. If pixelation filter is active, run it through the pixelator engine
+    if (pixelatorOptions.enabled) {
+      try {
+        const bitmap = await createImageBitmap(compositeCanvas);
+        const processedBitmap = await pixelateImage(bitmap, pixelatorOptions);
+        
+        ctx.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
+        ctx.drawImage(processedBitmap, 0, 0);
+        
+        bitmap.close();
+        processedBitmap.close();
+      } catch (err) {
+        console.warn('Canvas pixelation filter skip:', err);
+      }
+    }
+
+    // 3. Upload composited canvas texture to WebGL shader sampler buffers
+    if (painter) {
+      painter.updateTexture();
+    }
+  }, [layers, pixelatorOptions, painter]);
+
+  // Trigger composite when layers list or filters change
+  useEffect(() => {
+    if (layers.length > 0) {
+      compositeAndPixelate();
+    }
+  }, [layers, pixelatorOptions, compositeAndPixelate]);
+
+  /**
+   * Custom Project Serialization for IndexedDB saving (model Blob + layer PNG Blobs)
+   */
+  const customFramesSerializer = useCallback(async (): Promise<DbProjectFrame[]> => {
+    const dbFrames: DbProjectFrame[] = [];
+    
+    // 1. Add model binary file Blob as Frame 0
+    if (modelFileBlobRef.current) {
+      dbFrames.push({
+        id: 'mesh-model-3d',
+        index: 0,
+        timestamp: Date.now(),
+        sourceId: 'model-3d',
+        sourceColor: '#8b5cf6',
+        blob: modelFileBlobRef.current,
+      });
+    }
+
+    // 2. Add layer canvases as PNG Blobs in Frame 1..k
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      const canvas = document.getElementById(`layer-canvas-${layer.id}`) as HTMLCanvasElement;
+      if (canvas) {
+        const blob = await new Promise<Blob | null>((res) => canvas.toBlob((b) => res(b), 'image/png'));
+        if (blob) {
+          dbFrames.push({
+            id: `layer-snap-${layer.id}`,
+            index: i + 1,
+            timestamp: Date.now(),
+            sourceId: `layer-${layer.id}`,
+            sourceColor: '#10b981',
+            blob,
+          });
+        }
+      }
+    }
+
+    return dbFrames;
+  }, [layers]);
+
+  // Hook up Database save mechanics
+  const {
+    triggerSave,
+    triggerSaveAs,
+    isSaving,
+    autosaveNotification,
+  } = useProjectSave({
+    projectId,
+    setProjectId,
+    projectName,
+    setProjectName,
+    type: '3d-painter',
+    frameState: null,
+    customFrames: customFramesSerializer,
+    threePainterOptions: {
+      loadedModelName,
+      loadedModelSize,
+      psxEnabled,
+      pixelatorOptions,
+      layers: layers.map(l => ({
+        id: l.id,
+        name: l.name,
+        opacity: l.opacity,
+        visible: l.visible,
+        blendMode: l.blendMode,
+      })),
+    },
+    fps: 12,
+    loopMode: 'normal',
+    isDirty,
+    markSaved: () => setIsDirty(false),
+  });
+
+  /**
+   * UI trigger to load a 3D mesh model file
+   */
+  const loadNewModel = async (file: File) => {
+    setIsLoadingModel(true);
+    setLoadProgress(0);
+    setLoadedModelName(file.name);
+    setLoadedModelSize(file.size);
+    modelFileBlobRef.current = file;
+
+    try {
+      const data = await file.arrayBuffer();
+      if (painter) {
+        await painter.loadModel(data, file.name);
+        
+        // Extract original texture image if present
+        const originalImage = painter.getLoadedOriginalTextureImage();
+        
+        // Setup initial default Layer canvases
+        initializeLayerCanvases(undefined, originalImage);
+        setIsDirty(true);
+
+        // Force viewport resize and fit after short delay to bypass React display: none -> block render lag
+        setTimeout(() => {
+          painter.handleResize();
+          painter.frameModel();
+        }, 80);
+      }
+      setIsLoadingModel(false);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to parse 3D model.');
+      resetWorkspace();
+      setIsLoadingModel(false);
+    }
+  };
+
+  /**
+   * Setup initial canvas layers (Base texture layer + Paint layer)
+   */
+  const initializeLayerCanvases = (
+    restoredLayers?: PaintingLayer[],
+    originalImage?: HTMLImageElement | HTMLCanvasElement | ImageBitmap | null
+  ) => {
+    // Clean old layers from DOM
+    const oldCanvases = document.querySelectorAll('[id^="layer-canvas-"]');
+    oldCanvases.forEach(el => el.remove());
+
+    if (restoredLayers && restoredLayers.length > 0) {
+      restoredLayers.forEach(l => {
+        const canvas = document.createElement('canvas');
+        canvas.id = `layer-canvas-${l.id}`;
+        canvas.width = 512;
+        canvas.height = 512;
+        document.body.appendChild(canvas);
+        canvas.style.position = 'absolute';
+        canvas.style.left = '-9999px';
+        canvas.style.top = '-9999px';
+        l.canvas = canvas;
+      });
+      setLayers(restoredLayers);
+      setActiveLayerId(restoredLayers[restoredLayers.length - 1].id);
+      return;
+    }
+
+    // Default: create Base layer + Paint layer 1
+    const baseId = `layer-${Date.now()}-base`;
+    const paintId = `layer-${Date.now()}-paint`;
+
+    const baseCanvas = document.createElement('canvas');
+    baseCanvas.id = `layer-canvas-${baseId}`;
+    baseCanvas.width = 512;
+    baseCanvas.height = 512;
+    document.body.appendChild(baseCanvas);
+    baseCanvas.style.position = 'absolute';
+    baseCanvas.style.left = '-9999px';
+    baseCanvas.style.top = '-9999px';
+    
+    // Paint baseline default off-white texture grid or the original model texture
+    const baseCtx = baseCanvas.getContext('2d')!;
+    if (originalImage) {
+      baseCtx.drawImage(originalImage, 0, 0, 512, 512);
+    } else {
+      baseCtx.fillStyle = '#e4e4e7';
+      baseCtx.fillRect(0, 0, 512, 512);
+      // Draw simple layout border
+      baseCtx.strokeStyle = '#a1a1aa';
+      baseCtx.strokeRect(0, 0, 512, 512);
+    }
+
+    const paintCanvas = document.createElement('canvas');
+    paintCanvas.id = `layer-canvas-${paintId}`;
+    paintCanvas.width = 512;
+    paintCanvas.height = 512;
+    document.body.appendChild(paintCanvas);
+    paintCanvas.style.position = 'absolute';
+    paintCanvas.style.left = '-9999px';
+    paintCanvas.style.top = '-9999px';
+
+    const defaultLayers: PaintingLayer[] = [
+      { id: baseId, name: 'Base Texture', opacity: 1.0, visible: true, blendMode: 'normal', canvas: baseCanvas },
+      { id: paintId, name: 'Paint layer 1', opacity: 1.0, visible: true, blendMode: 'normal', canvas: paintCanvas },
+    ];
+
+    setLayers(defaultLayers);
+    setActiveLayerId(paintId);
+  };
+
+  const resetWorkspace = () => {
+    setLoadedModelName(null);
+    setLoadedModelSize(null);
+    setLayers([]);
+    setActiveLayerId('');
+    modelFileBlobRef.current = null;
+    undoStackRef.current = [];
+    redoStackRef.current = [];
+    setIsDirty(false);
+    if (painter) painter.clearLoadedModel();
+  };
+
+  // Restore deep-linked IndexedDB project on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('project');
+    if (!id) return;
+
+    setIsLoadingModel(true);
+    setLoadProgress(10);
+
+    import('@/lib/projectDatabase').then(async ({ getProject }) => {
+      try {
+        const project = await getProject(id);
+        if (!project) {
+          alert('Local project not found.');
+          setIsLoadingModel(false);
+          return;
+        }
+
+        setProjectId(project.id);
+        setProjectName(project.name);
+
+        const opts = project.metadata.threePainterOptions;
+        if (opts) {
+          setLoadedModelName(opts.loadedModelName);
+          setLoadedModelSize(opts.loadedModelSize);
+          setPsxEnabled(opts.psxEnabled);
+          if (opts.pixelatorOptions) setPixelatorOptions(opts.pixelatorOptions);
+        }
+
+        // Re-construct meshes and textures from Blobs
+        const modelFrame = project.frames.find(f => f.index === 0);
+        if (modelFrame) {
+          modelFileBlobRef.current = modelFrame.blob;
+          
+          // Trigger ThreePainter mesh load
+          const buffer = await modelFrame.blob.arrayBuffer();
+          if (painter) {
+            await painter.loadModel(buffer, opts?.loadedModelName || 'model.glb');
+          }
+        }
+
+        // Reconstruct layer canvases
+        const restoredLayers: PaintingLayer[] = [];
+        const layerMeta = opts?.layers || [];
+
+        for (let i = 0; i < layerMeta.length; i++) {
+          const meta = layerMeta[i];
+          const frame = project.frames.find(f => f.index === i + 1);
+          if (frame) {
+            const canvas = document.createElement('canvas');
+            canvas.id = `layer-canvas-${meta.id}`;
+            canvas.width = 512;
+            canvas.height = 512;
+            document.body.appendChild(canvas);
+            canvas.style.position = 'absolute';
+            canvas.style.left = '-9999px';
+            canvas.style.top = '-9999px';
+
+            const ctx2d = canvas.getContext('2d')!;
+            const img = new Image();
+            img.src = URL.createObjectURL(frame.blob);
+            await new Promise((resolve) => {
+              img.onload = () => {
+                ctx2d.drawImage(img, 0, 0);
+                URL.revokeObjectURL(img.src);
+                resolve(null);
+              };
+            });
+
+            restoredLayers.push({
+              id: meta.id,
+              name: meta.name,
+              opacity: meta.opacity,
+              visible: true,
+              blendMode: meta.blendMode,
+              canvas,
+            });
+          }
+        }
+
+        if (restoredLayers.length > 0) {
+          initializeLayerCanvases(restoredLayers);
+        }
+
+        setIsDirty(false);
+        setIsLoadingModel(false);
+
+        // Force viewport resize and fit after short delay to bypass React display: none -> block render lag
+        if (painter) {
+          setTimeout(() => {
+            painter.handleResize();
+            painter.frameModel();
+          }, 80);
+        }
+      } catch (err) {
+        console.error('Failed to restore 3D project:', err);
+        alert('Failed to load project.');
+        setIsLoadingModel(false);
+      }
+    });
+  }, [painter]);
+
+  /**
+   * Main direct 2D Canvas drawing execution on 3D UV Raycast intersections
+   */
+  const handleThreePaintStroke = useCallback((u: number, v: number, isStart: boolean, isEnd: boolean) => {
+    if (isEnd) {
+      setIsDirty(true);
+      return;
+    }
+
+    const activeLayer = layers.find(l => l.id === activeLayerId);
+    const canvas = document.getElementById(`layer-canvas-${activeLayerId}`) as HTMLCanvasElement;
+    const ctx = canvas?.getContext('2d');
+    
+    if (!canvas || !ctx || !activeLayer || !activeLayer.visible) return;
+
+    const x = Math.floor(u * canvas.width);
+    const y = Math.floor((1 - v) * canvas.height);
+
+    if (isStart) {
+      // 1. Push current state to undo history
+      const snap = captureHistorySnapshot();
+      undoStackRef.current.push(snap);
+      redoStackRef.current.length = 0; // Clear redo stack on new actions
+    }
+
+    // 2. Perform tool specific canvas drawing
+    ctx.save();
+
+    if (activeTool === 'bucket') {
+      // Flood Fill Tool
+      floodFill(ctx, x, y, brushColor);
+    } else {
+      // Brush & Eraser Tools
+      ctx.fillStyle = brushColor;
+      ctx.strokeStyle = brushColor;
+      ctx.lineWidth = brushSize;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      if (activeTool === 'eraser') {
+        ctx.globalCompositeOperation = 'destination-out';
+      }
+
+      ctx.beginPath();
+      // Since it's a dragging path, we draw standard circular coordinates
+      const radialGradient = ctx.createRadialGradient(x, y, 0, x, y, brushSize / 2);
+      
+      if (activeTool === 'eraser') {
+        radialGradient.addColorStop(0, `rgba(0,0,0,1)`);
+        radialGradient.addColorStop(brushHardness, `rgba(0,0,0,1)`);
+        radialGradient.addColorStop(1, `rgba(0,0,0,0)`);
+        ctx.fillStyle = radialGradient;
+      } else {
+        const rgb = hexToRgb(brushColor);
+        radialGradient.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${brushOpacity})`);
+        radialGradient.addColorStop(brushHardness, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${brushOpacity})`);
+        radialGradient.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
+        ctx.fillStyle = radialGradient;
+      }
+
+      ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+
+    // 3. Composite and update WebGL Texture immediately
+    compositeAndPixelate();
+  }, [layers, activeLayerId, activeTool, brushColor, brushSize, brushOpacity, brushHardness, compositeAndPixelate, captureHistorySnapshot]);
+
+  // Hook painting bridge dispatcher globally so ThreePainter can invoke it
+  useEffect(() => {
+    (window as any).__threePaintStrokeDispatcher = handleThreePaintStroke;
+    return () => {
+      delete (window as any).__threePaintStrokeDispatcher;
+    };
+  }, [handleThreePaintStroke]);
+
+  /**
+   * Classic Queue-based Canvas Flood Fill Algorithm
+   */
+  const floodFill = (ctx: CanvasRenderingContext2D, startX: number, startY: number, fillColor: string) => {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+
+    const fillRgb = hexToRgb(fillColor);
+    const startIdx = (startY * width + startX) * 4;
+    const startR = data[startIdx];
+    const startG = data[startIdx + 1];
+    const startB = data[startIdx + 2];
+    const startA = data[startIdx + 3];
+
+    // Verify it is not already filled
+    if (startR === fillRgb[0] && startG === fillRgb[1] && startB === fillRgb[2] && startA === 255) {
+      return;
+    }
+
+    const queue: [number, number][] = [[startX, startY]];
+    const visited = new Set<string>();
+
+    while (queue.length > 0) {
+      const [x, y] = queue.shift()!;
+      const key = `${x},${y}`;
+      if (visited.has(key)) continue;
+      visited.add(key);
+
+      const idx = (y * width + x) * 4;
+      data[idx] = fillRgb[0];
+      data[idx + 1] = fillRgb[1];
+      data[idx + 2] = fillRgb[2];
+      data[idx + 3] = 255;
+
+      const neighbors = [
+        [x + 1, y],
+        [x - 1, y],
+        [x, y + 1],
+        [x, y - 1],
+      ];
+
+      for (const [nx, ny] of neighbors) {
+        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+          const nIdx = (ny * width + nx) * 4;
+          const nr = data[nIdx];
+          const ng = data[nIdx + 1];
+          const nb = data[nIdx + 2];
+          const na = data[nIdx + 3];
+
+          // Check if neighbor color is similar
+          if (
+            Math.abs(nr - startR) < 15 &&
+            Math.abs(ng - startG) < 15 &&
+            Math.abs(nb - startB) < 15 &&
+            Math.abs(na - startA) < 15
+          ) {
+            queue.push([nx, ny]);
+          }
+        }
+      }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+  };
+
+  // Keyboard Shortcuts (Ctrl+Z / Ctrl+Y / Ctrl+S / F / .)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent shortcut interference if user is focused inside input elements
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        if (e.key === 'z' || e.key === 'Z') {
+          e.preventDefault();
+          undo();
+        } else if (e.key === 'y' || e.key === 'Y') {
+          e.preventDefault();
+          redo();
+        } else if (e.key === 's' || e.key === 'S') {
+          e.preventDefault();
+          triggerSave();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        redo();
+      } else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        if ((e.key === 'f' || e.key === 'F' || e.key === '.') && painter) {
+          e.preventDefault();
+          painter.frameModel();
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo, triggerSave, painter]);
+
+  // Clean on unmount
+  useEffect(() => {
+    return () => {
+      const oldCanvases = document.querySelectorAll('[id^="layer-canvas-"]');
+      oldCanvases.forEach(el => el.remove());
+      const compositeCanvas = document.getElementById('three-painter-composite-canvas');
+      compositeCanvas?.remove();
+    };
+  }, []);
+
+  /**
+   * Layer modification handlers
+   */
+  const handleAddLayer = () => {
+    if (layers.length >= 5) return;
+    const newId = `layer-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    
+    const canvas = document.createElement('canvas');
+    canvas.id = `layer-canvas-${newId}`;
+    canvas.width = 512;
+    canvas.height = 512;
+    document.body.appendChild(canvas);
+    canvas.style.position = 'absolute';
+    canvas.style.left = '-9999px';
+    canvas.style.top = '-9999px';
+
+    const newLayer: PaintingLayer = {
+      id: newId,
+      name: `Paint layer ${layers.length}`,
+      opacity: 1.0,
+      visible: true,
+      blendMode: 'normal',
+      canvas,
+    };
+
+    const snap = captureHistorySnapshot();
+    undoStackRef.current.push(snap);
+
+    setLayers([...layers, newLayer]);
+    setActiveLayerId(newId);
+    setIsDirty(true);
+  };
+
+  const handleDeleteLayer = (id: string) => {
+    const targetIdx = layers.findIndex(l => l.id === id);
+    if (targetIdx <= 0) return; // Base layer cannot be deleted
+
+    const snap = captureHistorySnapshot();
+    undoStackRef.current.push(snap);
+
+    // Delete canvas DOM node
+    document.getElementById(`layer-canvas-${id}`)?.remove();
+
+    const remaining = layers.filter(l => l.id !== id);
+    setLayers(remaining);
+    
+    // Shift active layer if deleted
+    if (activeLayerId === id) {
+      setActiveLayerId(remaining[remaining.length - 1].id);
+    }
+    setIsDirty(true);
+  };
+
+  const handleToggleLayerVisibility = (id: string) => {
+    setLayers(prev => prev.map(l => l.id === id ? { ...l, visible: !l.visible } : l));
+  };
+
+  const handleSetLayerOpacity = (id: string, opacity: number) => {
+    setLayers(prev => prev.map(l => l.id === id ? { ...l, opacity } : l));
+  };
+
+  const handleSetLayerBlendMode = (id: string, blendMode: PaintingLayer['blendMode']) => {
+    setLayers(prev => prev.map(l => l.id === id ? { ...l, blendMode } : l));
+  };
+
+  const handleReorderLayers = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === 0 || toIndex === 0) return; // Base layer must stay at index 0
+
+    const snap = captureHistorySnapshot();
+    undoStackRef.current.push(snap);
+
+    const reordered = [...layers];
+    const [moved] = reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, moved);
+
+    setLayers(reordered);
+    setIsDirty(true);
+  };
+
+  const handleUpdatePixelatorOptions = (opts: Partial<PixelatorOptions>) => {
+    setPixelatorOptions(prev => ({ ...prev, ...opts }));
+  };
+
+  const togglePanel = useCallback((panelId: string) => {
+    const newVisible = new Set(visiblePanels);
+    if (newVisible.has(panelId)) {
+      newVisible.delete(panelId);
+      dockLayoutRef.current?.removeTab(panelId);
+    } else {
+      newVisible.add(panelId);
+      dockLayoutRef.current?.addTab(panelId);
+    }
+    setVisiblePanels(newVisible);
+  }, [visiblePanels]);
+
+  const resetLayout = useCallback(() => {
+    dockLayoutRef.current?.resetLayout();
+    setVisiblePanels(new Set([
+      '3d-preview', 'brush-panel', 'layers-panel', 'pixelate-panel', 'export-panel'
+    ]));
+  }, []);
+
+  // Construct Context Provider value
+  const contextValue = useMemo(() => ({
+    projectId,
+    projectName,
+    setProjectName,
+    isSaving,
+    autosaveNotification,
+    loadedModelName,
+    loadedModelSize,
+    isModelLoaded,
+    loadNewModel,
+    resetWorkspace,
+    isLoadingModel,
+    loadProgress,
+    layers,
+    activeLayerId,
+    setActiveLayerId,
+    addLayer: handleAddLayer,
+    deleteLayer: handleDeleteLayer,
+    toggleLayerVisibility: handleToggleLayerVisibility,
+    setLayerOpacity: handleSetLayerOpacity,
+    setLayerBlendMode: handleSetLayerBlendMode,
+    reorderLayers: handleReorderLayers,
+    activeTool,
+    setActiveTool,
+    brushColor,
+    setBrushColor,
+    brushSize,
+    setBrushSize,
+    brushOpacity,
+    setBrushOpacity,
+    brushHardness,
+    setBrushHardness,
+    pixelatorOptions,
+    updatePixelatorOptions: handleUpdatePixelatorOptions,
+    psxEnabled,
+    setPsxEnabled,
+    isPaintMode,
+    setIsPaintMode,
+    painter,
+    setPainterInstance: setPainter,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    isDirty,
+    triggerSave,
+    triggerSaveAs,
+    visiblePanels,
+    togglePanel,
+    resetLayout,
+  }), [
+    projectId,
+    projectName,
+    isSaving,
+    autosaveNotification,
+    loadedModelName,
+    loadedModelSize,
+    isModelLoaded,
+    isLoadingModel,
+    loadProgress,
+    layers,
+    activeLayerId,
+    activeTool,
+    brushColor,
+    brushSize,
+    brushOpacity,
+    brushHardness,
+    pixelatorOptions,
+    psxEnabled,
+    isPaintMode,
+    painter,
+    canUndo,
+    canRedo,
+    isDirty,
+    visiblePanels,
+  ]);
+
+  return (
+    <ThreePainterProvider value={contextValue}>
+      <div className={styles.dockContainer}>
+        {/* Glassmorphic Menubar */}
+        <header className={styles.header}>
+          <ThreePainterMenuBar />
+          <div className={styles.headerInfo}>
+            {isModelLoaded && (
+              <span className={styles.modelTag}>
+                📦 {loadedModelName} ({(loadedModelSize! / 1024 / 1024).toFixed(2)} MB)
+              </span>
+            )}
+          </div>
+        </header>
+
+        {/* Flexlayout Draggable Panel Layouts */}
+        <ThreePainterDockLayout
+          ref={dockLayoutRef}
+          onVisiblePanelsChange={setVisiblePanels}
+        />
+      </div>
+    </ThreePainterProvider>
+  );
+}

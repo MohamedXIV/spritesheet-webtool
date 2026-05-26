@@ -17,6 +17,21 @@ export interface ProjectMetadata {
     cellWidth: number;
     cellHeight: number;
   };
+  threePainterOptions?: {
+    loadedModelName: string | null;
+    loadedModelSize: number | null;
+    pixelatorOptions: any;
+    brushOptions: any;
+    psxEnabled: boolean;
+    layers: {
+      id: string;
+      name: string;
+      opacity: number;
+      visible: boolean;
+      blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
+      frameId: string;
+    }[];
+  };
 }
 
 export interface DbProjectFrame {
@@ -31,7 +46,7 @@ export interface DbProjectFrame {
 export interface DbProject {
   id: string;
   name: string;
-  type: 'spritesheet' | 'pixelator';
+  type: 'spritesheet' | 'pixelator' | '3d-painter';
   createdAt: number;
   updatedAt: number;
   metadata: ProjectMetadata;
@@ -41,7 +56,7 @@ export interface DbProject {
 export interface ProjectSummary {
   id: string;
   name: string;
-  type: 'spritesheet' | 'pixelator';
+  type: 'spritesheet' | 'pixelator' | '3d-painter';
   createdAt: number;
   updatedAt: number;
   frameCount: number;

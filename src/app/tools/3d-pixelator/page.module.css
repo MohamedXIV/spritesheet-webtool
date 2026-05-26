@@ -1,0 +1,42 @@
+.dockContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #09090b;
+}
+
+.header {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  z-index: 60;
+  background: #09090b;
+}
+
+.headerInfo {
+  position: absolute;
+  right: 180px;
+  top: 13px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.modelTag {
+  font-size: 0.72rem;
+  color: #a1a1aa;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 550;
+  backdrop-filter: blur(4px);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

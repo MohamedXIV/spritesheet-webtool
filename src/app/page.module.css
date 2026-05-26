@@ -164,6 +164,12 @@
   color: #34d399;
 }
 
+.icon3d {
+  background: rgba(168, 85, 247, 0.08);
+  border-color: rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+}
+
 .toolTitle {
   font-size: 1.6rem;
   font-weight: 700;
@@ -220,6 +226,15 @@
 
 .ctaPixel:hover {
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+}
+
+.cta3d {
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  box-shadow: 0 4px 14px rgba(168, 85, 247, 0.3);
+}
+
+.cta3d:hover {
+  box-shadow: 0 6px 20px rgba(168, 85, 247, 0.5);
 }
 
 /* Lower Highlights Section */
@@ -352,6 +367,12 @@
   background: rgba(16, 185, 129, 0.15);
   border: 1px solid rgba(16, 185, 129, 0.3);
   color: #34d399;
+}
+
+.badge3d {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  color: #c084fc;
 }
 
 .projectActions {

@@ -1,0 +1,272 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  color: #e4e4e7;
+  font-family: inherit;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.layerCount {
+  font-size: 0.85rem;
+  font-weight: 550;
+  color: #a1a1aa;
+}
+
+.addBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #8b5cf6;
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.addBtn:hover:not(:disabled) {
+  background: #7c3aed;
+}
+
+.addBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.layerList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}
+
+.layerList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.layerList::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.layerList::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.layerRow {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.layerRow:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.activeRow {
+  background: rgba(139, 92, 246, 0.05) !important;
+  border-color: rgba(139, 92, 246, 0.3) !important;
+  box-shadow: inset 0 0 10px rgba(139, 92, 246, 0.05);
+}
+
+.rowMain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.visibilityBtn {
+  background: transparent;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s ease;
+}
+
+.visibilityBtn:hover {
+  color: #a1a1aa;
+}
+
+.visibleColor {
+  color: #a855f7 !important;
+}
+
+.layerName {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 550;
+  color: #e4e4e7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.baseTag {
+  color: #71717a;
+  font-weight: 400;
+  font-size: 0.7rem;
+  margin-left: 4px;
+}
+
+.renameWrapper {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  align-items: center;
+}
+
+.renameInput {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  border-radius: 4px;
+  color: #ffffff;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.saveRenameBtn {
+  background: #10b981;
+  border: none;
+  border-radius: 4px;
+  color: #ffffff;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+}
+
+.layerRow:hover .actions {
+  opacity: 1;
+}
+
+.actionBtn {
+  background: transparent;
+  border: none;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.actionBtn:hover:not(:disabled) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.actionBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.deleteBtn:hover {
+  color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.rowControls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.75rem;
+  color: #a1a1aa;
+}
+
+.controlGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.select {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  color: #ffffff;
+  padding: 3px 6px;
+  outline: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sliderContainer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.slider {
+  -webkit-appearance: none;
+  flex: 1;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1px;
+  outline: none;
+  cursor: pointer;
+}
+
+.slider:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #a855f7;
+}
+
+.percentageVal {
+  font-family: monospace;
+  min-width: 32px;
+  text-align: right;
+  color: #ffffff;
+}
