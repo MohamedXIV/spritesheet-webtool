@@ -3,11 +3,12 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { ThreePainter } from '@/lib/threePainter';
 import { PixelatorOptions } from '@/lib/pixelator';
+import { ShadingMode, LightingSettings } from '@/lib/lightingPresets';
 
 export interface PaintingLayer {
   id: string;
   name: string;
-  opacity: number;      // 0 to 1
+  opacity: number;
   visible: boolean;
   blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
   canvas: HTMLCanvasElement | null;
@@ -21,17 +22,17 @@ export interface ThreePainterContextValue {
   setProjectName: (name: string) => void;
   isSaving: boolean;
   autosaveNotification: string | null;
-  
-  // Model state
+
+  // Model
   loadedModelName: string | null;
   loadedModelSize: number | null;
   isModelLoaded: boolean;
   loadNewModel: (file: File) => Promise<void>;
   resetWorkspace: () => void;
   isLoadingModel: boolean;
-  loadProgress: number; // 0 to 100
-  
-  // Layers state
+  loadProgress: number;
+
+  // Layers
   layers: PaintingLayer[];
   activeLayerId: string;
   setActiveLayerId: (id: string) => void;
@@ -41,8 +42,8 @@ export interface ThreePainterContextValue {
   setLayerOpacity: (id: string, opacity: number) => void;
   setLayerBlendMode: (id: string, mode: PaintingLayer['blendMode']) => void;
   reorderLayers: (fromIndex: number, toIndex: number) => void;
-  
-  // Brush options
+
+  // Brush
   activeTool: BrushTool;
   setActiveTool: (tool: BrushTool) => void;
   brushColor: string;
@@ -53,22 +54,32 @@ export interface ThreePainterContextValue {
   setBrushOpacity: (opacity: number) => void;
   brushHardness: number;
   setBrushHardness: (hardness: number) => void;
-  
-  // Pixelator options
+
+  // Pixelator
   pixelatorOptions: PixelatorOptions;
   updatePixelatorOptions: (opts: Partial<PixelatorOptions>) => void;
-  
-  // Viewport Settings
+
+  // Viewport
   psxEnabled: boolean;
   setPsxEnabled: (enabled: boolean) => void;
   isPaintMode: boolean;
   setIsPaintMode: (paint: boolean) => void;
-  
-  // ThreePainter Instance Reference
+
+  // Shading mode
+  shadingMode: ShadingMode;
+  setShadingMode: (mode: ShadingMode) => void;
+
+  // Lighting
+  activeLightingPresetId: string;
+  setActiveLightingPresetId: (id: string) => void;
+  lightingSettings: LightingSettings;
+  updateLightingSettings: (settings: Partial<LightingSettings>) => void;
+
+  // ThreePainter instance
   painter: ThreePainter | null;
   setPainterInstance: (painter: ThreePainter | null) => void;
-  
-  // Undo/Redo/Save Callbacks
+
+  // History / Save
   undo: () => void;
   redo: () => void;
   canUndo: boolean;
@@ -76,20 +87,20 @@ export interface ThreePainterContextValue {
   isDirty: boolean;
   triggerSave: (customName?: string) => Promise<void>;
   triggerSaveAs: (name: string) => Promise<void>;
-  
-  // Visible panels
+
+  // Panels
   visiblePanels: Set<string>;
   togglePanel: (panelId: string) => void;
   resetLayout: () => void;
 }
 
+export type { ShadingMode, LightingSettings };
+
 const ThreePainterContext = createContext<ThreePainterContextValue | null>(null);
 
 export function useThreePainterContext() {
   const ctx = useContext(ThreePainterContext);
-  if (!ctx) {
-    throw new Error('useThreePainterContext must be used within ThreePainterProvider');
-  }
+  if (!ctx) throw new Error('useThreePainterContext must be used within ThreePainterProvider');
   return ctx;
 }
 
