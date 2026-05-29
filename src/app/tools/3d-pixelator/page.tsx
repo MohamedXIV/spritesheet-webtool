@@ -12,41 +12,34 @@ import { ThreePainter } from '@/lib/threePainter';
 import styles from './page.module.css';
 
 export default function ThreePainterPage() {
-  // 1. Workspace Identity
-  const [projectId, setProjectId] = useState<string>('');
+  const [projectId,   setProjectId]   = useState<string>('');
   const [projectName, setProjectName] = useState<string>('Untitled 3D Paint Project');
-  const [isDirty, setIsDirty] = useState(false);
+  const [isDirty,     setIsDirty]     = useState(false);
 
-  // 2. Loaders State
   const [loadedModelName, setLoadedModelName] = useState<string | null>(null);
   const [loadedModelSize, setLoadedModelSize] = useState<number | null>(null);
-  const [isLoadingModel, setIsLoadingModel] = useState(false);
-  const [loadProgress, setLoadProgress] = useState(0);
+  const [isLoadingModel,  setIsLoadingModel]  = useState(false);
+  const [loadProgress,    setLoadProgress]    = useState(0);
 
-  // 3. Viewport & Painter instances
-  const [painter, setPainter] = useState<ThreePainter | null>(null);
-  const [psxEnabled, setPsxEnabled] = useState(false);
-  const [isPaintMode, setIsPaintMode] = useState(true);
+  const [painter,      setPainter]      = useState<ThreePainter | null>(null);
+  const [psxEnabled,   setPsxEnabled]   = useState(false);
+  const [isPaintMode,  setIsPaintMode]  = useState(true);
 
-  // 4. Shading & Lighting
-  const [shadingMode, setShadingMode] = useState<ShadingMode>('unlit');
-  const [activeLightingPresetId, setActiveLightingPresetId] = useState<string>(DEFAULT_LIGHTING_PRESET_ID);
-  const [lightingSettings, setLightingSettings] = useState<LightingSettings>(
+  const [shadingMode,             setShadingMode]             = useState<ShadingMode>('unlit');
+  const [activeLightingPresetId,  setActiveLightingPresetId]  = useState<string>(DEFAULT_LIGHTING_PRESET_ID);
+  const [lightingSettings,        setLightingSettings]        = useState<LightingSettings>(
     LIGHTING_PRESETS.find(p => p.id === DEFAULT_LIGHTING_PRESET_ID)!.settings
   );
 
-  // 5. Layers Stack (Max 5, index 0 is Base)
-  const [layers, setLayers] = useState<PaintingLayer[]>([]);
+  const [layers,        setLayers]        = useState<PaintingLayer[]>([]);
   const [activeLayerId, setActiveLayerId] = useState<string>('');
 
-  // 6. Brush configurations
-  const [activeTool, setActiveTool] = useState<BrushTool>('brush');
-  const [brushColor, setBrushColor] = useState('#8b5cf6');
-  const [brushSize, setBrushSize] = useState(8);
-  const [brushOpacity, setBrushOpacity] = useState(1.0);
+  const [activeTool,    setActiveTool]    = useState<BrushTool>('brush');
+  const [brushColor,    setBrushColor]    = useState('#8b5cf6');
+  const [brushSize,     setBrushSize]     = useState(8);
+  const [brushOpacity,  setBrushOpacity]  = useState(1.0);
   const [brushHardness, setBrushHardness] = useState(0.8);
 
-  // 7. Retro Pixelator configurations
   const [pixelatorOptions, setPixelatorOptions] = useState<PixelatorOptions>({
     ...DEFAULT_PIXELATOR_OPTIONS,
     enabled: true,
@@ -54,18 +47,16 @@ export default function ThreePainterPage() {
     palette: 'pico8',
   });
 
-  // Panel layout references
   const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set([
-    '3d-preview', 'brush-panel', 'layers-panel', 'pixelate-panel', 'export-panel', 'lighting-panel'
+    '3d-preview', 'brush-panel', 'layers-panel', 'lighting-panel',
+    'texture-maps', 'pixelate-panel', 'export-panel',
   ]));
-  const dockLayoutRef = useRef<ThreePainterDockLayoutRef>(null);
 
-  // Undo / Redo history stacks
-  const undoStackRef = useRef<Array<Array<{ id: string; imgData: ImageData }>>>([]);
-  const redoStackRef = useRef<Array<Array<{ id: string; imgData: ImageData }>>>([]);
-
-  const modelFileBlobRef = useRef<Blob | null>(null);
-  const isModelLoaded = !!loadedModelName;
+  const dockLayoutRef     = useRef<ThreePainterDockLayoutRef>(null);
+  const undoStackRef      = useRef<Array<Array<{ id: string; imgData: ImageData }>>>([]);
+  const redoStackRef      = useRef<Array<Array<{ id: string; imgData: ImageData }>>>([]);
+  const modelFileBlobRef  = useRef<Blob | null>(null);
+  const isModelLoaded     = !!loadedModelName;
 
   useEffect(() => {
     if (!projectId) {
@@ -75,8 +66,8 @@ export default function ThreePainterPage() {
 
   const captureHistorySnapshot = useCallback((): Array<{ id: string; imgData: ImageData }> => {
     return layers.map(layer => {
-      const canvas = document.getElementById(`layer-canvas-${layer.id}`) as HTMLCanvasElement;
-      const ctx = canvas?.getContext('2d');
+      const canvas  = document.getElementById(`layer-canvas-${layer.id}`) as HTMLCanvasElement;
+      const ctx     = canvas?.getContext('2d');
       const imgData = ctx ? ctx.getImageData(0, 0, canvas.width, canvas.height) : new ImageData(256, 256);
       return { id: layer.id, imgData };
     });
@@ -85,21 +76,21 @@ export default function ThreePainterPage() {
   const applyHistorySnapshot = useCallback((snapshot: Array<{ id: string; imgData: ImageData }>) => {
     snapshot.forEach(snap => {
       const canvas = document.getElementById(`layer-canvas-${snap.id}`) as HTMLCanvasElement;
-      const ctx = canvas?.getContext('2d');
+      const ctx    = canvas?.getContext('2d');
       if (ctx) ctx.putImageData(snap.imgData, 0, 0);
     });
     compositeAndPixelate();
   }, [layers]);
 
   const undo = useCallback(() => {
-    if (undoStackRef.current.length === 0) return;
+    if (!undoStackRef.current.length) return;
     redoStackRef.current.push(captureHistorySnapshot());
     applyHistorySnapshot(undoStackRef.current.pop()!);
     setIsDirty(true);
   }, [captureHistorySnapshot, applyHistorySnapshot]);
 
   const redo = useCallback(() => {
-    if (redoStackRef.current.length === 0) return;
+    if (!redoStackRef.current.length) return;
     undoStackRef.current.push(captureHistorySnapshot());
     applyHistorySnapshot(redoStackRef.current.pop()!);
     setIsDirty(true);
@@ -112,50 +103,40 @@ export default function ThreePainterPage() {
     const compositeCanvas = document.getElementById('three-painter-composite-canvas') as HTMLCanvasElement;
     const ctx = compositeCanvas?.getContext('2d');
     if (!compositeCanvas || !ctx) return;
-
     ctx.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
-
     layers.forEach((layer) => {
       if (!layer.visible) return;
       const layerCanvas = document.getElementById(`layer-canvas-${layer.id}`) as HTMLCanvasElement;
       if (!layerCanvas) return;
       ctx.save();
       ctx.globalAlpha = layer.opacity;
-      if (layer.blendMode === 'multiply') ctx.globalCompositeOperation = 'multiply';
-      else if (layer.blendMode === 'screen') ctx.globalCompositeOperation = 'screen';
-      else if (layer.blendMode === 'overlay') ctx.globalCompositeOperation = 'overlay';
-      else ctx.globalCompositeOperation = 'source-over';
+      if      (layer.blendMode === 'multiply') ctx.globalCompositeOperation = 'multiply';
+      else if (layer.blendMode === 'screen')   ctx.globalCompositeOperation = 'screen';
+      else if (layer.blendMode === 'overlay')  ctx.globalCompositeOperation = 'overlay';
+      else                                     ctx.globalCompositeOperation = 'source-over';
       ctx.drawImage(layerCanvas, 0, 0);
       ctx.restore();
     });
-
     if (pixelatorOptions.enabled) {
       try {
-        const bitmap = await createImageBitmap(compositeCanvas);
-        const processedBitmap = await pixelateImage(bitmap, pixelatorOptions);
+        const bitmap  = await createImageBitmap(compositeCanvas);
+        const processed = await pixelateImage(bitmap, pixelatorOptions);
         ctx.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
-        ctx.drawImage(processedBitmap, 0, 0);
-        bitmap.close();
-        processedBitmap.close();
-      } catch (err) {
-        console.warn('Canvas pixelation filter skip:', err);
-      }
+        ctx.drawImage(processed, 0, 0);
+        bitmap.close(); processed.close();
+      } catch (err) { console.warn('Canvas pixelation skip:', err); }
     }
-
     if (painter) painter.updateTexture();
   }, [layers, pixelatorOptions, painter]);
 
-  useEffect(() => {
-    if (layers.length > 0) compositeAndPixelate();
-  }, [layers, pixelatorOptions, compositeAndPixelate]);
+  useEffect(() => { if (layers.length > 0) compositeAndPixelate(); }, [layers, pixelatorOptions, compositeAndPixelate]);
 
   const customFramesSerializer = useCallback(async (): Promise<DbProjectFrame[]> => {
     const dbFrames: DbProjectFrame[] = [];
-    if (modelFileBlobRef.current) {
+    if (modelFileBlobRef.current)
       dbFrames.push({ id: 'mesh-model-3d', index: 0, timestamp: Date.now(), sourceId: 'model-3d', sourceColor: '#8b5cf6', blob: modelFileBlobRef.current });
-    }
     for (let i = 0; i < layers.length; i++) {
-      const layer = layers[i];
+      const layer  = layers[i];
       const canvas = document.getElementById(`layer-canvas-${layer.id}`) as HTMLCanvasElement;
       if (canvas) {
         const blob = await new Promise<Blob | null>((res) => canvas.toBlob((b) => res(b), 'image/png'));
@@ -174,17 +155,14 @@ export default function ThreePainterPage() {
   });
 
   const loadNewModel = async (file: File) => {
-    setIsLoadingModel(true);
-    setLoadProgress(0);
-    setLoadedModelName(file.name);
-    setLoadedModelSize(file.size);
+    setIsLoadingModel(true); setLoadProgress(0);
+    setLoadedModelName(file.name); setLoadedModelSize(file.size);
     modelFileBlobRef.current = file;
     try {
       const data = await file.arrayBuffer();
       if (painter) {
         await painter.loadModel(data, file.name);
-        const originalImage = painter.getLoadedOriginalTextureImage();
-        initializeLayerCanvases(undefined, originalImage);
+        initializeLayerCanvases(undefined, painter.getLoadedOriginalTextureImage());
         setIsDirty(true);
         setTimeout(() => { painter.handleResize(); painter.frameModel(); }, 80);
       }
@@ -201,14 +179,12 @@ export default function ThreePainterPage() {
     restoredLayers?: PaintingLayer[],
     originalImage?: HTMLImageElement | HTMLCanvasElement | ImageBitmap | null
   ) => {
-    const oldCanvases = document.querySelectorAll('[id^="layer-canvas-"]');
-    oldCanvases.forEach(el => el.remove());
-
-    if (restoredLayers && restoredLayers.length > 0) {
+    document.querySelectorAll('[id^="layer-canvas-"]').forEach(el => el.remove());
+    if (restoredLayers?.length) {
       restoredLayers.forEach(l => {
         const canvas = document.createElement('canvas');
         canvas.id = `layer-canvas-${l.id}`;
-        canvas.width = 512; canvas.height = 512;
+        canvas.width = canvas.height = 512;
         document.body.appendChild(canvas);
         canvas.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
         l.canvas = canvas;
@@ -217,34 +193,27 @@ export default function ThreePainterPage() {
       setActiveLayerId(restoredLayers[restoredLayers.length - 1].id);
       return;
     }
-
     const baseId  = `layer-${Date.now()}-base`;
     const paintId = `layer-${Date.now()}-paint`;
-
-    const baseCanvas = document.createElement('canvas');
-    baseCanvas.id = `layer-canvas-${baseId}`;
-    baseCanvas.width = 512; baseCanvas.height = 512;
-    document.body.appendChild(baseCanvas);
-    baseCanvas.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
-    const baseCtx = baseCanvas.getContext('2d')!;
+    const make = (id: string) => {
+      const c = document.createElement('canvas');
+      c.id = `layer-canvas-${id}`; c.width = c.height = 512;
+      document.body.appendChild(c);
+      c.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
+      return c;
+    };
+    const baseCanvas  = make(baseId);
+    const baseCtx     = baseCanvas.getContext('2d')!;
     if (originalImage) {
       baseCtx.drawImage(originalImage, 0, 0, 512, 512);
     } else {
-      baseCtx.fillStyle = '#e4e4e7';
-      baseCtx.fillRect(0, 0, 512, 512);
-      baseCtx.strokeStyle = '#a1a1aa';
-      baseCtx.strokeRect(0, 0, 512, 512);
+      baseCtx.fillStyle = '#e4e4e7'; baseCtx.fillRect(0, 0, 512, 512);
+      baseCtx.strokeStyle = '#a1a1aa'; baseCtx.strokeRect(0, 0, 512, 512);
     }
-
-    const paintCanvas = document.createElement('canvas');
-    paintCanvas.id = `layer-canvas-${paintId}`;
-    paintCanvas.width = 512; paintCanvas.height = 512;
-    document.body.appendChild(paintCanvas);
-    paintCanvas.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
-
+    const paintCanvas = make(paintId);
     setLayers([
-      { id: baseId,  name: 'Base Texture',  opacity: 1.0, visible: true, blendMode: 'normal', canvas: baseCanvas  },
-      { id: paintId, name: 'Paint layer 1', opacity: 1.0, visible: true, blendMode: 'normal', canvas: paintCanvas },
+      { id: baseId,  name: 'Base Texture',  opacity: 1, visible: true, blendMode: 'normal', canvas: baseCanvas  },
+      { id: paintId, name: 'Paint layer 1', opacity: 1, visible: true, blendMode: 'normal', canvas: paintCanvas },
     ]);
     setActiveLayerId(paintId);
   };
@@ -282,26 +251,25 @@ export default function ThreePainterPage() {
         const restoredLayers: PaintingLayer[] = [];
         const layerMeta = opts?.layers || [];
         for (let i = 0; i < layerMeta.length; i++) {
-          const meta = layerMeta[i];
+          const meta  = layerMeta[i];
           const frame = project.frames.find((f: any) => f.index === i + 1);
           if (frame) {
             const canvas = document.createElement('canvas');
-            canvas.id = `layer-canvas-${meta.id}`;
-            canvas.width = 512; canvas.height = 512;
+            canvas.id = `layer-canvas-${meta.id}`; canvas.width = canvas.height = 512;
             document.body.appendChild(canvas);
             canvas.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
             const ctx2d = canvas.getContext('2d')!;
-            const img = new Image();
+            const img   = new Image();
             img.src = URL.createObjectURL(frame.blob);
             await new Promise((resolve) => { img.onload = () => { ctx2d.drawImage(img, 0, 0); URL.revokeObjectURL(img.src); resolve(null); }; });
             restoredLayers.push({ id: meta.id, name: meta.name, opacity: meta.opacity, visible: true, blendMode: meta.blendMode, canvas });
           }
         }
-        if (restoredLayers.length > 0) initializeLayerCanvases(restoredLayers);
+        if (restoredLayers.length) initializeLayerCanvases(restoredLayers);
         setIsDirty(false); setIsLoadingModel(false);
         if (painter) setTimeout(() => { painter.handleResize(); painter.frameModel(); }, 80);
       } catch (err) {
-        console.error('Failed to restore 3D project:', err);
+        console.error('Failed to restore project:', err);
         alert('Failed to load project.');
         setIsLoadingModel(false);
       }
@@ -312,34 +280,29 @@ export default function ThreePainterPage() {
     if (isEnd) { setIsDirty(true); return; }
     const activeLayer = layers.find(l => l.id === activeLayerId);
     const canvas = document.getElementById(`layer-canvas-${activeLayerId}`) as HTMLCanvasElement;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx || !activeLayer || !activeLayer.visible) return;
+    const ctx    = canvas?.getContext('2d');
+    if (!canvas || !ctx || !activeLayer?.visible) return;
     const x = Math.floor(u * canvas.width);
     const y = Math.floor((1 - v) * canvas.height);
-    if (isStart) {
-      undoStackRef.current.push(captureHistorySnapshot());
-      redoStackRef.current.length = 0;
-    }
+    if (isStart) { undoStackRef.current.push(captureHistorySnapshot()); redoStackRef.current.length = 0; }
     ctx.save();
     if (activeTool === 'bucket') {
       floodFill(ctx, x, y, brushColor);
     } else {
-      ctx.fillStyle = brushColor; ctx.strokeStyle = brushColor;
       ctx.lineWidth = brushSize; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       if (activeTool === 'eraser') ctx.globalCompositeOperation = 'destination-out';
-      const radialGradient = ctx.createRadialGradient(x, y, 0, x, y, brushSize / 2);
+      const rg  = ctx.createRadialGradient(x, y, 0, x, y, brushSize / 2);
+      const rgb = hexToRgb(brushColor);
       if (activeTool === 'eraser') {
-        radialGradient.addColorStop(0, 'rgba(0,0,0,1)');
-        radialGradient.addColorStop(brushHardness, 'rgba(0,0,0,1)');
-        radialGradient.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = radialGradient;
+        rg.addColorStop(0,            'rgba(0,0,0,1)');
+        rg.addColorStop(brushHardness,'rgba(0,0,0,1)');
+        rg.addColorStop(1,            'rgba(0,0,0,0)');
       } else {
-        const rgb = hexToRgb(brushColor);
-        radialGradient.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${brushOpacity})`);
-        radialGradient.addColorStop(brushHardness, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${brushOpacity})`);
-        radialGradient.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
-        ctx.fillStyle = radialGradient;
+        rg.addColorStop(0,            `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${brushOpacity})`);
+        rg.addColorStop(brushHardness,`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${brushOpacity})`);
+        rg.addColorStop(1,            `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
       }
+      ctx.fillStyle = rg;
       ctx.beginPath(); ctx.arc(x, y, brushSize / 2, 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();
@@ -352,26 +315,26 @@ export default function ThreePainterPage() {
   }, [handleThreePaintStroke]);
 
   const floodFill = (ctx: CanvasRenderingContext2D, startX: number, startY: number, fillColor: string) => {
-    const width = ctx.canvas.width; const height = ctx.canvas.height;
-    const imgData = ctx.getImageData(0, 0, width, height); const data = imgData.data;
-    const fillRgb = hexToRgb(fillColor);
-    const startIdx = (startY * width + startX) * 4;
-    const [sR, sG, sB, sA] = [data[startIdx], data[startIdx+1], data[startIdx+2], data[startIdx+3]];
-    if (sR === fillRgb[0] && sG === fillRgb[1] && sB === fillRgb[2] && sA === 255) return;
+    const W = ctx.canvas.width, H = ctx.canvas.height;
+    const imgData = ctx.getImageData(0, 0, W, H), data = imgData.data;
+    const rgb   = hexToRgb(fillColor);
+    const si    = (startY * W + startX) * 4;
+    const [sR, sG, sB, sA] = [data[si], data[si+1], data[si+2], data[si+3]];
+    if (sR === rgb[0] && sG === rgb[1] && sB === rgb[2] && sA === 255) return;
     const queue: [number, number][] = [[startX, startY]];
     const visited = new Set<string>();
-    while (queue.length > 0) {
+    while (queue.length) {
       const [x, y] = queue.shift()!;
       const key = `${x},${y}`;
       if (visited.has(key)) continue;
       visited.add(key);
-      const idx = (y * width + x) * 4;
-      data[idx] = fillRgb[0]; data[idx+1] = fillRgb[1]; data[idx+2] = fillRgb[2]; data[idx+3] = 255;
+      const i = (y * W + x) * 4;
+      data[i]=rgb[0]; data[i+1]=rgb[1]; data[i+2]=rgb[2]; data[i+3]=255;
       for (const [nx, ny] of [[x+1,y],[x-1,y],[x,y+1],[x,y-1]]) {
-        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-          const nIdx = (ny * width + nx) * 4;
-          if (Math.abs(data[nIdx]-sR)<15 && Math.abs(data[nIdx+1]-sG)<15 && Math.abs(data[nIdx+2]-sB)<15 && Math.abs(data[nIdx+3]-sA)<15)
-            queue.push([nx, ny]);
+        if (nx>=0 && nx<W && ny>=0 && ny<H) {
+          const ni = (ny*W+nx)*4;
+          if (Math.abs(data[ni]-sR)<15&&Math.abs(data[ni+1]-sG)<15&&Math.abs(data[ni+2]-sB)<15&&Math.abs(data[ni+3]-sA)<15)
+            queue.push([nx,ny]);
         }
       }
     }
@@ -379,21 +342,21 @@ export default function ThreePainterPage() {
   };
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') return;
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
-        if (e.key === 'z' || e.key === 'Z') { e.preventDefault(); undo(); }
-        else if (e.key === 'y' || e.key === 'Y') { e.preventDefault(); redo(); }
-        else if (e.key === 's' || e.key === 'S') { e.preventDefault(); triggerSave(); }
-      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement;
+      if (['INPUT','SELECT','TEXTAREA'].includes(t.tagName)) return;
+      if ((e.ctrlKey||e.metaKey) && !e.shiftKey) {
+        if (e.key==='z'||e.key==='Z') { e.preventDefault(); undo(); }
+        else if (e.key==='y'||e.key==='Y') { e.preventDefault(); redo(); }
+        else if (e.key==='s'||e.key==='S') { e.preventDefault(); triggerSave(); }
+      } else if ((e.ctrlKey||e.metaKey)&&e.shiftKey&&(e.key==='z'||e.key==='Z')) {
         e.preventDefault(); redo();
-      } else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-        if ((e.key === 'f' || e.key === 'F' || e.key === '.') && painter) { e.preventDefault(); painter.frameModel(); }
+      } else if (!e.ctrlKey&&!e.metaKey&&!e.altKey) {
+        if ((e.key==='f'||e.key==='F'||e.key==='.')&&painter) { e.preventDefault(); painter.frameModel(); }
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [undo, redo, triggerSave, painter]);
 
   useEffect(() => {
@@ -405,19 +368,19 @@ export default function ThreePainterPage() {
 
   const handleAddLayer = () => {
     if (layers.length >= 5) return;
-    const newId = `layer-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    const newId  = `layer-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
     const canvas = document.createElement('canvas');
-    canvas.id = `layer-canvas-${newId}`; canvas.width = 512; canvas.height = 512;
+    canvas.id = `layer-canvas-${newId}`; canvas.width = canvas.height = 512;
     document.body.appendChild(canvas);
     canvas.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
     undoStackRef.current.push(captureHistorySnapshot());
-    setLayers([...layers, { id: newId, name: `Paint layer ${layers.length}`, opacity: 1.0, visible: true, blendMode: 'normal', canvas }]);
+    setLayers([...layers, { id: newId, name: `Paint layer ${layers.length}`, opacity: 1, visible: true, blendMode: 'normal', canvas }]);
     setActiveLayerId(newId); setIsDirty(true);
   };
 
   const handleDeleteLayer = (id: string) => {
-    const targetIdx = layers.findIndex(l => l.id === id);
-    if (targetIdx <= 0) return;
+    const idx = layers.findIndex(l => l.id === id);
+    if (idx <= 0) return;
     undoStackRef.current.push(captureHistorySnapshot());
     document.getElementById(`layer-canvas-${id}`)?.remove();
     const remaining = layers.filter(l => l.id !== id);
@@ -431,15 +394,15 @@ export default function ThreePainterPage() {
   };
 
   const togglePanel = useCallback((panelId: string) => {
-    const newVisible = new Set(visiblePanels);
-    if (newVisible.has(panelId)) { newVisible.delete(panelId); dockLayoutRef.current?.removeTab(panelId); }
-    else { newVisible.add(panelId); dockLayoutRef.current?.addTab(panelId); }
-    setVisiblePanels(newVisible);
+    const next = new Set(visiblePanels);
+    if (next.has(panelId)) { next.delete(panelId); dockLayoutRef.current?.removeTab(panelId); }
+    else                   { next.add(panelId);    dockLayoutRef.current?.addTab(panelId); }
+    setVisiblePanels(next);
   }, [visiblePanels]);
 
   const resetLayout = useCallback(() => {
     dockLayoutRef.current?.resetLayout();
-    setVisiblePanels(new Set(['3d-preview','brush-panel','layers-panel','pixelate-panel','export-panel','lighting-panel']));
+    setVisiblePanels(new Set(['3d-preview','brush-panel','layers-panel','lighting-panel','texture-maps','pixelate-panel','export-panel']));
   }, []);
 
   const contextValue = useMemo(() => ({
@@ -448,18 +411,19 @@ export default function ThreePainterPage() {
     layers, activeLayerId, setActiveLayerId,
     addLayer: handleAddLayer,
     deleteLayer: handleDeleteLayer,
-    toggleLayerVisibility: (id: string) => setLayers(prev => prev.map(l => l.id === id ? { ...l, visible: !l.visible } : l)),
-    setLayerOpacity: (id: string, opacity: number) => setLayers(prev => prev.map(l => l.id === id ? { ...l, opacity } : l)),
-    setLayerBlendMode: (id: string, blendMode: PaintingLayer['blendMode']) => setLayers(prev => prev.map(l => l.id === id ? { ...l, blendMode } : l)),
-    reorderLayers: (fromIndex: number, toIndex: number) => {
-      if (fromIndex === 0 || toIndex === 0) return;
+    toggleLayerVisibility: (id: string) => setLayers(prev => prev.map(l => l.id===id ? {...l, visible: !l.visible} : l)),
+    setLayerOpacity:   (id: string, opacity: number)                      => setLayers(prev => prev.map(l => l.id===id ? {...l, opacity}    : l)),
+    setLayerBlendMode: (id: string, blendMode: PaintingLayer['blendMode']) => setLayers(prev => prev.map(l => l.id===id ? {...l, blendMode} : l)),
+    reorderLayers: (from: number, to: number) => {
+      if (from===0||to===0) return;
       undoStackRef.current.push(captureHistorySnapshot());
-      const reordered = [...layers]; const [moved] = reordered.splice(fromIndex, 1); reordered.splice(toIndex, 0, moved);
-      setLayers(reordered); setIsDirty(true);
+      const arr = [...layers]; const [m] = arr.splice(from,1); arr.splice(to,0,m);
+      setLayers(arr); setIsDirty(true);
     },
-    activeTool, setActiveTool, brushColor, setBrushColor, brushSize, setBrushSize,
-    brushOpacity, setBrushOpacity, brushHardness, setBrushHardness,
-    pixelatorOptions, updatePixelatorOptions: (opts: Partial<PixelatorOptions>) => setPixelatorOptions(prev => ({ ...prev, ...opts })),
+    activeTool, setActiveTool, brushColor, setBrushColor,
+    brushSize, setBrushSize, brushOpacity, setBrushOpacity, brushHardness, setBrushHardness,
+    pixelatorOptions,
+    updatePixelatorOptions: (opts: Partial<PixelatorOptions>) => setPixelatorOptions(prev => ({...prev,...opts})),
     psxEnabled, setPsxEnabled, isPaintMode, setIsPaintMode,
     shadingMode, setShadingMode,
     activeLightingPresetId, setActiveLightingPresetId,
