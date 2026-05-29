@@ -6,8 +6,6 @@ import { useThreePainterContext, ShadingMode } from '@/contexts/ThreePainterCont
 import { LIGHTING_PRESETS, LightingSettings } from '@/lib/lightingPresets';
 import styles from './LightingPanel.module.css';
 
-// ─── Collapsible Section ─────────────────────────────────────────────────────
-
 function Section({ label, children, defaultOpen = true }: {
   label: string; children: React.ReactNode; defaultOpen?: boolean;
 }) {
@@ -23,8 +21,6 @@ function Section({ label, children, defaultOpen = true }: {
   );
 }
 
-// ─── Compact Slider Row ───────────────────────────────────────────────────────
-
 function SliderRow({ label, value, min, max, step = 1, unit = '', onChange, disabled = false }: {
   label: string; value: number; min: number; max: number;
   step?: number; unit?: string; onChange: (v: number) => void; disabled?: boolean;
@@ -32,12 +28,8 @@ function SliderRow({ label, value, min, max, step = 1, unit = '', onChange, disa
   return (
     <div className={`${styles.sliderRow} ${disabled ? styles.sliderRowDisabled : ''}`}>
       <span className={styles.sliderLabel}>{label}</span>
-      <input
-        type="range"
-        className={styles.sliderTrack}
-        min={min} max={max} step={step}
-        value={value}
-        disabled={disabled}
+      <input type="range" className={styles.sliderTrack}
+        min={min} max={max} step={step} value={value} disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
       />
       <span className={styles.sliderValue}>{value}{unit}</span>
@@ -45,45 +37,26 @@ function SliderRow({ label, value, min, max, step = 1, unit = '', onChange, disa
   );
 }
 
-// ─── Light Row ────────────────────────────────────────────────────────────────
-
 function LightRow({ label, color, intensity, enabled, onToggle, onColor, onIntensity }: {
   label: string; color: string; intensity: number; enabled: boolean;
   onToggle: () => void; onColor: (c: string) => void; onIntensity: (v: number) => void;
 }) {
   return (
     <div className={`${styles.lightRow} ${!enabled ? styles.lightRowOff : ''}`}>
-      <button
-        className={`${styles.lightToggle} ${enabled ? styles.lightToggleOn : ''}`}
-        onClick={onToggle}
-        title={enabled ? 'Disable light' : 'Enable light'}
-      >
+      <button className={`${styles.lightToggle} ${enabled ? styles.lightToggleOn : ''}`}
+        onClick={onToggle} title={enabled ? 'Disable' : 'Enable'}>
         <Lightbulb size={9} />
       </button>
       <span className={styles.lightLabel}>{label}</span>
-      <input
-        type="color"
-        className={styles.lightColor}
-        value={color}
-        disabled={!enabled}
-        onChange={(e) => onColor(e.target.value)}
-        title="Light color"
-      />
-      <input
-        type="range"
-        className={styles.sliderTrack}
-        min={0} max={2} step={0.05}
-        value={intensity}
-        disabled={!enabled}
-        onChange={(e) => onIntensity(Number(e.target.value))}
-        style={{ flex: 1 }}
-      />
+      <input type="color" className={styles.lightColor} value={color} disabled={!enabled}
+        onChange={(e) => onColor(e.target.value)} />
+      <input type="range" className={styles.sliderTrack}
+        min={0} max={2} step={0.05} value={intensity} disabled={!enabled}
+        onChange={(e) => onIntensity(Number(e.target.value))} style={{ flex: 1 }} />
       <span className={styles.sliderValue}>{intensity.toFixed(1)}</span>
     </div>
   );
 }
-
-// ─── Main Panel ───────────────────────────────────────────────────────────────
 
 const SHADING_MODES: { value: ShadingMode; label: string; hint: string }[] = [
   { value: 'unlit',    label: 'Unlit',  hint: 'Flat / pixel art' },
@@ -94,14 +67,13 @@ const SHADING_MODES: { value: ShadingMode; label: string; hint: string }[] = [
 
 export function LightingPanel() {
   const {
-    painter,
-    shadingMode, setShadingMode,
+    painter, shadingMode, setShadingMode,
     activeLightingPresetId, setActiveLightingPresetId,
-    lightingSettings, updateLightingSettings,
-    psxEnabled,
+    lightingSettings, updateLightingSettings, psxEnabled,
   } = useThreePainterContext();
 
   const [local, setLocal] = useState<LightingSettings>(lightingSettings);
+  const [toonSteps, setToonSteps] = useState(3);
 
   useEffect(() => { setLocal(lightingSettings); }, [lightingSettings]);
 
@@ -116,10 +88,7 @@ export function LightingPanel() {
     setActiveLightingPresetId(id);
     painter?.applyLightingPreset(id);
     const preset = LIGHTING_PRESETS.find(p => p.id === id);
-    if (preset) {
-      setLocal(preset.settings);
-      updateLightingSettings(preset.settings);
-    }
+    if (preset) { setLocal(preset.settings); updateLightingSettings(preset.settings); }
   };
 
   const handleShadingMode = (mode: ShadingMode) => {
@@ -127,110 +96,84 @@ export function LightingPanel() {
     painter?.setShadingMode(mode);
   };
 
+  const handleToonSteps = (v: number) => {
+    setToonSteps(v);
+    painter?.setToonSteps(v);
+  };
+
   const needsLights = (shadingMode === 'toon' || shadingMode === 'standard') && !psxEnabled;
 
   return (
     <div className={styles.container}>
 
-      {/* Shading Mode */}
       <Section label="SHADING MODE">
         <div className={styles.modeGrid}>
           {SHADING_MODES.map(({ value, label, hint }) => (
-            <button
-              key={value}
+            <button key={value}
               className={`${styles.modeBtn} ${shadingMode === value && !psxEnabled ? styles.modeBtnActive : ''}`}
-              onClick={() => handleShadingMode(value)}
-              title={hint}
-              disabled={psxEnabled}
-            >
+              onClick={() => handleShadingMode(value)} title={hint} disabled={psxEnabled}>
               {label}
             </button>
           ))}
         </div>
-        {psxEnabled && (
-          <p className={styles.psxNote}>PSX shader active — shading mode overridden</p>
-        )}
+        {psxEnabled && <p className={styles.psxNote}>PSX shader active — shading mode overridden</p>}
       </Section>
 
-      {/* Presets */}
       <Section label="PRESET">
         <div className={styles.presetGrid}>
           {LIGHTING_PRESETS.map(p => (
-            <button
-              key={p.id}
+            <button key={p.id}
               className={`${styles.presetBtn} ${activeLightingPresetId === p.id ? styles.presetBtnActive : ''}`}
-              onClick={() => handlePreset(p.id)}
-              title={`Suggested for: ${p.suggestedMode}`}
-            >
+              onClick={() => handlePreset(p.id)} title={`Suggested: ${p.suggestedMode}`}>
               {p.name}
             </button>
           ))}
         </div>
       </Section>
 
-      {/* Ambient */}
       <Section label="AMBIENT" defaultOpen={needsLights}>
         <div className={styles.ambientRow}>
-          <input
-            type="color"
-            className={styles.lightColor}
-            value={local.ambient.color}
-            onChange={(e) => commit({ ambient: { ...local.ambient, color: e.target.value } })}
-          />
-          <input
-            type="range"
-            className={styles.sliderTrack}
-            min={0} max={2} step={0.05}
-            value={local.ambient.intensity}
-            onChange={(e) => commit({ ambient: { ...local.ambient, intensity: Number(e.target.value) } })}
-            style={{ flex: 1 }}
-          />
+          <input type="color" className={styles.lightColor} value={local.ambient.color}
+            onChange={(e) => commit({ ambient: { ...local.ambient, color: e.target.value } })} />
+          <input type="range" className={styles.sliderTrack} min={0} max={2} step={0.05}
+            value={local.ambient.intensity} style={{ flex: 1 }}
+            onChange={(e) => commit({ ambient: { ...local.ambient, intensity: Number(e.target.value) } })} />
           <span className={styles.sliderValue}>{local.ambient.intensity.toFixed(1)}</span>
         </div>
       </Section>
 
-      {/* Directional Lights */}
       <Section label="LIGHTS" defaultOpen={needsLights}>
         {!needsLights && (
           <p className={styles.noLightsNote}>
             Switch to <strong>Toon</strong> or <strong>PBR</strong> to use directional lights.
           </p>
         )}
-
         <LightRow label="Key" color={local.key.color} intensity={local.key.intensity} enabled={local.key.enabled}
           onToggle={() => commit({ key: { ...local.key, enabled: !local.key.enabled } })}
           onColor={(c) => commit({ key: { ...local.key, color: c } })}
-          onIntensity={(v) => commit({ key: { ...local.key, intensity: v } })}
-        />
-        <SliderRow label="Azimuth"   value={local.key.azimuth}   min={0}   max={360} disabled={!local.key.enabled} onChange={(v) => commit({ key: { ...local.key, azimuth: v } })}   unit="°" />
-        <SliderRow label="Elevation" value={local.key.elevation} min={-90} max={90}  disabled={!local.key.enabled} onChange={(v) => commit({ key: { ...local.key, elevation: v } })} unit="°" />
-
+          onIntensity={(v) => commit({ key: { ...local.key, intensity: v } })} />
+        <SliderRow label="Azimuth"   value={local.key.azimuth}   min={0}   max={360} unit="°" disabled={!local.key.enabled} onChange={(v) => commit({ key: { ...local.key, azimuth: v } })} />
+        <SliderRow label="Elevation" value={local.key.elevation} min={-90} max={90}  unit="°" disabled={!local.key.enabled} onChange={(v) => commit({ key: { ...local.key, elevation: v } })} />
         <div className={styles.lightDivider} />
-
         <LightRow label="Fill" color={local.fill.color} intensity={local.fill.intensity} enabled={local.fill.enabled}
           onToggle={() => commit({ fill: { ...local.fill, enabled: !local.fill.enabled } })}
           onColor={(c) => commit({ fill: { ...local.fill, color: c } })}
-          onIntensity={(v) => commit({ fill: { ...local.fill, intensity: v } })}
-        />
-        <SliderRow label="Azimuth"   value={local.fill.azimuth}   min={0}   max={360} disabled={!local.fill.enabled} onChange={(v) => commit({ fill: { ...local.fill, azimuth: v } })}   unit="°" />
-        <SliderRow label="Elevation" value={local.fill.elevation} min={-90} max={90}  disabled={!local.fill.enabled} onChange={(v) => commit({ fill: { ...local.fill, elevation: v } })} unit="°" />
-
+          onIntensity={(v) => commit({ fill: { ...local.fill, intensity: v } })} />
+        <SliderRow label="Azimuth"   value={local.fill.azimuth}   min={0}   max={360} unit="°" disabled={!local.fill.enabled} onChange={(v) => commit({ fill: { ...local.fill, azimuth: v } })} />
+        <SliderRow label="Elevation" value={local.fill.elevation} min={-90} max={90}  unit="°" disabled={!local.fill.enabled} onChange={(v) => commit({ fill: { ...local.fill, elevation: v } })} />
         <div className={styles.lightDivider} />
-
         <LightRow label="Rim" color={local.rim.color} intensity={local.rim.intensity} enabled={local.rim.enabled}
           onToggle={() => commit({ rim: { ...local.rim, enabled: !local.rim.enabled } })}
           onColor={(c) => commit({ rim: { ...local.rim, color: c } })}
-          onIntensity={(v) => commit({ rim: { ...local.rim, intensity: v } })}
-        />
-        <SliderRow label="Azimuth"   value={local.rim.azimuth}   min={0}   max={360} disabled={!local.rim.enabled} onChange={(v) => commit({ rim: { ...local.rim, azimuth: v } })}   unit="°" />
-        <SliderRow label="Elevation" value={local.rim.elevation} min={-90} max={90}  disabled={!local.rim.enabled} onChange={(v) => commit({ rim: { ...local.rim, elevation: v } })} unit="°" />
+          onIntensity={(v) => commit({ rim: { ...local.rim, intensity: v } })} />
+        <SliderRow label="Azimuth"   value={local.rim.azimuth}   min={0}   max={360} unit="°" disabled={!local.rim.enabled} onChange={(v) => commit({ rim: { ...local.rim, azimuth: v } })} />
+        <SliderRow label="Elevation" value={local.rim.elevation} min={-90} max={90}  unit="°" disabled={!local.rim.enabled} onChange={(v) => commit({ rim: { ...local.rim, elevation: v } })} />
       </Section>
 
-      {/* Toon band count */}
       {shadingMode === 'toon' && !psxEnabled && (
         <Section label="TOON">
-          <SliderRow label="Bands" value={3} min={2} max={5} onChange={(v) => painter?.setToonSteps(v)} />
-          <p className={styles.toonHint}>2 = hard manga, 5 = soft gradient</p>
+          <SliderRow label="Bands" value={toonSteps} min={2} max={5} onChange={handleToonSteps} />
+          <p className={styles.toonHint}>2 = hard manga &nbsp;·&nbsp; 5 = soft gradient</p>
         </Section>
       )}
 

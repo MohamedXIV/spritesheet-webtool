@@ -11,30 +11,23 @@ import {
   lightDirectionFromAngles,
 } from './lightingPresets';
 
-// ─── PSX Shader ───────────────────────────────────────────────────────────────
-
 const PSX_VERTEX_SHADER = `#version 300 es
 in vec3 position;
 in vec2 uv;
-
 uniform mat4 modelMatrix;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float jitterAmount;
 uniform vec2 resolution;
-
 noperspective out vec2 vUv;
-
 void main() {
   vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
   vec4 clipPosition = projectionMatrix * mvPosition;
-  
   if (jitterAmount > 0.0) {
     vec4 ndc = clipPosition / clipPosition.w;
     ndc.xy = floor(ndc.xy * resolution * 0.5) / (resolution * 0.5);
     clipPosition = ndc * clipPosition.w;
   }
-  
   vUv = uv;
   gl_Position = clipPosition;
 }
@@ -43,16 +36,13 @@ void main() {
 const PSX_FRAGMENT_SHADER = `#version 300 es
 precision mediump float;
 uniform sampler2D map;
-
 noperspective in vec2 vUv;
 out vec4 fragColor;
-
-void main() {
-  fragColor = texture(map, vUv);
-}
+void main() { fragColor = texture(map, vUv); }
 `;
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+export type MapSlot = 'ao' | 'normal' | 'emissive' | 'roughness';
+export type MapIntensitySlot = 'ao' | 'emissive' | 'normalScale';
 
 export interface ThreePainterConfig {
   canvasElement: HTMLCanvasElement;
@@ -63,8 +53,6 @@ export interface ThreePainterConfig {
 }
 
 export type { ShadingMode, LightingSettings };
-
-// ─── ThreePainter ─────────────────────────────────────────────────────────────
 
 export class ThreePainter {
   private canvas: HTMLCanvasElement;
@@ -85,8 +73,6 @@ export class ThreePainter {
   private loadedOriginalTextureImage: HTMLImageElement | HTMLCanvasElement | ImageBitmap | null = null;
 
   private canvasTexture!: THREE.CanvasTexture;
-
-  // Materials
   private standardMaterial!: THREE.MeshBasicMaterial;
   private psxMaterial!: THREE.RawShaderMaterial;
   private matcapMaterial!: THREE.MeshMatcapMaterial;
@@ -95,13 +81,11 @@ export class ThreePainter {
   private proceduralMatcapTex!: THREE.CanvasTexture;
   private toonGradientMap!: THREE.DataTexture;
 
-  // Lights
   private ambientLight!: THREE.AmbientLight;
   private keyLight!: THREE.DirectionalLight;
   private fillLight!: THREE.DirectionalLight;
   private rimLight!: THREE.DirectionalLight;
 
-  // State
   private isPSXShaderEnabled = false;
   private shadingMode: ShadingMode = 'unlit';
   private currentLightingSettings: LightingSettings;
@@ -115,10 +99,8 @@ export class ThreePainter {
     this.onPaintStroke = config.onPaintStroke;
     this.onColorPicked = config.onColorPicked;
     this.onLoadProgress = config.onLoadProgress;
-
     const defaultPreset = LIGHTING_PRESETS.find(p => p.id === DEFAULT_LIGHTING_PRESET_ID)!;
     this.currentLightingSettings = defaultPreset.settings;
-
     this.initThree();
     this.initTextures();
     this.initMaterials();
@@ -132,26 +114,18 @@ export class ThreePainter {
   private initThree() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#121214');
-
     const rect = this.canvas.getBoundingClientRect();
     this.camera = new THREE.PerspectiveCamera(50, rect.width / rect.height, 0.01, 10000);
     this.camera.position.set(0, 0, 4);
-
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: false });
     this.renderer.setSize(rect.width, rect.height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
     this.controls = new OrbitControls(this.camera, this.canvas);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
-    this.controls.mouseButtons = {
-      LEFT: null as any,
-      MIDDLE: THREE.MOUSE.PAN,
-      RIGHT: THREE.MOUSE.ROTATE,
-    };
-
+    this.controls.mouseButtons = { LEFT: null as any, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE };
     this.raycaster = new THREE.Raycaster();
   }
 
@@ -161,47 +135,20 @@ export class ThreePainter {
     this.canvasTexture.magFilter = THREE.NearestFilter;
     this.canvasTexture.wrapS = THREE.RepeatWrapping;
     this.canvasTexture.wrapT = THREE.RepeatWrapping;
-
     this.proceduralMatcapTex = this.buildProceduralMatcap(128);
     this.toonGradientMap = this.buildToonGradient(3);
   }
 
   private initMaterials() {
-    this.standardMaterial = new THREE.MeshBasicMaterial({
-      map: this.canvasTexture,
-      side: THREE.DoubleSide,
-    });
-
+    this.standardMaterial = new THREE.MeshBasicMaterial({ map: this.canvasTexture, side: THREE.DoubleSide });
     this.psxMaterial = new THREE.RawShaderMaterial({
-      vertexShader: PSX_VERTEX_SHADER,
-      fragmentShader: PSX_FRAGMENT_SHADER,
-      glslVersion: THREE.GLSL3,
-      uniforms: {
-        map: { value: this.canvasTexture },
-        jitterAmount: { value: 1.0 },
-        resolution: { value: new THREE.Vector2(320, 240) },
-      },
+      vertexShader: PSX_VERTEX_SHADER, fragmentShader: PSX_FRAGMENT_SHADER, glslVersion: THREE.GLSL3,
+      uniforms: { map: { value: this.canvasTexture }, jitterAmount: { value: 1.0 }, resolution: { value: new THREE.Vector2(320, 240) } },
       side: THREE.DoubleSide,
     });
-
-    this.matcapMaterial = new THREE.MeshMatcapMaterial({
-      map: this.canvasTexture,
-      matcap: this.proceduralMatcapTex,
-      side: THREE.DoubleSide,
-    });
-
-    this.toonMaterial = new THREE.MeshToonMaterial({
-      map: this.canvasTexture,
-      gradientMap: this.toonGradientMap,
-      side: THREE.DoubleSide,
-    });
-
-    this.pbrMaterial = new THREE.MeshStandardMaterial({
-      map: this.canvasTexture,
-      roughness: 0.85,
-      metalness: 0.0,
-      side: THREE.DoubleSide,
-    });
+    this.matcapMaterial = new THREE.MeshMatcapMaterial({ map: this.canvasTexture, matcap: this.proceduralMatcapTex, side: THREE.DoubleSide });
+    this.toonMaterial = new THREE.MeshToonMaterial({ map: this.canvasTexture, gradientMap: this.toonGradientMap, side: THREE.DoubleSide });
+    this.pbrMaterial = new THREE.MeshStandardMaterial({ map: this.canvasTexture, roughness: 0.85, metalness: 0.0, side: THREE.DoubleSide });
   }
 
   private initLights() {
@@ -239,56 +186,33 @@ export class ThreePainter {
     cv.width = cv.height = size;
     const ctx = cv.getContext('2d')!;
     const cx = size / 2;
-
-    ctx.beginPath();
-    ctx.arc(cx, cx, cx, 0, Math.PI * 2);
-    ctx.clip();
-
+    ctx.beginPath(); ctx.arc(cx, cx, cx, 0, Math.PI * 2); ctx.clip();
     const base = ctx.createRadialGradient(cx * 0.7, cx * 0.5, 0, cx, cx, cx);
-    base.addColorStop(0.0,  '#e8d8f8');
-    base.addColorStop(0.35, '#b09cc8');
-    base.addColorStop(0.65, '#5c4880');
-    base.addColorStop(1.0,  '#140c28');
-    ctx.fillStyle = base;
-    ctx.fillRect(0, 0, size, size);
-
+    base.addColorStop(0.0, '#e8d8f8'); base.addColorStop(0.35, '#b09cc8');
+    base.addColorStop(0.65, '#5c4880'); base.addColorStop(1.0, '#140c28');
+    ctx.fillStyle = base; ctx.fillRect(0, 0, size, size);
     const rim = ctx.createRadialGradient(cx, size * 0.9, 0, cx, size * 0.85, size * 0.38);
-    rim.addColorStop(0.0, 'rgba(120,140,220,0.55)');
-    rim.addColorStop(1.0, 'rgba(120,140,220,0.0)');
-    ctx.fillStyle = rim;
-    ctx.fillRect(0, 0, size, size);
-
+    rim.addColorStop(0.0, 'rgba(120,140,220,0.55)'); rim.addColorStop(1.0, 'rgba(120,140,220,0.0)');
+    ctx.fillStyle = rim; ctx.fillRect(0, 0, size, size);
     const spec = ctx.createRadialGradient(cx * 0.6, cx * 0.52, 0, cx * 0.6, cx * 0.52, cx * 0.22);
-    spec.addColorStop(0.0, 'rgba(255,250,245,1.0)');
-    spec.addColorStop(0.4, 'rgba(255,248,240,0.7)');
-    spec.addColorStop(1.0, 'rgba(255,240,220,0.0)');
-    ctx.fillStyle = spec;
-    ctx.fillRect(0, 0, size, size);
-
+    spec.addColorStop(0.0, 'rgba(255,250,245,1.0)'); spec.addColorStop(0.4, 'rgba(255,248,240,0.7)'); spec.addColorStop(1.0, 'rgba(255,240,220,0.0)');
+    ctx.fillStyle = spec; ctx.fillRect(0, 0, size, size);
     return new THREE.CanvasTexture(cv);
   }
 
   private buildToonGradient(steps: number): THREE.DataTexture {
     const W = 256;
     const palette: [number, number, number][] = steps <= 2
-      ? [[20, 15, 40], [255, 248, 255]]
-      : steps === 3
-        ? [[20, 15, 40], [100, 85, 150], [255, 248, 255]]
-        : steps === 4
-          ? [[20, 15, 40], [80, 65, 120], [180, 160, 220], [255, 248, 255]]
-          : [[15, 10, 30], [60, 50, 100], [120, 105, 170], [200, 185, 240], [255, 250, 255]];
-
+      ? [[20,15,40],[255,248,255]]
+      : steps === 3 ? [[20,15,40],[100,85,150],[255,248,255]]
+      : steps === 4 ? [[20,15,40],[80,65,120],[180,160,220],[255,248,255]]
+      : [[15,10,30],[60,50,100],[120,105,170],[200,185,240],[255,250,255]];
     const data = new Uint8Array(W * 4);
     for (let i = 0; i < W; i++) {
-      const t    = i / (W - 1);
-      const raw  = t * (palette.length - 1);
-      const lo   = Math.floor(raw);
-      const idx  = raw - lo < 0.5 ? lo : Math.min(lo + 1, palette.length - 1);
+      const t = i / (W - 1), raw = t * (palette.length - 1), lo = Math.floor(raw);
+      const idx = raw - lo < 0.5 ? lo : Math.min(lo + 1, palette.length - 1);
       const [r, g, b] = palette[idx];
-      data[i * 4]     = r;
-      data[i * 4 + 1] = g;
-      data[i * 4 + 2] = b;
-      data[i * 4 + 3] = 255;
+      data[i*4]=r; data[i*4+1]=g; data[i*4+2]=b; data[i*4+3]=255;
     }
     const tex = new THREE.DataTexture(data, W, 1, THREE.RGBAFormat);
     tex.needsUpdate = true;
@@ -339,20 +263,54 @@ export class ThreePainter {
     this.currentLightingSettings = settings;
     this.ambientLight.color.set(settings.ambient.color);
     this.ambientLight.intensity = settings.ambient.intensity;
-
     const applyDir = (light: THREE.DirectionalLight, cfg: typeof settings.key) => {
-      light.color.set(cfg.color);
-      light.intensity = cfg.intensity;
+      light.color.set(cfg.color); light.intensity = cfg.intensity;
       const [x, y, z] = lightDirectionFromAngles(cfg.azimuth, cfg.elevation);
       light.position.set(x * 5, y * 5, z * 5);
     };
-    applyDir(this.keyLight,  settings.key);
+    applyDir(this.keyLight, settings.key);
     applyDir(this.fillLight, settings.fill);
-    applyDir(this.rimLight,  settings.rim);
+    applyDir(this.rimLight, settings.rim);
     this.syncLightVisibility();
   }
 
   public getLightingSettings(): LightingSettings { return this.currentLightingSettings; }
+
+  // ── Public API: texture maps ─────────────────────────────────────────────────
+
+  /** Set or clear a PBR texture map slot. Pass null to remove the map. */
+  public setMap(slot: MapSlot, tex: THREE.Texture | null) {
+    switch (slot) {
+      case 'ao':        this.pbrMaterial.aoMap        = tex; break;
+      case 'normal':    this.pbrMaterial.normalMap    = tex; break;
+      case 'roughness': this.pbrMaterial.roughnessMap = tex; break;
+      case 'emissive':
+        this.pbrMaterial.emissiveMap = tex;
+        // Keep emissive tint in sync — black would suppress the map entirely
+        this.pbrMaterial.emissive.set(tex ? '#ffffff' : '#000000');
+        break;
+    }
+    this.pbrMaterial.needsUpdate = true;
+  }
+
+  /**
+   * Adjust a map's scalar parameter.
+   * 'ao'          → aoMapIntensity   (0–1)
+   * 'emissive'    → emissiveIntensity (0–3)
+   * 'normalScale' → normalScale X+Y   (0–3)
+   */
+  public setMapIntensity(slot: MapIntensitySlot, value: number) {
+    switch (slot) {
+      case 'ao':          this.pbrMaterial.aoMapIntensity   = value; break;
+      case 'emissive':    this.pbrMaterial.emissiveIntensity = value; break;
+      case 'normalScale': this.pbrMaterial.normalScale.set(value, value); break;
+    }
+  }
+
+  /** Set the emissive tint colour on the PBR material (hex string, e.g. '#ff8800'). */
+  public setEmissiveColor(hex: string) {
+    this.pbrMaterial.emissive.set(hex);
+  }
 
   // ── Public API: legacy PSX ───────────────────────────────────────────────────
 
@@ -375,22 +333,17 @@ export class ThreePainter {
     this.renderer.render(this.scene, this.camera);
   };
 
-  public updateTexture() {
-    if (this.canvasTexture) this.canvasTexture.needsUpdate = true;
-  }
+  public updateTexture() { if (this.canvasTexture) this.canvasTexture.needsUpdate = true; }
 
   // ── Model loading ────────────────────────────────────────────────────────────
 
   public async loadModel(fileData: ArrayBuffer | Blob, fileName: string): Promise<void> {
     this.onLoadProgress?.(10);
     this.clearLoadedModel();
-
     const extension = fileName.split('.').pop()?.toLowerCase();
     const url = URL.createObjectURL(new Blob([fileData]));
-
     try {
       let loadedObject: THREE.Object3D | THREE.Group;
-
       if (extension === 'gltf' || extension === 'glb') {
         const loader = new GLTFLoader();
         this.onLoadProgress?.(30);
@@ -409,7 +362,6 @@ export class ThreePainter {
       } else {
         throw new Error(`Unsupported 3D file extension: .${extension}`);
       }
-
       this.onLoadProgress?.(80);
       this.setupMeshGroup(loadedObject);
       this.onLoadProgress?.(100);
@@ -444,6 +396,10 @@ export class ThreePainter {
         }
         const hasUVs = child.geometry.attributes.uv !== undefined;
         if (hasUVs) {
+          // Copy UV0 → UV2 so aoMap works without a separately baked UV channel
+          if (!child.geometry.attributes.uv2) {
+            child.geometry.setAttribute('uv2', child.geometry.attributes.uv);
+          }
           child.material = this.getActiveMaterial();
           this.paintableMeshes.push(child);
         } else {
@@ -456,8 +412,7 @@ export class ThreePainter {
       this.loadedOriginalTextureImage = (originalTexture as THREE.Texture).image as any;
     }
 
-    object.position.set(0, 0, 0);
-    object.scale.set(1, 1, 1);
+    object.position.set(0, 0, 0); object.scale.set(1, 1, 1);
     const box    = new THREE.Box3().setFromObject(object);
     const size   = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
@@ -494,8 +449,8 @@ export class ThreePainter {
 
   public frameModel() {
     if (!this.loadedModelGroup) return;
-    const fov      = this.camera.fov * (Math.PI / 180);
-    const cameraZ  = Math.abs(3.0 / 2 / Math.tan(fov / 2)) * 1.45;
+    const fov = this.camera.fov * (Math.PI / 180);
+    const cameraZ = Math.abs(3.0 / 2 / Math.tan(fov / 2)) * 1.45;
     const direction = new THREE.Vector3();
     this.camera.getWorldDirection(direction);
     if (direction.lengthSq() < 0.001) direction.set(0, 0, -1);
@@ -523,7 +478,6 @@ export class ThreePainter {
         ((e.clientY - rect.top)  / rect.height) * -2 + 1,
       );
     };
-
     const onDown = (e: MouseEvent) => {
       if (e.button !== 0 || !this.isPaintMode || !this.paintableMeshes.length) return;
       this.raycaster.setFromCamera(getMousePos(e), this.camera);
@@ -534,7 +488,6 @@ export class ThreePainter {
         else this.onPaintStroke(hit.uv.x, hit.uv.y, true, false);
       }
     };
-
     const onMove = (e: MouseEvent) => {
       if (!this.isDrawing || !this.isPaintMode || !this.paintableMeshes.length) return;
       this.raycaster.setFromCamera(getMousePos(e), this.camera);
@@ -544,15 +497,12 @@ export class ThreePainter {
         else this.onPaintStroke(hit.uv.x, hit.uv.y, false, false);
       }
     };
-
     const onUp = () => {
       if (this.isDrawing) { this.isDrawing = false; this.onPaintStroke(0, 0, false, true); }
     };
-
     this.canvas.addEventListener('mousedown', onDown);
     this.canvas.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-
     this.handleKeyDown = (e: KeyboardEvent) => {
       const el = document.activeElement;
       if (el && ['INPUT','TEXTAREA','SELECT'].includes(el.tagName)) return;
