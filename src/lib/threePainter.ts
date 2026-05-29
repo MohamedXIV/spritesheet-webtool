@@ -278,48 +278,38 @@ export class ThreePainter {
 
   // ── Public API: texture maps ─────────────────────────────────────────────────
 
-  /**
-   * Set or clear a PBR texture map slot on the standard material.
-   * Pass null to remove the map from the slot.
-   */
+  /** Set or clear a PBR texture map slot. Pass null to remove the map. */
   public setMap(slot: MapSlot, tex: THREE.Texture | null) {
     switch (slot) {
-      case 'ao':
-        this.pbrMaterial.aoMap = tex;
-        break;
-      case 'normal':
-        this.pbrMaterial.normalMap = tex;
-        break;
+      case 'ao':        this.pbrMaterial.aoMap        = tex; break;
+      case 'normal':    this.pbrMaterial.normalMap    = tex; break;
+      case 'roughness': this.pbrMaterial.roughnessMap = tex; break;
       case 'emissive':
         this.pbrMaterial.emissiveMap = tex;
-        // emissive must be non-black for the map to show
+        // Keep emissive tint in sync — black would suppress the map entirely
         this.pbrMaterial.emissive.set(tex ? '#ffffff' : '#000000');
-        break;
-      case 'roughness':
-        this.pbrMaterial.roughnessMap = tex;
         break;
     }
     this.pbrMaterial.needsUpdate = true;
   }
 
   /**
-   * Adjust a map's intensity/scale parameter.
-   * 'ao'          → aoMapIntensity  (0–1)
+   * Adjust a map's scalar parameter.
+   * 'ao'          → aoMapIntensity   (0–1)
    * 'emissive'    → emissiveIntensity (0–3)
-   * 'normalScale' → normalScale X+Y  (0–3)
+   * 'normalScale' → normalScale X+Y   (0–3)
    */
   public setMapIntensity(slot: MapIntensitySlot, value: number) {
     switch (slot) {
-      case 'ao':
-        this.pbrMaterial.aoMapIntensity = value;
-        break;
-      case 'emissive':
-        this.pbrMaterial.emissiveIntensity = value;
-        break;
-      case 'normalScale':
-        this.pbrMaterial.normalScale.set(value, value);
-        break;
+      case 'ao':          this.pbrMaterial.aoMapIntensity   = value; break;
+      case 'emissive':    this.pbrMaterial.emissiveIntensity = value; break;
+      case 'normalScale': this.pbrMaterial.normalScale.set(value, value); break;
     }
+  }
+
+  /** Set the emissive tint colour on the PBR material (hex string, e.g. '#ff8800'). */
+  public setEmissiveColor(hex: string) {
+    this.pbrMaterial.emissive.set(hex);
   }
 
   // ── Public API: legacy PSX ───────────────────────────────────────────────────
@@ -406,7 +396,7 @@ export class ThreePainter {
         }
         const hasUVs = child.geometry.attributes.uv !== undefined;
         if (hasUVs) {
-          // Copy UV0 → UV2 so aoMap works without requiring a separate UV channel
+          // Copy UV0 → UV2 so aoMap works without a separately baked UV channel
           if (!child.geometry.attributes.uv2) {
             child.geometry.setAttribute('uv2', child.geometry.attributes.uv);
           }
