@@ -4,26 +4,25 @@ import React, { useCallback, useEffect, useRef, useState, forwardRef, useImperat
 import { Layout, Model, TabNode, Actions, DockLocation } from 'flexlayout-react';
 import 'flexlayout-react/style/dark.css';
 import { useThreePainterContext } from '@/contexts/ThreePainterContext';
-
-// Import workspace panels
 import { ThreePainterPreview } from '@/components/ThreePainterPreview';
 import { BrushPanel } from '@/components/BrushPanel';
 import { LayersPanel } from '@/components/LayersPanel';
 import { LightingPanel } from '@/components/LightingPanel';
+import { TextureMapsPanel } from '@/components/TextureMapsPanel';
 import { ThreePainterPixelatePanel } from '@/components/ThreePainterPixelatePanel';
 import { ThreePainterExportPanel } from '@/components/ThreePainterExportPanel';
-
 import styles from './ThreePainterDockLayout.module.css';
 
 const STORAGE_KEY = 'three-painter-dock-layout';
 
 const PANEL_INFO: Record<string, { name: string }> = {
-  '3d-preview':     { name: '3D Preview Port' },
-  'brush-panel':    { name: 'Brush toolbox' },
-  'layers-panel':   { name: 'Canvas Layers' },
-  'lighting-panel': { name: 'Lighting & Shading' },
-  'pixelate-panel': { name: 'Retro Pixelation' },
-  'export-panel':   { name: 'Export Assets' },
+  '3d-preview':      { name: '3D Preview Port' },
+  'brush-panel':     { name: 'Brush toolbox' },
+  'layers-panel':    { name: 'Canvas Layers' },
+  'lighting-panel':  { name: 'Lighting & Shading' },
+  'texture-maps':    { name: 'Texture Maps' },
+  'pixelate-panel':  { name: 'Retro Pixelation' },
+  'export-panel':    { name: 'Export Assets' },
 };
 
 export interface ThreePainterDockLayoutRef {
@@ -37,10 +36,7 @@ interface ThreePainterDockLayoutProps {
 }
 
 const defaultLayout = {
-  global: {
-    splitterSize: 6,
-    splitterExtra: 4,
-  },
+  global: { splitterSize: 6, splitterExtra: 4 },
   borders: [],
   layout: {
     type: 'row',
@@ -53,9 +49,7 @@ const defaultLayout = {
           {
             type: 'tabset',
             weight: 70,
-            children: [
-              { type: 'tab', name: '3D Viewport', component: '3d-preview' },
-            ],
+            children: [{ type: 'tab', name: '3D Viewport', component: '3d-preview' }],
           },
           {
             type: 'tabset',
@@ -71,9 +65,10 @@ const defaultLayout = {
         type: 'tabset',
         weight: 25,
         children: [
-          { type: 'tab', name: 'Lighting & Shading',   component: 'lighting-panel' },
-          { type: 'tab', name: 'Pixelation & Shading', component: 'pixelate-panel' },
-          { type: 'tab', name: 'Export Output',        component: 'export-panel'   },
+          { type: 'tab', name: 'Lighting & Shading',   component: 'lighting-panel'  },
+          { type: 'tab', name: 'Texture Maps',         component: 'texture-maps'    },
+          { type: 'tab', name: 'Pixelation & Shading', component: 'pixelate-panel'  },
+          { type: 'tab', name: 'Export Output',        component: 'export-panel'    },
         ],
       },
     ],
@@ -113,26 +108,25 @@ export const ThreePainterDockLayout = forwardRef<ThreePainterDockLayoutRef, Thre
 
     const factory = useCallback((node: TabNode) => {
       const component = node.getComponent();
-      const isLoaded = ctx.isModelLoaded;
+      const isLoaded  = ctx.isModelLoaded;
 
       // Always accessible — no model required
       if (component === '3d-preview') {
-        return (
-          <div className={styles.panelContent}>
-            <ThreePainterPreview />
-          </div>
-        );
+        return <div className={styles.panelContent}><ThreePainterPreview /></div>;
       }
-
       if (component === 'lighting-panel') {
-        return (
-          <div className={styles.panelContent}>
-            <LightingPanel />
-          </div>
-        );
+        return <div className={styles.panelContent}><LightingPanel /></div>;
       }
 
-      // Other panels require a loaded model
+      // These handle their own empty state internally
+      if (component === 'texture-maps') {
+        return <div className={styles.panelContent}><TextureMapsPanel /></div>;
+      }
+      if (component === 'export-panel') {
+        return <div className={styles.panelContent}><ThreePainterExportPanel /></div>;
+      }
+
+      // Remaining panels require a loaded model
       if (!isLoaded) {
         return (
           <div className={styles.panelContent}>
@@ -143,7 +137,7 @@ export const ThreePainterDockLayout = forwardRef<ThreePainterDockLayoutRef, Thre
                   <polyline points="2 17 12 22 22 17" />
                   <polyline points="2 12 12 17 22 12" />
                 </svg>
-                <p>Import a 3D model in the viewport first to activate this panel.</p>
+                <p>Import a 3D model in the viewport first.</p>
               </div>
             </div>
           </div>
@@ -151,32 +145,10 @@ export const ThreePainterDockLayout = forwardRef<ThreePainterDockLayoutRef, Thre
       }
 
       switch (component) {
-        case 'brush-panel':
-          return (
-            <div className={styles.panelContent}>
-              <BrushPanel />
-            </div>
-          );
-        case 'layers-panel':
-          return (
-            <div className={styles.panelContent}>
-              <LayersPanel />
-            </div>
-          );
-        case 'pixelate-panel':
-          return (
-            <div className={styles.panelContent}>
-              <ThreePainterPixelatePanel />
-            </div>
-          );
-        case 'export-panel':
-          return (
-            <div className={styles.panelContent}>
-              <ThreePainterExportPanel />
-            </div>
-          );
-        default:
-          return <div className={styles.placeholder}>Unknown Panel: {component}</div>;
+        case 'brush-panel':   return <div className={styles.panelContent}><BrushPanel /></div>;
+        case 'layers-panel':  return <div className={styles.panelContent}><LayersPanel /></div>;
+        case 'pixelate-panel': return <div className={styles.panelContent}><ThreePainterPixelatePanel /></div>;
+        default: return <div className={styles.placeholder}>Unknown Panel: {component}</div>;
       }
     }, [ctx.isModelLoaded]);
 
@@ -222,12 +194,7 @@ export const ThreePainterDockLayout = forwardRef<ThreePainterDockLayoutRef, Thre
     return (
       <div className={styles.container}>
         <div className={styles.layoutWrapper}>
-          <Layout
-            ref={layoutRef}
-            model={model}
-            factory={factory}
-            onModelChange={handleModelChange}
-          />
+          <Layout ref={layoutRef} model={model} factory={factory} onModelChange={handleModelChange} />
         </div>
       </div>
     );
