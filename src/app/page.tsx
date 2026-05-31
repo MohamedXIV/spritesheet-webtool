@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Trash2, Edit2, FolderOpen, Clock, Settings, FileSpreadsheet, Image as ImageIcon } from 'lucide-react';
 import { getAllProjectsSummary, deleteProject, renameProject, ProjectSummary } from '@/lib/projectDatabase';
+import ChangelogDrawer from '@/components/ChangelogDrawer';
 import styles from './page.module.css';
 
 export default function Home() {
@@ -11,6 +12,10 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  
+  // Interactive Changelog Drawer States
+  const [isChangelogOpen, setIsChangelogOpen] = useState(false);
+  const [changelogFilter, setChangelogFilter] = useState<'All' | 'spritesheet' | 'pixelator' | '3d-painter'>('All');
 
   // Fetch projects from IndexedDB on mount
   const loadProjects = async () => {
@@ -67,6 +72,11 @@ export default function Home() {
     });
   };
 
+  const openChangelog = (filter: 'All' | 'spritesheet' | 'pixelator' | '3d-painter') => {
+    setChangelogFilter(filter);
+    setIsChangelogOpen(true);
+  };
+
   return (
     <main className={styles.main}>
       {/* Premium Background Orbs */}
@@ -75,44 +85,24 @@ export default function Home() {
         <div className={styles.gradientOrb2} />
       </div>
 
-      {/* ZZZ Filmstrip Header Decoration */}
-      <div className={styles.filmstripRow}>
-        <div className={styles.filmstripTrack}>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <React.Fragment key={i}>
-              <span className={styles.filmstripUnit}>
-                <span className={styles.filmstripPunch} />
-                HDD DATA INTER-KNOT SECURED
-              </span>
-              <span className={styles.filmstripUnit}>
-                <span className={styles.filmstripPunch} />
-                <span className={styles.filmstripText}>PROXY PROTOCOL v1.0.4</span>
-              </span>
-              <span className={styles.filmstripUnit}>
-                <span className={styles.filmstripPunch} />
-                DRIP LEVEL: MAX
-              </span>
-              <span className={styles.filmstripUnit}>
-                <span className={styles.filmstripPunch} />
-                <span className={styles.filmstripTextAlt}>LOCAL CLIENT-SIDE PROCESSING</span>
-              </span>
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
-
       {/* Hero Header */}
       <header className={styles.header}>
-        <div className={styles.badge}>
-          <span className={styles.badgeDot} />
-          OPERATOR CONSOLE: HUB STATUS [ONLINE]
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <button 
+            onClick={() => openChangelog('All')}
+            className={styles.changelogTrigger}
+            title="View platform update logs"
+          >
+            <Clock size={12} />
+            Proxy Log History
+          </button>
         </div>
         <h1 className={styles.title}>
           <span className={styles.titleMain}>SPRITECRAFT</span>
           <span className={styles.highlight}>PROXY SYSTEM</span>
         </h1>
-        <div className={styles.ribbon}>
-          HDD STORAGE: LOCAL // ZERO SERVER UPLOADS
+        <div className={styles.ribbonWarning}>
+          ⚠️ Don't rely on the save system, it's currently buggy
         </div>
         <p className={styles.subtitle}>
           Revamped high-performance client-side asset manipulators for modern proxies and game developers. 
@@ -122,7 +112,7 @@ export default function Home() {
 
       {/* Tools Portal Cards */}
       <section className={styles.toolsSuite}>
-        <div className={styles.toolCard}>
+        <div className={styles.toolCard} data-version="v0.8.2-beta">
           <div className={styles.scanline} />
           <div className={styles.toolIcon}>
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -132,7 +122,16 @@ export default function Home() {
               <line x1="2" y1="12" x2="22" y2="12" />
             </svg>
           </div>
-          <h2 className={styles.toolTitle}>Video to Spritesheet</h2>
+          <div className={styles.toolTitleRow}>
+            <h2 className={styles.toolTitle}>Video to Spritesheet</h2>
+            <button 
+              onClick={() => openChangelog('spritesheet')}
+              className={styles.toolChangelogBtn}
+              title="View tool updates history"
+            >
+              <Clock size={12} />
+            </button>
+          </div>
           <p className={styles.toolDesc}>
             Load video files (MP4, WebM) or individual images, extract precise frames, 
             remove backgrounds, and compile them into a game-ready spritesheet with JSON metadata.
@@ -151,7 +150,7 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className={styles.toolCard}>
+        <div className={styles.toolCard} data-version="v0.5.0-alpha">
           <div className={styles.scanline} />
           <div className={`${styles.toolIcon} ${styles.iconPixel}`}>
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -159,7 +158,16 @@ export default function Home() {
               <path d="M7 7h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8 4h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z" fill="currentColor"/>
             </svg>
           </div>
-          <h2 className={styles.toolTitle}>Sprite Pixelator</h2>
+          <div className={styles.toolTitleRow}>
+            <h2 className={styles.toolTitle}>Sprite Pixelator</h2>
+            <button 
+              onClick={() => openChangelog('pixelator')}
+              className={styles.toolChangelogBtn}
+              title="View tool updates history"
+            >
+              <Clock size={12} />
+            </button>
+          </div>
           <p className={styles.toolDesc}>
             Convert packed spritesheets, high-res images, or video clips into retro pixel art. 
             Specify slicing dimensions, apply classic palettes, and dither grids.
@@ -178,7 +186,7 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className={styles.toolCard}>
+        <div className={styles.toolCard} data-version="v0.2.1-alpha">
           <div className={styles.scanline} />
           <div className={`${styles.toolIcon} ${styles.icon3d}`}>
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -188,7 +196,16 @@ export default function Home() {
               <line x1="12" y1="12" x2="12" y2="22" />
             </svg>
           </div>
-          <h2 className={styles.toolTitle}>3D Pixel-Painter</h2>
+          <div className={styles.toolTitleRow}>
+            <h2 className={styles.toolTitle}>3D Pixel-Painter</h2>
+            <button 
+              onClick={() => openChangelog('3d-painter')}
+              className={styles.toolChangelogBtn}
+              title="View tool updates history"
+            >
+              <Clock size={12} />
+            </button>
+          </div>
           <p className={styles.toolDesc}>
             Import 3D models, paint directly on UV textures in real-time, composite paint layers, 
             and apply authentic console-style vertex snaps, wobbly texture coordinates, and dither filters.
@@ -357,36 +374,17 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Bottom Filmstrip Divider */}
-      <div className={styles.filmstripRow} style={{ marginTop: 'auto', borderBottom: 'none' }}>
-        <div className={styles.filmstripTrack}>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <React.Fragment key={i}>
-              <span className={styles.filmstripUnit}>
-                <span className={styles.filmstripPunch} />
-                SPRITECRAFT DECODERS ACTIVE
-              </span>
-              <span className={styles.filmstripUnit}>
-                <span className={styles.filmstripPunch} />
-                <span className={styles.filmstripText}>GPU RENDERING OK</span>
-              </span>
-              <span className={styles.filmstripUnit}>
-                <span className={styles.filmstripPunch} />
-                DRIP LEVEL: MAX
-              </span>
-              <span className={styles.filmstripUnit}>
-                <span className={styles.filmstripPunch} />
-                <span className={styles.filmstripTextAlt}>LOCAL SECURE</span>
-              </span>
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
-
       {/* Footer */}
       <footer className={styles.footer}>
         <p>Built with Next.js • Client-Side WASM & Canvas Decoders • Open Source & Ad-Free</p>
       </footer>
+
+      {/* Interactive Operations Drawer */}
+      <ChangelogDrawer 
+        isOpen={isChangelogOpen} 
+        onClose={() => setIsChangelogOpen(false)} 
+        initialFilter={changelogFilter} 
+      />
     </main>
   );
 }
