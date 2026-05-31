@@ -1,0 +1,40 @@
+# SpriteCraft Proxy AI Workflow Rules
+
+Whenever you write code, propose refactorings, resolve bugs, or prepare commits/pushes in this repository, you MUST follow these guidelines strictly.
+
+## 1. Synchronized Versioning & Changelog Enforcement
+
+Every feature addition, bug fix, layout refactor, or version increment MUST be updated in exactly **two places in lockstep**:
+
+1. **Developer Changelog**: [CHANGELOG.md](file:///f:/_WIP/spritesheet-webtool/CHANGELOG.md) (Follows the standard "Keep a Changelog" formatting with headers `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`).
+2. **Application Database**: [src/data/changelog.ts](file:///f:/_WIP/spritesheet-webtool/src/data/changelog.ts) (Add a new version block of type `ChangelogVersion` matching the markdown record perfectly).
+
+### Lifecycle Checklist:
+- [ ] Implement code changes.
+- [ ] Determine the new version number using Semantic Versioning (SemVer).
+- [ ] Update `CHANGELOG.md` in the project root.
+- [ ] Update `src/data/changelog.ts` with matching types.
+- [ ] Verify both files compile correctly.
+
+---
+
+## 2. Conventional Commit Guidelines
+
+All git commits and branch pull operations must use the **Conventional Commits** specification:
+* `feat:` for new capabilities (bumps minor e.g., `0.8.2` -> `0.9.0` or patch `v0.8.2` -> `v0.8.3`).
+* `fix:` for bug fixes (bumps patch e.g., `v0.8.2` -> `v0.8.3`).
+* `refactor:` for codebase structure refactoring with zero feature modifications.
+* `docs:` for updates in README, CHANGELOG, or code documentation.
+* `style:` for changes in visual design systems or CSS layout elements.
+
+**Commit Example:**
+```bash
+git commit -m "feat: add AO & Normal maps slots to texture maps panel"
+```
+
+---
+
+## 3. Pre-Commit / Pre-Push Check
+Before announcing any task complete or committing/pushing to the remote repo:
+1. Verify that `CHANGELOG.md` and `src/data/changelog.ts` are fully aligned.
+2. Run a verification build (`npm run build` or similar) to guarantee TypeScript and Next.js are error-free.
