@@ -8,7 +8,7 @@ export interface PixelatorOptions {
   pixelSize: number; // 1 to 32
   palette: 'none' | 'gameboy' | 'nes' | 'pico8' | 'c64' | 'gameboy-color' | 'custom';
   customPaletteColors?: string[]; // hex colors for custom palette
-  ditherType: 'none' | 'bayer4x4' | 'bayer8x8' | 'floyd-steinberg';
+  ditherType: 'none' | 'white-noise' | 'blue-noise' | 'bayer2x2' | 'bayer4x4' | 'bayer8x8' | 'pattern' | 'floyd-steinberg';
   ditherAmount: number; // 0 to 100 (percentage of error/dither to apply)
   pixelShape: 'square' | 'circle' | 'diamond';
   outlineEnabled: boolean;
@@ -17,6 +17,17 @@ export interface PixelatorOptions {
   contrast: number; // -100 to 100
   saturation: number; // -100 to 100
   brightness: number; // -100 to 100
+
+  // Advanced Quantization Settings
+  quantizationType?: 'none' | 'custom' | 'per-channel' | 'lut';
+  quantizeUsePixelated?: boolean;
+  quantizeQuality?: number; // 1 to 8 (1 = highest, 8 = fastest subsampling)
+  quantizeNumColors?: number; // 8 to 256
+  quantizeGamma?: number; // 0.5 to 2.0
+  quantizeForceColors?: 'none' | 'black-white' | 'nes-anchors';
+  quantizeUseRangeAdaptive?: boolean;
+  quantizeColorsPerChannel?: number; // 2 to 256
+  quantizeLUTPreset?: 'none' | 'amiga-12bit' | 'sega-md' | 'psx-15bit' | 'pc98';
 }
 
 export const DEFAULT_PIXELATOR_OPTIONS: PixelatorOptions = {
@@ -32,6 +43,17 @@ export const DEFAULT_PIXELATOR_OPTIONS: PixelatorOptions = {
   contrast: 0,
   saturation: 0,
   brightness: 0,
+
+  // Advanced Quantization defaults
+  quantizationType: 'none',
+  quantizeUsePixelated: false,
+  quantizeQuality: 2,
+  quantizeNumColors: 32,
+  quantizeGamma: 1.0,
+  quantizeForceColors: 'none',
+  quantizeUseRangeAdaptive: false,
+  quantizeColorsPerChannel: 256,
+  quantizeLUTPreset: 'none',
 };
 
 // Preset RGB Palettes
@@ -77,7 +99,12 @@ const PALETTES: Record<string, number[][]> = {
   ]
 };
 
-// Bayer matrices
+// Bayer & Ordered Matrices
+const BAYER_2X2 = [
+  [0, 2],
+  [3, 1]
+];
+
 const BAYER_4X4 = [
   [0, 8, 2, 10],
   [12, 4, 14, 6],
@@ -94,6 +121,32 @@ const BAYER_8X8 = [
   [34, 18, 46, 30, 33, 17, 45, 29],
   [10, 58, 6, 54, 9, 57, 5, 53],
   [42, 26, 50, 22, 41, 25, 49, 21]
+];
+
+const BLUE_NOISE_16X16 = [
+  [  0, 161,  46, 216,  12, 188,  34, 203,  23, 176,  59, 237,   4, 167,  52, 228],
+  [128,  78, 251, 114, 150,  92, 243, 122, 137,  71, 247, 102, 144,  84, 255, 110],
+  [ 38, 192,  17, 172,  56, 231,   8, 164,  49, 211,  28, 184,  62, 222,  19, 179],
+  [240, 106, 141,  81, 254, 119, 134,  96, 250, 113, 153,  89, 245, 125, 131,  74],
+  [ 15, 182,  50, 225,  25, 200,  41, 175,  57, 234,  11, 169,  44, 207,  31, 196],
+  [147,  87, 246, 126, 133,  69, 249, 105, 143,  80, 252, 116, 155,  94, 242, 121],
+  [ 60, 239,   5, 166,  54, 219,  20, 186,  36, 213,  22, 180,  63, 230,   2, 162],
+  [139,  72, 248, 103, 157,  90, 244, 112, 149,  97, 253, 118, 135,  76, 250, 101],
+  [ 27, 209,  42, 191,  29, 177,  61, 227,  13, 170,  48, 224,  26, 193,  45, 215],
+  [253, 115, 152,  88, 241, 123, 132,  75, 255, 109, 145,  83, 238, 127, 138,  85],
+  [ 10, 168,  58, 233,   3, 163,  51, 214,  32, 198,  60, 236,  16, 173,  53, 220],
+  [142,  82, 251, 107, 146,  93, 247, 120, 136,  70, 249,  99, 151,  91, 240, 111],
+  [ 55, 226,  24, 183,  39, 210,  18, 178,  57, 232,   7, 165,  40, 205,  33, 187],
+  [130,  95, 245, 117, 154,  79, 252, 100, 148,  86, 243, 124, 133,  77, 254, 104],
+  [ 47, 202,  35, 195,  63, 229,  14, 171,  43, 217,  30, 190,  61, 223,  21, 174],
+  [236, 121, 140,  73, 250, 108, 139,  92, 239, 114, 156,  82, 248, 106, 146,  98]
+];
+
+const PATTERN_CHECKER = [
+  [0, 128, 0, 128],
+  [128, 0, 128, 0],
+  [0, 128, 0, 128],
+  [128, 0, 128, 0]
 ];
 
 // Helper to convert Hex to RGB
@@ -165,6 +218,238 @@ function adjustColor(r: number, g: number, b: number, contrast: number, saturati
 /**
  * Pixelates an ImageBitmap and returns a new ImageBitmap with the processed pixel art effect.
  */
+// Helper to generate a custom palette dynamically using Median Cut with Gamma weighting
+interface ColorBucket {
+  colors: number[][];
+  minR: number; maxR: number;
+  minG: number; maxG: number;
+  minB: number; maxB: number;
+}
+
+function getBucketRanges(bucket: ColorBucket) {
+  let minR = 255, maxR = 0;
+  let minG = 255, maxG = 0;
+  let minB = 255, maxB = 0;
+  for (const c of bucket.colors) {
+    if (c[0] < minR) minR = c[0];
+    if (c[0] > maxR) maxR = c[0];
+    if (c[1] < minG) minG = c[1];
+    if (c[1] > maxG) maxG = c[1];
+    if (c[2] < minB) minB = c[2];
+    if (c[2] > maxB) maxB = c[2];
+  }
+  bucket.minR = minR; bucket.maxR = maxR;
+  bucket.minG = minG; bucket.maxG = maxG;
+  bucket.minB = minB; bucket.maxB = maxB;
+}
+
+export function generateCustomPalette(
+  pixels: Uint8ClampedArray,
+  numColors: number,
+  subsampling: number,
+  gamma: number,
+  forceColors: 'none' | 'black-white' | 'nes-anchors'
+): number[][] {
+  const colorSet = new Set<number>();
+  const uniqueColors: number[][] = [];
+  
+  for (let i = 0; i < pixels.length; i += 4 * subsampling) {
+    if (pixels[i + 3] < 128) continue;
+    const r = pixels[i];
+    const g = pixels[i + 1];
+    const b = pixels[i + 2];
+    const rgbKey = (r << 16) | (g << 8) | b;
+    if (!colorSet.has(rgbKey)) {
+      colorSet.add(rgbKey);
+      uniqueColors.push([r, g, b]);
+    }
+  }
+  
+  if (uniqueColors.length <= numColors) {
+    return uniqueColors.length > 0 ? uniqueColors : [[0, 0, 0], [255, 255, 255]];
+  }
+  
+  const initialBucket: ColorBucket = {
+    colors: uniqueColors,
+    minR: 0, maxR: 255,
+    minG: 0, maxG: 255,
+    minB: 0, maxB: 255
+  };
+  getBucketRanges(initialBucket);
+  
+  const buckets: ColorBucket[] = [initialBucket];
+  
+  while (buckets.length < numColors) {
+    let largestRange = -1;
+    let splitIndex = -1;
+    let splitChannel: 'r' | 'g' | 'b' = 'r';
+    
+    for (let i = 0; i < buckets.length; i++) {
+      const b = buckets[i];
+      if (b.colors.length < 2) continue;
+      
+      const rRange = (b.maxR - b.minR) * 0.299;
+      const gRange = (b.maxG - b.minG) * 0.587;
+      const bRange = (b.maxB - b.minB) * 0.114;
+      
+      const maxChannelRange = Math.max(rRange, gRange, bRange);
+      if (maxChannelRange > largestRange) {
+        largestRange = maxChannelRange;
+        splitIndex = i;
+        if (maxChannelRange === rRange) splitChannel = 'r';
+        else if (maxChannelRange === gRange) splitChannel = 'g';
+        else splitChannel = 'b';
+      }
+    }
+    
+    if (splitIndex === -1) break;
+    
+    const bucketToSplit = buckets.splice(splitIndex, 1)[0];
+    const channelIdx = splitChannel === 'r' ? 0 : splitChannel === 'g' ? 1 : 2;
+    bucketToSplit.colors.sort((a, b) => a[channelIdx] - b[channelIdx]);
+    
+    const medianIdx = Math.floor(bucketToSplit.colors.length / 2);
+    const part1 = bucketToSplit.colors.slice(0, medianIdx);
+    const part2 = bucketToSplit.colors.slice(medianIdx);
+    
+    const b1: ColorBucket = { colors: part1, minR: 0, maxR: 0, minG: 0, maxG: 0, minB: 0, maxB: 0 };
+    const b2: ColorBucket = { colors: part2, minR: 0, maxR: 0, minG: 0, maxG: 0, minB: 0, maxB: 0 };
+    getBucketRanges(b1);
+    getBucketRanges(b2);
+    buckets.push(b1, b2);
+  }
+  
+  let palette: number[][] = buckets.map(b => {
+    let sumR = 0, sumG = 0, sumB = 0;
+    let totalWeight = 0;
+    
+    for (const c of b.colors) {
+      const luminance = (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255;
+      const weight = Math.pow(1 - luminance, gamma - 1) || 1;
+      sumR += c[0] * weight;
+      sumG += c[1] * weight;
+      sumB += c[2] * weight;
+      totalWeight += weight;
+    }
+    
+    if (totalWeight === 0) totalWeight = b.colors.length;
+    
+    return [
+      Math.max(0, Math.min(255, Math.round(sumR / totalWeight))),
+      Math.max(0, Math.min(255, Math.round(sumG / totalWeight))),
+      Math.max(0, Math.min(255, Math.round(sumB / totalWeight)))
+    ];
+  });
+  
+  if (forceColors === 'black-white') {
+    palette[0] = [0, 0, 0];
+    if (palette.length > 1) palette[palette.length - 1] = [255, 255, 255];
+  } else if (forceColors === 'nes-anchors') {
+    palette[0] = [0, 0, 0];
+    if (palette.length > 1) palette[1] = [255, 255, 255];
+    if (palette.length > 2) palette[2] = [128, 128, 128];
+  }
+  
+  return palette;
+}
+
+// Calculate ordered threshold patterns for noise injection
+function getDitherOffset(
+  x: number,
+  y: number,
+  ditherType: string,
+  dAmount: number,
+  stepSize: number = 64
+): number {
+  if (ditherType === 'none') return 0;
+  
+  let threshold = 0.5;
+  if (ditherType === 'white-noise') {
+    threshold = Math.random();
+  } else if (ditherType === 'blue-noise') {
+    threshold = BLUE_NOISE_16X16[y % 16][x % 16] / 255;
+  } else if (ditherType === 'bayer2x2') {
+    threshold = BAYER_2X2[y % 2][x % 2] / 4;
+  } else if (ditherType === 'bayer4x4') {
+    threshold = BAYER_4X4[y % 4][x % 4] / 16;
+  } else if (ditherType === 'bayer8x8') {
+    threshold = BAYER_8X8[y % 8][x % 8] / 64;
+  } else if (ditherType === 'pattern') {
+    threshold = PATTERN_CHECKER[y % 4][x % 4] / 255;
+  }
+  
+  return (threshold - 0.5) * stepSize * dAmount;
+}
+
+// Quantizes a single RGB color based on options
+function quantizePixel(
+  r: number,
+  g: number,
+  b: number,
+  quantizationType: 'none' | 'custom' | 'per-channel' | 'lut',
+  palettePreset: string,
+  activePalette: number[][] | null,
+  quantizeLUTPreset: string,
+  quantizeColorsPerChannel: number,
+  quantizeUseRangeAdaptive: boolean,
+  minR: number, maxR: number,
+  minG: number, maxG: number,
+  minB: number, maxB: number
+): number[] {
+  if (quantizationType === 'lut') {
+    if (quantizeLUTPreset === 'amiga-12bit' || quantizeLUTPreset === 'pc98') {
+      return [
+        Math.max(0, Math.min(255, Math.round(r / 17) * 17)),
+        Math.max(0, Math.min(255, Math.round(g / 17) * 17)),
+        Math.max(0, Math.min(255, Math.round(b / 17) * 17))
+      ];
+    } else if (quantizeLUTPreset === 'sega-md') {
+      return [
+        Math.max(0, Math.min(255, Math.round(r / 36.42) * 36)),
+        Math.max(0, Math.min(255, Math.round(g / 36.42) * 36)),
+        Math.max(0, Math.min(255, Math.round(b / 36.42) * 36))
+      ];
+    } else if (quantizeLUTPreset === 'psx-15bit') {
+      return [
+        Math.max(0, Math.min(255, Math.round(r / 8.22) * 8)),
+        Math.max(0, Math.min(255, Math.round(g / 8.22) * 8)),
+        Math.max(0, Math.min(255, Math.round(b / 8.22) * 8))
+      ];
+    }
+  }
+  
+  if (quantizationType === 'per-channel') {
+    const steps = quantizeColorsPerChannel;
+    if (quantizeUseRangeAdaptive) {
+      const stepR = (maxR - minR) / (steps - 1);
+      const stepG = (maxG - minG) / (steps - 1);
+      const stepB = (maxB - minB) / (steps - 1);
+      return [
+        Math.max(0, Math.min(255, minR + Math.round((r - minR) / (stepR || 1)) * stepR)),
+        Math.max(0, Math.min(255, minG + Math.round((g - minG) / (stepG || 1)) * stepG)),
+        Math.max(0, Math.min(255, minB + Math.round((b - minB) / (stepB || 1)) * stepB))
+      ];
+    } else {
+      const step = 255 / (steps - 1);
+      return [
+        Math.max(0, Math.min(255, Math.round(r / step) * step)),
+        Math.max(0, Math.min(255, Math.round(g / step) * step)),
+        Math.max(0, Math.min(255, Math.round(b / step) * step))
+      ];
+    }
+  }
+  
+  if (activePalette) {
+    return findClosestColor(r, g, b, activePalette);
+  }
+  
+  return [
+    Math.max(0, Math.min(255, Math.round(r))),
+    Math.max(0, Math.min(255, Math.round(g))),
+    Math.max(0, Math.min(255, Math.round(b)))
+  ];
+}
+
 export async function pixelateImage(bitmap: ImageBitmap, options: PixelatorOptions): Promise<ImageBitmap> {
   const {
     pixelSize,
@@ -180,6 +465,17 @@ export async function pixelateImage(bitmap: ImageBitmap, options: PixelatorOptio
     saturation,
     brightness
   } = options;
+
+  // Resolve advanced parameters with default fallbacks for backwards compatibility
+  const quantizationType = options.quantizationType || 'none';
+  const quantizeUsePixelated = options.quantizeUsePixelated !== undefined ? options.quantizeUsePixelated : false;
+  const quantizeQuality = options.quantizeQuality || 2;
+  const quantizeNumColors = options.quantizeNumColors || 32;
+  const quantizeGamma = options.quantizeGamma !== undefined ? options.quantizeGamma : 1.0;
+  const quantizeForceColors = options.quantizeForceColors || 'none';
+  const quantizeUseRangeAdaptive = options.quantizeUseRangeAdaptive !== undefined ? options.quantizeUseRangeAdaptive : false;
+  const quantizeColorsPerChannel = options.quantizeColorsPerChannel || 256;
+  const quantizeLUTPreset = options.quantizeLUTPreset || 'none';
 
   if (bitmap.width === 0 || bitmap.height === 0) {
     return bitmap;
@@ -207,7 +503,6 @@ export async function pixelateImage(bitmap: ImageBitmap, options: PixelatorOptio
   const smallCtx = smallCanvas.getContext('2d', { willReadFrequently: true });
   if (!smallCtx) return bitmap;
 
-  // Draw image downscaled
   smallCtx.imageSmoothingEnabled = false;
   smallCtx.drawImage(canvas, 0, 0, smallWidth, smallHeight);
 
@@ -215,29 +510,76 @@ export async function pixelateImage(bitmap: ImageBitmap, options: PixelatorOptio
   const imgData = smallCtx.getImageData(0, 0, smallWidth, smallHeight);
   const data = imgData.data;
 
-  // 2. Select retro palette
+  // Determine active palette preset if needed
   let activePalette: number[][] | null = null;
-  if (palettePreset === 'custom' && customPaletteColors && customPaletteColors.length > 0) {
-    activePalette = customPaletteColors.map(hexToRgb);
-  } else if (palettePreset !== 'none' && PALETTES[palettePreset]) {
-    activePalette = PALETTES[palettePreset];
+  if (quantizationType === 'none' && palettePreset !== 'none') {
+    if (palettePreset === 'custom' && customPaletteColors && customPaletteColors.length > 0) {
+      activePalette = customPaletteColors.map(hexToRgb);
+    } else if (PALETTES[palettePreset]) {
+      activePalette = PALETTES[palettePreset];
+    }
   }
 
-  // 3. Process Pixels (Palette Mapping & Dithering)
+  // Handle advanced custom palette extraction
+  if (quantizationType === 'custom') {
+    let sourcePixels: Uint8ClampedArray;
+    if (quantizeUsePixelated) {
+      sourcePixels = data;
+    } else {
+      const origData = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+      sourcePixels = origData.data;
+    }
+    activePalette = generateCustomPalette(
+      sourcePixels,
+      quantizeNumColors,
+      quantizeQuality,
+      quantizeGamma,
+      quantizeForceColors
+    );
+  }
+
+  // Handle range adaptive boundaries if per-channel adaptive is active
+  let minR = 255, maxR = 0;
+  let minG = 255, maxG = 0;
+  let minB = 255, maxB = 0;
+  if (quantizationType === 'per-channel' && quantizeUseRangeAdaptive) {
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] === 0) continue;
+      const r = data[i]; const g = data[i + 1]; const b = data[i + 2];
+      if (r < minR) minR = r; if (r > maxR) maxR = r;
+      if (g < minG) minG = g; if (g > maxG) maxG = g;
+      if (b < minB) minB = b; if (b > maxB) maxB = b;
+    }
+    if (minR === maxR) { minR = 0; maxR = 255; }
+    if (minG === maxG) { minG = 0; maxG = 255; }
+    if (minB === maxB) { minB = 0; maxB = 255; }
+  }
+
+  // Determine dither step size based on mode
+  let ditherStep = 64;
+  if (quantizationType === 'per-channel') {
+    ditherStep = 255 / (quantizeColorsPerChannel - 1);
+  } else if (quantizationType === 'lut') {
+    if (quantizeLUTPreset === 'sega-md') ditherStep = 36;
+    else if (quantizeLUTPreset === 'psx-15bit') ditherStep = 8;
+    else ditherStep = 17; // Amiga 12bit / pc98
+  } else if (quantizationType === 'none' && (palettePreset === 'none' || palettePreset === undefined)) {
+    ditherStep = 16; // True color dithering step size to make noise visible on gradients
+  }
+
+  const dAmount = ditherAmount / 100;
   const adjustContrastSat = contrast !== 0 || saturation !== 0 || brightness !== 0;
 
-  if (activePalette) {
-    const dAmount = ditherAmount / 100;
-    
-    if (ditherType === 'bayer4x4' || ditherType === 'bayer8x8') {
-      const matrix = ditherType === 'bayer4x4' ? BAYER_4X4 : BAYER_8X8;
-      const matrixSize = ditherType === 'bayer4x4' ? 4 : 8;
-      const maxVal = matrixSize * matrixSize;
+  // Check if color mapping, quantization, or dithering is active
+  const isQuantizing = quantizationType !== 'none' || activePalette !== null || ditherType !== 'none';
 
+  if (isQuantizing) {
+    if (ditherType !== 'none' && ditherType !== 'floyd-steinberg') {
+      // Ordered grid-based dithering
       for (let y = 0; y < smallHeight; y++) {
         for (let x = 0; x < smallWidth; x++) {
           const idx = (y * smallWidth + x) * 4;
-          if (data[idx + 3] === 0) continue; // Skip transparency
+          if (data[idx + 3] === 0) continue;
 
           let r = data[idx];
           let g = data[idx + 1];
@@ -247,24 +589,25 @@ export async function pixelateImage(bitmap: ImageBitmap, options: PixelatorOptio
             [r, g, b] = adjustColor(r, g, b, contrast, saturation, brightness);
           }
 
-          // Get Bayer threshold value
-          const threshold = (matrix[y % matrixSize][x % matrixSize] / maxVal - 0.5) * 64 * dAmount;
+          const offset = getDitherOffset(x, y, ditherType, dAmount, ditherStep);
+          const dr = Math.max(0, Math.min(255, r + offset));
+          const dg = Math.max(0, Math.min(255, g + offset));
+          const db = Math.max(0, Math.min(255, b + offset));
 
-          // Apply dither offset
-          const dr = Math.max(0, Math.min(255, r + threshold));
-          const dg = Math.max(0, Math.min(255, g + threshold));
-          const db = Math.max(0, Math.min(255, b + threshold));
+          const quantized = quantizePixel(
+            dr, dg, db,
+            quantizationType, palettePreset, activePalette, quantizeLUTPreset,
+            quantizeColorsPerChannel, quantizeUseRangeAdaptive,
+            minR, maxR, minG, maxG, minB, maxB
+          );
 
-          // Map to palette
-          const closest = findClosestColor(dr, dg, db, activePalette);
-          data[idx] = closest[0];
-          data[idx + 1] = closest[1];
-          data[idx + 2] = closest[2];
+          data[idx] = quantized[0];
+          data[idx + 1] = quantized[1];
+          data[idx + 2] = quantized[2];
         }
       }
     } else if (ditherType === 'floyd-steinberg') {
       // Floyd-Steinberg error diffusion
-      // Create copies to hold floating-point values so error diffusion is precise
       const rBuffer = new Float32Array(smallWidth * smallHeight);
       const gBuffer = new Float32Array(smallWidth * smallHeight);
       const bBuffer = new Float32Array(smallWidth * smallHeight);
@@ -279,8 +622,7 @@ export async function pixelateImage(bitmap: ImageBitmap, options: PixelatorOptio
         for (let x = 0; x < smallWidth; x++) {
           const idx = y * smallWidth + x;
           const dataIdx = idx * 4;
-
-          if (data[dataIdx + 3] === 0) continue; // Transparency
+          if (data[dataIdx + 3] === 0) continue;
 
           let r = rBuffer[idx];
           let g = gBuffer[idx];
@@ -290,42 +632,39 @@ export async function pixelateImage(bitmap: ImageBitmap, options: PixelatorOptio
             [r, g, b] = adjustColor(r, g, b, contrast, saturation, brightness);
           }
 
-          // Map to closest palette color
-          const closest = findClosestColor(r, g, b, activePalette);
+          const quantized = quantizePixel(
+            r, g, b,
+            quantizationType, palettePreset, activePalette, quantizeLUTPreset,
+            quantizeColorsPerChannel, quantizeUseRangeAdaptive,
+            minR, maxR, minG, maxG, minB, maxB
+          );
 
-          // Write result
-          data[dataIdx] = closest[0];
-          data[dataIdx + 1] = closest[1];
-          data[dataIdx + 2] = closest[2];
+          data[dataIdx] = quantized[0];
+          data[dataIdx + 1] = quantized[1];
+          data[dataIdx + 2] = quantized[2];
 
-          // Compute error
-          const errR = (r - closest[0]) * dAmount;
-          const errG = (g - closest[1]) * dAmount;
-          const errB = (b - closest[2]) * dAmount;
+          const errR = (r - quantized[0]) * dAmount;
+          const errG = (g - quantized[1]) * dAmount;
+          const errB = (b - quantized[2]) * dAmount;
 
-          // Diffuse error to neighbors
-          // Right
           if (x + 1 < smallWidth) {
             const nIdx = idx + 1;
             rBuffer[nIdx] += errR * (7 / 16);
             gBuffer[nIdx] += errG * (7 / 16);
             bBuffer[nIdx] += errB * (7 / 16);
           }
-          // Down Left
           if (x > 0 && y + 1 < smallHeight) {
             const nIdx = idx + smallWidth - 1;
             rBuffer[nIdx] += errR * (3 / 16);
             gBuffer[nIdx] += errG * (3 / 16);
             bBuffer[nIdx] += errB * (3 / 16);
           }
-          // Down
           if (y + 1 < smallHeight) {
             const nIdx = idx + smallWidth;
             rBuffer[nIdx] += errR * (5 / 16);
             gBuffer[nIdx] += errG * (5 / 16);
             bBuffer[nIdx] += errB * (5 / 16);
           }
-          // Down Right
           if (x + 1 < smallWidth && y + 1 < smallHeight) {
             const nIdx = idx + smallWidth + 1;
             rBuffer[nIdx] += errR * (1 / 16);
@@ -335,9 +674,10 @@ export async function pixelateImage(bitmap: ImageBitmap, options: PixelatorOptio
         }
       }
     } else {
-      // No dithering, direct mapping
+      // Direct quantization mapping without dithering
       for (let i = 0; i < data.length; i += 4) {
         if (data[i + 3] === 0) continue;
+
         let r = data[i];
         let g = data[i + 1];
         let b = data[i + 2];
@@ -346,14 +686,20 @@ export async function pixelateImage(bitmap: ImageBitmap, options: PixelatorOptio
           [r, g, b] = adjustColor(r, g, b, contrast, saturation, brightness);
         }
 
-        const closest = findClosestColor(r, g, b, activePalette);
-        data[i] = closest[0];
-        data[i + 1] = closest[1];
-        data[i + 2] = closest[2];
+        const quantized = quantizePixel(
+          r, g, b,
+          quantizationType, palettePreset, activePalette, quantizeLUTPreset,
+          quantizeColorsPerChannel, quantizeUseRangeAdaptive,
+          minR, maxR, minG, maxG, minB, maxB
+        );
+
+        data[i] = quantized[0];
+        data[i + 1] = quantized[1];
+        data[i + 2] = quantized[2];
       }
     }
   } else if (adjustContrastSat) {
-    // Just color adjustment without palette mapping
+    // Just color adjustments (no quantization)
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] === 0) continue;
       const adjusted = adjustColor(data[i], data[i + 1], data[i + 2], contrast, saturation, brightness);

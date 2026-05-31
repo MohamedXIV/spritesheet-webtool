@@ -37,6 +37,17 @@ export function PixelationPanel({
   const [localSaturation, setLocalSaturation] = useState(0);
   const [localBrightness, setLocalBrightness] = useState(0);
 
+  // New Advanced Quantization states (Local to Pixelation Panel)
+  const [quantizationType, setQuantizationType] = useState<Required<PixelatorOptions>['quantizationType']>('none');
+  const [quantizeUsePixelated, setQuantizeUsePixelated] = useState(false);
+  const [quantizeQuality, setQuantizeQuality] = useState(2);
+  const [quantizeNumColors, setQuantizeNumColors] = useState(32);
+  const [quantizeGamma, setQuantizeGamma] = useState(1.0);
+  const [quantizeForceColors, setQuantizeForceColors] = useState<Required<PixelatorOptions>['quantizeForceColors']>('none');
+  const [quantizeUseRangeAdaptive, setQuantizeUseRangeAdaptive] = useState(false);
+  const [quantizeColorsPerChannel, setQuantizeColorsPerChannel] = useState(256);
+  const [quantizeLUTPreset, setQuantizeLUTPreset] = useState<Required<PixelatorOptions>['quantizeLUTPreset']>('none');
+
   // Bind to context if present, otherwise fall back to local
   const enabled = ctx?.activePixelatorOptions ? ctx.activePixelatorOptions.enabled : localEnabled;
   const setEnabled = ctx?.activePixelatorOptions ? ctx.activePixelatorOptions.setEnabled : setLocalEnabled;
@@ -88,8 +99,8 @@ export function PixelationPanel({
       const canvas = previewCanvasRef.current;
       if (!canvas || !currentPreviewFrame?.bitmap) return;
 
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      const ctx2d = canvas.getContext('2d');
+      if (!ctx2d) return;
 
       try {
         if (currentPreviewFrame.bitmap.width === 0) return;
@@ -111,6 +122,16 @@ export function PixelationPanel({
             contrast,
             saturation,
             brightness,
+            // Advanced settings injection
+            quantizationType,
+            quantizeUsePixelated,
+            quantizeQuality,
+            quantizeNumColors,
+            quantizeGamma,
+            quantizeForceColors,
+            quantizeUseRangeAdaptive,
+            quantizeColorsPerChannel,
+            quantizeLUTPreset,
           });
           processedBitmap = displayBitmap;
         }
@@ -132,13 +153,13 @@ export function PixelationPanel({
         const tileSize = 8;
         for (let y = 0; y < canvas.height; y += tileSize) {
           for (let x = 0; x < canvas.width; x += tileSize) {
-            ctx.fillStyle = ((x / tileSize + y / tileSize) % 2) ? '#1f1f38' : '#14142b';
-            ctx.fillRect(x, y, tileSize, tileSize);
+            ctx2d.fillStyle = ((x / tileSize + y / tileSize) % 2) ? '#1f1f38' : '#14142b';
+            ctx2d.fillRect(x, y, tileSize, tileSize);
           }
         }
 
         // Draw the processed preview
-        ctx.drawImage(displayBitmap, 0, 0, canvas.width, canvas.height);
+        ctx2d.drawImage(displayBitmap, 0, 0, canvas.width, canvas.height);
 
         // Keep local reference clean
         if (displayBitmap !== currentPreviewFrame.bitmap) {
@@ -172,6 +193,15 @@ export function PixelationPanel({
     contrast,
     saturation,
     brightness,
+    quantizationType,
+    quantizeUsePixelated,
+    quantizeQuality,
+    quantizeNumColors,
+    quantizeGamma,
+    quantizeForceColors,
+    quantizeUseRangeAdaptive,
+    quantizeColorsPerChannel,
+    quantizeLUTPreset,
   ]);
 
   // Bulk process and apply
@@ -194,6 +224,16 @@ export function PixelationPanel({
       contrast,
       saturation,
       brightness,
+      // Advanced settings injection
+      quantizationType,
+      quantizeUsePixelated,
+      quantizeQuality,
+      quantizeNumColors,
+      quantizeGamma,
+      quantizeForceColors,
+      quantizeUseRangeAdaptive,
+      quantizeColorsPerChannel,
+      quantizeLUTPreset,
     };
 
     try {
@@ -223,6 +263,15 @@ export function PixelationPanel({
     contrast,
     saturation,
     brightness,
+    quantizationType,
+    quantizeUsePixelated,
+    quantizeQuality,
+    quantizeNumColors,
+    quantizeGamma,
+    quantizeForceColors,
+    quantizeUseRangeAdaptive,
+    quantizeColorsPerChannel,
+    quantizeLUTPreset,
     onFramesProcessed,
   ]);
 
@@ -287,61 +336,230 @@ export function PixelationPanel({
             </div>
 
             {/* 2. Color Depth & Dithering */}
-            <div className={styles.sectionHeader}>Retro Palette & Shading</div>
+            <div className={styles.sectionHeader}>Quantization & Color Reduction</div>
 
             <div className={styles.field}>
-              <label className={styles.label}>Color System Palette</label>
+              <label className={styles.label}>Quantization Type</label>
               <select
-                value={palette}
-                onChange={(e) => setPalette(e.target.value as PixelatorOptions['palette'])}
+                value={quantizationType}
+                onChange={(e) => setQuantizationType(e.target.value as any)}
                 className={styles.select}
                 disabled={isApplying}
               >
-                <option value="none">True Color (No Palette Limit)</option>
-                <option value="pico8">PICO-8 Console (16 Colors)</option>
-                <option value="gameboy">Original GameBoy Green (4 Colors)</option>
-                <option value="gameboy-color">GameBoy Color (24 Colors)</option>
-                <option value="c64">Commodore 64 (16 Colors)</option>
-                <option value="nes">Classic NES Console (42 Colors)</option>
+                <option value="none">None (Standard Preset Palette)</option>
+                <option value="custom">Generate Custom Palette</option>
+                <option value="per-channel">Per Channel</option>
+                <option value="lut">Lookup Table</option>
               </select>
             </div>
 
-            {palette !== 'none' && (
-              <>
-                <div className={styles.field}>
-                  <label className={styles.label}>Dither Pattern</label>
-                  <select
-                    value={ditherType}
-                    onChange={(e) => setDitherType(e.target.value as PixelatorOptions['ditherType'])}
-                    className={styles.select}
+            {/* IF None: show preset palette selector */}
+            {quantizationType === 'none' && (
+              <div className={styles.field}>
+                <label className={styles.label}>Color System Palette</label>
+                <select
+                  value={palette}
+                  onChange={(e) => setPalette(e.target.value as PixelatorOptions['palette'])}
+                  className={styles.select}
+                  disabled={isApplying}
+                >
+                  <option value="none">True Color (No Palette Limit)</option>
+                  <option value="pico8">PICO-8 Console (16 Colors)</option>
+                  <option value="gameboy">Original GameBoy Green (4 Colors)</option>
+                  <option value="gameboy-color">GameBoy Color (24 Colors)</option>
+                  <option value="c64">Commodore 64 (16 Colors)</option>
+                  <option value="nes">Classic NES Console (42 Colors)</option>
+                </select>
+              </div>
+            )}
+
+            {/* IF Custom: show Dynamic Palette generation controls */}
+            {quantizationType === 'custom' && (
+              <div className={styles.subSettings} style={{ gridColumn: 'span 2' }}>
+                <div className={styles.checkboxRow} style={{ marginBottom: '8px' }}>
+                  <input
+                    type="checkbox"
+                    id="quantize-use-pixelated"
+                    checked={quantizeUsePixelated}
+                    onChange={(e) => setQuantizeUsePixelated(e.target.checked)}
                     disabled={isApplying}
-                  >
-                    <option value="none">Solid Color Matching (Flat)</option>
-                    <option value="bayer4x4">Bayer 4x4 Ordered Dither</option>
-                    <option value="bayer8x8">Bayer 8x8 Ordered Dither</option>
-                    <option value="floyd-steinberg">Floyd-Steinberg Error Diffusion</option>
+                  />
+                  <label htmlFor="quantize-use-pixelated">Use Pixelated Texture for Quantizing</label>
+                </div>
+
+                <div className={styles.field}>
+                  <label className={styles.label}>Color Mode</label>
+                  <select className={styles.select} disabled={true}>
+                    <option value="RGB">RGB</option>
                   </select>
                 </div>
 
-                {ditherType !== 'none' && (
-                  <div className={styles.field}>
-                    <div className={styles.labelRow}>
-                      <span className={styles.label}>Dither Intensity</span>
-                      <span className={styles.valueBadge}>{ditherAmount}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={ditherAmount}
-                      onChange={(e) => setDitherAmount(Number(e.target.value))}
-                      className={styles.slider}
-                      disabled={isApplying}
-                    />
+                <div className={styles.field}>
+                  <div className={styles.labelRow}>
+                    <span className={styles.label}>Subsampling Quality</span>
+                    <span className={styles.valueBadge}>{quantizeQuality === 1 ? 'High (1x)' : `${quantizeQuality}x`}</span>
                   </div>
-                )}
-              </>
+                  <input
+                    type="range"
+                    min="1"
+                    max="8"
+                    value={quantizeQuality}
+                    onChange={(e) => setQuantizeQuality(Number(e.target.value))}
+                    className={styles.slider}
+                    disabled={isApplying}
+                  />
+                </div>
+
+                <div className={styles.field}>
+                  <div className={styles.labelRow}>
+                    <span className={styles.label}>Number of Colors</span>
+                    <span className={styles.valueBadge}>{quantizeNumColors} colors</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="8"
+                    max="256"
+                    step="8"
+                    value={quantizeNumColors}
+                    onChange={(e) => setQuantizeNumColors(Number(e.target.value))}
+                    className={styles.slider}
+                    disabled={isApplying}
+                  />
+                </div>
+
+                <div className={styles.field}>
+                  <div className={styles.labelRow}>
+                    <span className={styles.label}>Gamma Adjust</span>
+                    <span className={styles.valueBadge}>{quantizeGamma.toFixed(1)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2.0"
+                    step="0.1"
+                    value={quantizeGamma}
+                    onChange={(e) => setQuantizeGamma(Number(e.target.value))}
+                    className={styles.slider}
+                    disabled={isApplying}
+                  />
+                </div>
+
+                <div className={styles.field}>
+                  <label className={styles.label}>Force Colors</label>
+                  <select
+                    value={quantizeForceColors}
+                    onChange={(e) => setQuantizeForceColors(e.target.value as any)}
+                    className={styles.select}
+                    disabled={isApplying}
+                  >
+                    <option value="none">None</option>
+                    <option value="black-white">Force Black & White</option>
+                    <option value="nes-anchors">Force NES Anchors</option>
+                  </select>
+                </div>
+              </div>
             )}
+
+            {/* IF Per-Channel: show color bit parameters */}
+            {quantizationType === 'per-channel' && (
+              <div className={styles.subSettings} style={{ gridColumn: 'span 2' }}>
+                <div className={styles.checkboxRow} style={{ marginBottom: '8px' }}>
+                  <input
+                    type="checkbox"
+                    id="quantize-range-adaptive"
+                    checked={quantizeUseRangeAdaptive}
+                    onChange={(e) => setQuantizeUseRangeAdaptive(e.target.checked)}
+                    disabled={isApplying}
+                  />
+                  <label htmlFor="quantize-range-adaptive">Use Range Adaptive Mode</label>
+                </div>
+
+                <div className={styles.field}>
+                  <label className={styles.label}>Color Mode</label>
+                  <select className={styles.select} disabled={true}>
+                    <option value="ColorsPerChannel">Colors Per Channel</option>
+                  </select>
+                </div>
+
+                <div className={styles.field}>
+                  <div className={styles.labelRow}>
+                    <span className={styles.label}>Colors Per Channel</span>
+                    <span className={styles.valueBadge}>{quantizeColorsPerChannel}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="2"
+                    max="256"
+                    value={quantizeColorsPerChannel}
+                    onChange={(e) => setQuantizeColorsPerChannel(Number(e.target.value))}
+                    className={styles.slider}
+                    disabled={isApplying}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* IF Lookup Table: show presets */}
+            {quantizationType === 'lut' && (
+              <div className={styles.subSettings} style={{ gridColumn: 'span 2' }}>
+                <div className={styles.field}>
+                  <label className={styles.label}>Hardware Preset LUT</label>
+                  <select
+                    value={quantizeLUTPreset}
+                    onChange={(e) => setQuantizeLUTPreset(e.target.value as any)}
+                    className={styles.select}
+                    disabled={isApplying}
+                  >
+                    <option value="none">Default LUT (None)</option>
+                    <option value="amiga-12bit">Amiga OCS (12-bit, 4096 colors)</option>
+                    <option value="sega-md">Sega Mega Drive (9-bit analog)</option>
+                    <option value="psx-15bit">Sony PlayStation (15-bit, 32768 colors)</option>
+                    <option value="pc98">PC-98 analog color space</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Dither Selector — always visible when filter is active */}
+            <>
+              <div className={styles.sectionHeader}>Dithering Engine</div>
+              <div className={styles.field}>
+                <label className={styles.label}>Dither Type</label>
+                <select
+                  value={ditherType}
+                  onChange={(e) => setDitherType(e.target.value as any)}
+                  className={styles.select}
+                  disabled={isApplying}
+                >
+                  <option value="none">Solid Color Matching (Flat)</option>
+                  <option value="white-noise">White Noise Dither</option>
+                  <option value="blue-noise">Blue Noise Dither</option>
+                  <option value="bayer2x2">Bayer 2x2 Ordered Dither</option>
+                  <option value="bayer4x4">Bayer 4x4 Ordered Dither</option>
+                  <option value="bayer8x8">Bayer 8x8 Ordered Dither</option>
+                  <option value="pattern">Pattern Ordered Dither</option>
+                  <option value="floyd-steinberg">Floyd-Steinberg Error Diffusion</option>
+                </select>
+              </div>
+
+              {ditherType !== 'none' && (
+                <div className={styles.field}>
+                  <div className={styles.labelRow}>
+                    <span className={styles.label}>Dither Intensity</span>
+                    <span className={styles.valueBadge}>{ditherAmount}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={ditherAmount}
+                    onChange={(e) => setDitherAmount(Number(e.target.value))}
+                    className={styles.slider}
+                    disabled={isApplying}
+                  />
+                </div>
+              )}
+            </>
 
             {/* 3. Sprite Outline Sharpness */}
             <div className={styles.sectionHeader}>Edges & Outlines</div>

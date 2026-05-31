@@ -44,7 +44,7 @@ export default function ThreePainterPage() {
     ...DEFAULT_PIXELATOR_OPTIONS,
     enabled: true,
     pixelSize: 4,
-    palette: 'pico8',
+    palette: 'none',
   });
 
   const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set([

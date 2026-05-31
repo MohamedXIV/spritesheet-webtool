@@ -84,17 +84,79 @@ export function ThreePainterPixelatePanel() {
         <ToggleRow label="Enabled" checked={p.enabled} onChange={(v) => updatePixelatorOptions({ enabled: v })} />
         <SliderRow label="Pixel size" value={p.pixelSize} min={1} max={32} unit="px"
           onChange={(v) => updatePixelatorOptions({ pixelSize: v })} disabled={!p.enabled} />
-        <SelectRow label="Palette" value={p.palette} disabled={!p.enabled}
-          onChange={(v) => updatePixelatorOptions({ palette: v as any })}
+        <SelectRow label="Quantization" value={p.quantizationType || 'none'} disabled={!p.enabled}
+          onChange={(v) => updatePixelatorOptions({ quantizationType: v as any })}
           options={[
-            { value: 'none',         label: 'None (true color)' },
-            { value: 'pico8',        label: 'PICO-8 (16)' },
-            { value: 'gameboy',      label: 'Game Boy (4)' },
-            { value: 'gameboy-color', label: 'GBC LCD' },
-            { value: 'nes',          label: 'NES (54)' },
-            { value: 'c64',          label: 'C64 (16)' },
+            { value: 'none',        label: 'None (preset palette)' },
+            { value: 'custom',      label: 'Custom Palette' },
+            { value: 'per-channel', label: 'Per Channel' },
+            { value: 'lut',         label: 'Lookup Table' },
           ]}
         />
+
+        {/* Preset Palette if QuantizationType is None */}
+        {p.enabled && (p.quantizationType || 'none') === 'none' && (
+          <SelectRow label="Palette Preset" value={p.palette} disabled={!p.enabled}
+            onChange={(v) => updatePixelatorOptions({ palette: v as any })}
+            options={[
+              { value: 'none',          label: 'None (True color)' },
+              { value: 'pico8',         label: 'PICO-8 (16)' },
+              { value: 'gameboy',       label: 'Game Boy (4)' },
+              { value: 'gameboy-color', label: 'GBC LCD' },
+              { value: 'nes',           label: 'NES (54)' },
+              { value: 'c64',           label: 'C64 (16)' },
+            ]}
+          />
+        )}
+
+        {/* Generate Custom Palette sub-options */}
+        {p.enabled && p.quantizationType === 'custom' && (
+          <div style={{ paddingLeft: '10px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', margin: '4px 0 8px 4px' }}>
+            <ToggleRow label="Use pixelated input" checked={p.quantizeUsePixelated || false}
+              onChange={(v) => updatePixelatorOptions({ quantizeUsePixelated: v })} />
+            <SliderRow label="Subsampling" value={p.quantizeQuality || 2} min={1} max={8} displayValue={`${p.quantizeQuality || 2}x`}
+              onChange={(v) => updatePixelatorOptions({ quantizeQuality: v })} />
+            <SliderRow label="Colors" value={p.quantizeNumColors || 32} min={8} max={256} displayValue={`${p.quantizeNumColors || 32} cols`}
+              onChange={(v) => updatePixelatorOptions({ quantizeNumColors: v })} />
+            <SliderRow label="Gamma Adjust" value={Math.round((p.quantizeGamma || 1.0) * 10)} min={5} max={20} displayValue={`${(p.quantizeGamma || 1.0).toFixed(1)}`}
+              onChange={(v) => updatePixelatorOptions({ quantizeGamma: v / 10 })} />
+            <SelectRow label="Force Anchors" value={p.quantizeForceColors || 'none'}
+              onChange={(v) => updatePixelatorOptions({ quantizeForceColors: v as any })}
+              options={[
+                { value: 'none',        label: 'None' },
+                { value: 'black-white', label: 'Force B&W' },
+                { value: 'nes-anchors', label: 'Force NES Anchors' },
+              ]}
+            />
+          </div>
+        )}
+
+        {/* Per Channel sub-options */}
+        {p.enabled && p.quantizationType === 'per-channel' && (
+          <div style={{ paddingLeft: '10px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', margin: '4px 0 8px 4px' }}>
+            <ToggleRow label="Adaptive Range" checked={p.quantizeUseRangeAdaptive || false}
+              onChange={(v) => updatePixelatorOptions({ quantizeUseRangeAdaptive: v })} />
+            <SliderRow label="Colors/Channel" value={p.quantizeColorsPerChannel || 256} min={2} max={256} displayValue={`${p.quantizeColorsPerChannel || 256}`}
+              onChange={(v) => updatePixelatorOptions({ quantizeColorsPerChannel: v })} />
+          </div>
+        )}
+
+        {/* Lookup Table sub-options */}
+        {p.enabled && p.quantizationType === 'lut' && (
+          <div style={{ paddingLeft: '10px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', margin: '4px 0 8px 4px' }}>
+            <SelectRow label="Hardware Preset" value={p.quantizeLUTPreset || 'none'}
+              onChange={(v) => updatePixelatorOptions({ quantizeLUTPreset: v as any })}
+              options={[
+                { value: 'none',        label: 'Default LUT (None)' },
+                { value: 'amiga-12bit', label: 'Amiga OCS (12-bit)' },
+                { value: 'sega-md',     label: 'Sega Mega Drive' },
+                { value: 'psx-15bit',   label: 'PlayStation (15-bit)' },
+                { value: 'pc98',        label: 'PC-98 analog' },
+              ]}
+            />
+          </div>
+        )}
+
         <SelectRow label="Shape" value={p.pixelShape} disabled={!p.enabled}
           onChange={(v) => updatePixelatorOptions({ pixelShape: v as any })}
           options={[
@@ -105,15 +167,19 @@ export function ThreePainterPixelatePanel() {
         />
       </Section>
 
-      {/* Dither — only relevant with a palette */}
-      {p.enabled && p.palette !== 'none' && (
+      {/* Dither Section — always visible when filter is active */}
+      {p.enabled && (
         <Section label="DITHER">
           <SelectRow label="Method" value={p.ditherType}
             onChange={(v) => updatePixelatorOptions({ ditherType: v as any })}
             options={[
               { value: 'none',            label: 'None' },
+              { value: 'white-noise',     label: 'White Noise' },
+              { value: 'blue-noise',      label: 'Blue Noise' },
+              { value: 'bayer2x2',        label: 'Bayer 2×2' },
               { value: 'bayer4x4',        label: 'Bayer 4×4' },
               { value: 'bayer8x8',        label: 'Bayer 8×8' },
+              { value: 'pattern',         label: 'Pattern Ordered' },
               { value: 'floyd-steinberg', label: 'Floyd-Steinberg' },
             ]}
           />
