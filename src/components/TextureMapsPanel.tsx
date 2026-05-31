@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import * as THREE from 'three';
-import { ChevronDown, ChevronRight, Upload, X, ImageIcon } from 'lucide-react';
+import { ChevronDown, ChevronRight, Upload, X, ImageIcon, Compass, Percent, Sparkles, Layers } from 'lucide-react';
 import { useThreePainterContext } from '@/contexts/ThreePainterContext';
 import { MapSlot } from '@/lib/threePainter';
 import styles from './TextureMapsPanel.module.css';
@@ -90,6 +90,11 @@ function MapSlotSection({ label, slot, badge, painter, controls }: {
     if (file && file.type.startsWith('image/')) load(file);
   };
 
+  const handleClear = () => {
+    clear();
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
   return (
     <Section label={label} badge={badge}>
       <div
@@ -108,7 +113,7 @@ function MapSlotSection({ label, slot, badge, painter, controls }: {
             <div className={styles.thumbMeta}>
               <span className={styles.thumbName}>{fileName}</span>
               <button className={styles.clearBtn}
-                onClick={(e) => { e.stopPropagation(); clear(); }} title="Remove map">
+                onClick={(e) => { e.stopPropagation(); handleClear(); }} title="Remove map">
                 <X size={9} /> Clear
               </button>
             </div>
@@ -151,6 +156,7 @@ function MatcapSlot({ painter }: { painter: PainterRef }) {
     painter?.setMatcapTexture(null); // reverts to procedural built-in
     setObjectUrl(null);
     setFileName(null);
+    if (inputRef.current) inputRef.current.value = '';
   };
 
   useEffect(() => () => { if (prevUrl.current) URL.revokeObjectURL(prevUrl.current); }, []);
@@ -194,15 +200,125 @@ function MatcapSlot({ painter }: { painter: PainterRef }) {
   );
 }
 
+// ── AlbedoSlot ───────────────────────────────────────────────────────────────────
+
+interface AlbedoSlotProps {
+  layers: any[];
+  activeLayerId: string;
+  importImageToLayer?: (file: File, id: string) => void;
+  clearLayer?: (id: string) => void;
+}
+
+function AlbedoSlot({ layers, activeLayerId, importImageToLayer, clearLayer }: AlbedoSlotProps) {
+  const [targetLayerId, setTargetLayerId] = useState(activeLayerId);
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const prevUrl = useRef<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    if (layers.some(l => l.id === activeLayerId)) {
+      setTargetLayerId(activeLayerId);
+    }
+  }, [activeLayerId, layers]);
+
+  useEffect(() => {
+    return () => {
+      if (prevUrl.current) URL.revokeObjectURL(prevUrl.current);
+    };
+  }, []);
+
+  const load = (file: File) => {
+    if (prevUrl.current) URL.revokeObjectURL(prevUrl.current);
+    const url = URL.createObjectURL(file);
+    prevUrl.current = url;
+    if (importImageToLayer) {
+      importImageToLayer(file, targetLayerId);
+    }
+    setObjectUrl(url);
+    setFileName(file.name);
+  };
+
+  const clear = () => {
+    if (prevUrl.current) {
+      URL.revokeObjectURL(prevUrl.current);
+      prevUrl.current = null;
+    }
+    if (clearLayer) {
+      clearLayer(targetLayerId);
+    }
+    setObjectUrl(null);
+    setFileName(null);
+  };
+
+  const handleFiles = (files: FileList | null) => {
+    const file = files?.[0];
+    if (file && file.type.startsWith('image/')) load(file);
+  };
+
+  return (
+    <Section label="ALBEDO / DIFFUSE" badge="Core Paint Layer">
+      <p className={styles.slotHint}>Import an external image directly into a painting layer. Updates the 3D model & applies pixelation instantly.</p>
+      
+      <div className={styles.layerSelectRow}>
+        <span className={styles.sliderLabel}>Target Layer</span>
+        <select 
+          className={styles.layerSelect}
+          value={targetLayerId}
+          onChange={(e) => setTargetLayerId(e.target.value)}
+        >
+          {layers.map(l => (
+            <option key={l.id} value={l.id}>{l.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div
+        className={`${styles.dropZone} ${dragging ? styles.dropZoneDrag : ''} ${objectUrl ? styles.dropZoneLoaded : ''}`}
+        onClick={() => !objectUrl && inputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); }}
+      >
+        <input ref={inputRef} type="file" accept="image/*" className={styles.hiddenInput}
+          onChange={(e) => handleFiles(e.target.files)} />
+
+        {objectUrl ? (
+          <div className={styles.thumbRow}>
+            <img src={objectUrl} alt={fileName ?? ''} className={styles.thumb} />
+            <div className={styles.thumbMeta}>
+              <span className={styles.thumbName}>{fileName}</span>
+              <button className={styles.clearBtn}
+                onClick={(e) => { e.stopPropagation(); clear(); }} title="Clear Albedo">
+                <X size={9} /> Clear
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className={styles.dropPlaceholder}>
+            <Upload size={13} className={styles.dropIcon} />
+            <span>Drop image or click to browse</span>
+          </div>
+        )}
+      </div>
+    </Section>
+  );
+}
+
 // ── Main Panel ────────────────────────────────────────────────────────────────
 
 export function TextureMapsPanel() {
-  const { painter, shadingMode, isModelLoaded } = useThreePainterContext();
+  const { painter, shadingMode, isModelLoaded, layers, activeLayerId, importImageToLayer, clearLayer } = useThreePainterContext();
 
   const [aoIntensity,       setAoIntensity]       = useState(1.0);
   const [normalScale,       setNormalScale]       = useState(1.0);
   const [emissiveColor,     setEmissiveColor]     = useState('#ffffff');
   const [emissiveIntensity, setEmissiveIntensity] = useState(1.0);
+  
+  // New Maps State
+  const [metalness,         setMetalness]         = useState(1.0);
+  const [displacementScale, setDisplacementScale] = useState(0.1);
 
   const isPBR = shadingMode === 'standard';
 
@@ -227,6 +343,14 @@ export function TextureMapsPanel() {
       {isPBR && (
         <div className={styles.modeNoticeOk}>PBR mode active — all map slots enabled.</div>
       )}
+
+      {/* Albedo / Diffuse */}
+      <AlbedoSlot 
+        layers={layers} 
+        activeLayerId={activeLayerId} 
+        importImageToLayer={importImageToLayer} 
+        clearLayer={clearLayer}
+      />
 
       {/* Matcap */}
       <MatcapSlot painter={painter} />
@@ -266,6 +390,25 @@ export function TextureMapsPanel() {
           </>
         }
       />
+
+      {/* Metalness */}
+      <MapSlotSection label="METALNESS MAP" slot="metalness" badge="PBR" painter={painter}
+        controls={
+          <SliderRow label="Metallic" value={metalness} min={0} max={1}
+            onChange={(v) => { setMetalness(v); painter?.setMapIntensity('metalness', v); }} />
+        }
+      />
+
+      {/* Displacement */}
+      <MapSlotSection label="DISPLACEMENT MAP" slot="displacement" badge="PBR" painter={painter}
+        controls={
+          <SliderRow label="Scale" value={displacementScale} min={0} max={1} step={0.02}
+            onChange={(v) => { setDisplacementScale(v); painter?.setMapIntensity('displacementScale', v); }} />
+        }
+      />
+
+      {/* Alpha / Transparency */}
+      <MapSlotSection label="ALPHA (TRANSPARENCY)" slot="alpha" badge="PBR" painter={painter} />
 
       {/* Roughness */}
       <MapSlotSection label="ROUGHNESS MAP" slot="roughness" badge="PBR" painter={painter} />
