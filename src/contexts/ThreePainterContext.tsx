@@ -14,7 +14,7 @@ export interface PaintingLayer {
   canvas: HTMLCanvasElement | null;
 }
 
-export type BrushTool = 'brush' | 'eraser' | 'eyedropper' | 'bucket';
+export type BrushTool = 'brush' | 'eraser' | 'eyedropper' | 'bucket' | 'island-bucket';
 
 export interface ThreePainterContextValue {
   projectId: string;
@@ -42,6 +42,8 @@ export interface ThreePainterContextValue {
   setLayerOpacity: (id: string, opacity: number) => void;
   setLayerBlendMode: (id: string, mode: PaintingLayer['blendMode']) => void;
   reorderLayers: (fromIndex: number, toIndex: number) => void;
+  importImageToLayer?: (file: File, layerId: string) => void;
+  clearLayer?: (layerId: string) => void;
 
   // Brush
   activeTool: BrushTool;

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Paintbrush, Eraser, Pipette, PaintBucket,
-  ChevronDown, ChevronRight, Plus, Trash2, Check, X, Pencil,
+  ChevronDown, ChevronRight, Plus, Trash2, Check, X, Pencil, Sparkles,
 } from 'lucide-react';
 import { useThreePainterContext, BrushTool } from '@/contexts/ThreePainterContext';
 import {
@@ -169,10 +169,11 @@ export function BrushPanel() {
   // ── Tool helpers ─────────────────────────────────────────────────────────
 
   const TOOLS: [BrushTool, string, React.ReactNode][] = [
-    ['brush',      'Brush (B)',   <Paintbrush  size={13} strokeWidth={2} />],
-    ['eraser',     'Eraser (E)',  <Eraser      size={13} strokeWidth={2} />],
-    ['eyedropper', 'Pick (I)',    <Pipette     size={13} strokeWidth={2} />],
-    ['bucket',     'Fill (G)',    <PaintBucket size={13} strokeWidth={2} />],
+    ['brush',         'Brush (B)',       <Paintbrush  size={13} strokeWidth={2} />],
+    ['eraser',        'Eraser (E)',      <Eraser      size={13} strokeWidth={2} />],
+    ['eyedropper',    'Pick (I)',        <Pipette     size={13} strokeWidth={2} />],
+    ['bucket',        'Flood Fill (G)',  <PaintBucket size={13} strokeWidth={2} />],
+    ['island-bucket', 'Island Fill (U)', <Sparkles    size={13} strokeWidth={2} />],
   ];
 
   const handleToolClick = (tool: BrushTool) => {

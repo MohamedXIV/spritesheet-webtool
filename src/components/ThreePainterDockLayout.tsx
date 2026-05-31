@@ -11,18 +11,22 @@ import { LightingPanel } from '@/components/LightingPanel';
 import { TextureMapsPanel } from '@/components/TextureMapsPanel';
 import { ThreePainterPixelatePanel } from '@/components/ThreePainterPixelatePanel';
 import { ThreePainterExportPanel } from '@/components/ThreePainterExportPanel';
+import { ThreePainter2DPreview } from '@/components/ThreePainter2DPreview';
+import { AIGenerationPanel } from '@/components/AIGenerationPanel';
 import styles from './ThreePainterDockLayout.module.css';
 
 const STORAGE_KEY = 'three-painter-dock-layout';
 
 const PANEL_INFO: Record<string, { name: string }> = {
   '3d-preview':      { name: '3D Preview Port' },
+  '2d-preview':      { name: '2D UV Paint Viewport' },
   'brush-panel':     { name: 'Brush toolbox' },
   'layers-panel':    { name: 'Canvas Layers' },
   'lighting-panel':  { name: 'Lighting & Shading' },
   'texture-maps':    { name: 'Texture Maps' },
   'pixelate-panel':  { name: 'Retro Pixelation' },
   'export-panel':    { name: 'Export Assets' },
+  'ai-generation':   { name: 'AI Generator' },
 };
 
 export interface ThreePainterDockLayoutRef {
@@ -49,7 +53,10 @@ const defaultLayout = {
           {
             type: 'tabset',
             weight: 70,
-            children: [{ type: 'tab', name: '3D Viewport', component: '3d-preview' }],
+            children: [
+              { type: 'tab', name: '3D Viewport', component: '3d-preview' },
+              { type: 'tab', name: '2D UV Paint', component: '2d-preview' }
+            ],
           },
           {
             type: 'tabset',
@@ -148,6 +155,8 @@ export const ThreePainterDockLayout = forwardRef<ThreePainterDockLayoutRef, Thre
         case 'brush-panel':   return <div className={styles.panelContent}><BrushPanel /></div>;
         case 'layers-panel':  return <div className={styles.panelContent}><LayersPanel /></div>;
         case 'pixelate-panel': return <div className={styles.panelContent}><ThreePainterPixelatePanel /></div>;
+        case '2d-preview':     return <div className={styles.panelContent}><ThreePainter2DPreview /></div>;
+        case 'ai-generation':  return <div className={styles.panelContent}><AIGenerationPanel /></div>;
         default: return <div className={styles.placeholder}>Unknown Panel: {component}</div>;
       }
     }, [ctx.isModelLoaded]);

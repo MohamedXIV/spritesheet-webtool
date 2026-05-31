@@ -15,6 +15,7 @@ const VIEW_PANELS = [
   { id: 'texture-maps',   label: 'Texture Maps' },
   { id: 'pixelate-panel', label: 'Pixelation' },
   { id: 'export-panel',   label: 'Export' },
+  { id: 'ai-generation',  label: 'AI Generator' },
 ];
 
 function CheckIcon({ size }: { size: number }) {
