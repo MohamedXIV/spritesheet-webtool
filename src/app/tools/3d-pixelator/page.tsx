@@ -48,8 +48,8 @@ export default function ThreePainterPage() {
   });
 
   const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set([
-    '3d-preview', 'brush-panel', 'layers-panel', 'lighting-panel',
-    'texture-maps', 'pixelate-panel', 'export-panel',
+    '3d-preview', '2d-preview', 'brush-panel', 'layers-panel', 'lighting-panel',
+    'texture-maps', 'pixelate-panel', 'export-panel', 'ai-generation',
   ]));
 
   const dockLayoutRef     = useRef<ThreePainterDockLayoutRef>(null);
@@ -288,6 +288,21 @@ export default function ThreePainterPage() {
     ctx.save();
     if (activeTool === 'bucket') {
       floodFill(ctx, x, y, brushColor);
+    } else if (activeTool === 'island-bucket') {
+      if (painter) {
+        const tris = painter.getUVIslandTrianglesAt(u, v);
+        if (tris) {
+          ctx.fillStyle = brushColor;
+          ctx.beginPath();
+          tris.forEach(tri => {
+            ctx.moveTo(tri.a.x * canvas.width, (1 - tri.a.y) * canvas.height);
+            ctx.lineTo(tri.b.x * canvas.width, (1 - tri.b.y) * canvas.height);
+            ctx.lineTo(tri.c.x * canvas.width, (1 - tri.c.y) * canvas.height);
+            ctx.closePath();
+          });
+          ctx.fill();
+        }
+      }
     } else {
       ctx.lineWidth = brushSize; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       if (activeTool === 'eraser') ctx.globalCompositeOperation = 'destination-out';
@@ -307,7 +322,7 @@ export default function ThreePainterPage() {
     }
     ctx.restore();
     compositeAndPixelate();
-  }, [layers, activeLayerId, activeTool, brushColor, brushSize, brushOpacity, brushHardness, compositeAndPixelate, captureHistorySnapshot]);
+  }, [layers, activeLayerId, activeTool, brushColor, brushSize, brushOpacity, brushHardness, compositeAndPixelate, captureHistorySnapshot, painter]);
 
   useEffect(() => {
     (window as any).__threePaintStrokeDispatcher = handleThreePaintStroke;
@@ -389,6 +404,35 @@ export default function ThreePainterPage() {
     setIsDirty(true);
   };
 
+  const handleImportImageToLayer = useCallback((file: File, layerId: string) => {
+    const canvas = document.getElementById(`layer-canvas-${layerId}`) as HTMLCanvasElement;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(img.src);
+      setIsDirty(true);
+      compositeAndPixelate();
+    };
+  }, [compositeAndPixelate]);
+
+  const handleClearLayer = useCallback((layerId: string) => {
+    const canvas = document.getElementById(`layer-canvas-${layerId}`) as HTMLCanvasElement;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const baseLayer = layers[0];
+    if (layerId === baseLayer?.id) {
+      ctx.fillStyle = '#e4e4e7'; ctx.fillRect(0, 0, 512, 512);
+      ctx.strokeStyle = '#a1a1aa'; ctx.strokeRect(0, 0, 512, 512);
+    }
+    setIsDirty(true);
+    compositeAndPixelate();
+  }, [layers, compositeAndPixelate]);
+
   const handleUpdateLightingSettings = (settings: Partial<LightingSettings>) => {
     setLightingSettings(prev => ({ ...prev, ...settings } as LightingSettings));
   };
@@ -402,7 +446,7 @@ export default function ThreePainterPage() {
 
   const resetLayout = useCallback(() => {
     dockLayoutRef.current?.resetLayout();
-    setVisiblePanels(new Set(['3d-preview','brush-panel','layers-panel','lighting-panel','texture-maps','pixelate-panel','export-panel']));
+    setVisiblePanels(new Set(['3d-preview','2d-preview','brush-panel','layers-panel','lighting-panel','texture-maps','pixelate-panel','export-panel','ai-generation']));
   }, []);
 
   const contextValue = useMemo(() => ({
@@ -420,6 +464,8 @@ export default function ThreePainterPage() {
       const arr = [...layers]; const [m] = arr.splice(from,1); arr.splice(to,0,m);
       setLayers(arr); setIsDirty(true);
     },
+    importImageToLayer: handleImportImageToLayer,
+    clearLayer: handleClearLayer,
     activeTool, setActiveTool, brushColor, setBrushColor,
     brushSize, setBrushSize, brushOpacity, setBrushOpacity, brushHardness, setBrushHardness,
     pixelatorOptions,
@@ -437,7 +483,7 @@ export default function ThreePainterPage() {
     layers, activeLayerId, activeTool, brushColor, brushSize, brushOpacity, brushHardness,
     pixelatorOptions, psxEnabled, isPaintMode,
     shadingMode, activeLightingPresetId, lightingSettings,
-    painter, canUndo, canRedo, isDirty, visiblePanels,
+    painter, canUndo, canRedo, isDirty, visiblePanels, handleImportImageToLayer, handleClearLayer,
   ]);
 
   return (

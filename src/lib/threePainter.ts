@@ -41,8 +41,8 @@ out vec4 fragColor;
 void main() { fragColor = texture(map, vUv); }
 `;
 
-export type MapSlot = 'ao' | 'normal' | 'emissive' | 'roughness';
-export type MapIntensitySlot = 'ao' | 'emissive' | 'normalScale';
+export type MapSlot = 'ao' | 'normal' | 'emissive' | 'roughness' | 'metalness' | 'displacement' | 'alpha';
+export type MapIntensitySlot = 'ao' | 'emissive' | 'normalScale' | 'metalness' | 'displacementScale';
 
 export interface ThreePainterConfig {
   canvasElement: HTMLCanvasElement;
@@ -70,6 +70,7 @@ export class ThreePainter {
 
   private loadedModelGroup: THREE.Group | null = null;
   private paintableMeshes: THREE.Mesh[] = [];
+  private uvIslands: Array<Array<{ a: THREE.Vector2; b: THREE.Vector2; c: THREE.Vector2 }>> = [];
   private loadedOriginalTextureImage: HTMLImageElement | HTMLCanvasElement | ImageBitmap | null = null;
 
   private canvasTexture!: THREE.CanvasTexture;
@@ -240,6 +241,8 @@ export class ThreePainter {
 
   public getShadingMode(): ShadingMode { return this.shadingMode; }
 
+  public getPaintableMeshes(): THREE.Mesh[] { return this.paintableMeshes; }
+
   public setMatcapTexture(tex: THREE.Texture | null) {
     this.matcapMaterial.matcap = tex ?? this.proceduralMatcapTex;
     this.matcapMaterial.needsUpdate = true;
@@ -281,10 +284,33 @@ export class ThreePainter {
   /** Set or clear a PBR texture map slot. Pass null to remove the map. */
   public setMap(slot: MapSlot, tex: THREE.Texture | null) {
     switch (slot) {
-      case 'ao':        this.pbrMaterial.aoMap        = tex; break;
-      case 'normal':    this.pbrMaterial.normalMap    = tex; break;
-      case 'roughness': this.pbrMaterial.roughnessMap = tex; break;
+      case 'ao':
+        if (this.pbrMaterial.aoMap) this.pbrMaterial.aoMap.dispose();
+        this.pbrMaterial.aoMap        = tex;
+        break;
+      case 'normal':
+        if (this.pbrMaterial.normalMap) this.pbrMaterial.normalMap.dispose();
+        this.pbrMaterial.normalMap    = tex;
+        break;
+      case 'roughness':
+        if (this.pbrMaterial.roughnessMap) this.pbrMaterial.roughnessMap.dispose();
+        this.pbrMaterial.roughnessMap = tex;
+        break;
+      case 'metalness':
+        if (this.pbrMaterial.metalnessMap) this.pbrMaterial.metalnessMap.dispose();
+        this.pbrMaterial.metalnessMap = tex;
+        break;
+      case 'displacement':
+        if (this.pbrMaterial.displacementMap) this.pbrMaterial.displacementMap.dispose();
+        this.pbrMaterial.displacementMap = tex;
+        break;
+      case 'alpha':
+        if (this.pbrMaterial.alphaMap) this.pbrMaterial.alphaMap.dispose();
+        this.pbrMaterial.alphaMap = tex;
+        this.pbrMaterial.transparent = tex !== null;
+        break;
       case 'emissive':
+        if (this.pbrMaterial.emissiveMap) this.pbrMaterial.emissiveMap.dispose();
         this.pbrMaterial.emissiveMap = tex;
         // Keep emissive tint in sync — black would suppress the map entirely
         this.pbrMaterial.emissive.set(tex ? '#ffffff' : '#000000');
@@ -295,15 +321,19 @@ export class ThreePainter {
 
   /**
    * Adjust a map's scalar parameter.
-   * 'ao'          → aoMapIntensity   (0–1)
-   * 'emissive'    → emissiveIntensity (0–3)
-   * 'normalScale' → normalScale X+Y   (0–3)
+   * 'ao'                → aoMapIntensity      (0–1)
+   * 'emissive'          → emissiveIntensity   (0–3)
+   * 'normalScale'       → normalScale X+Y     (0–3)
+   * 'metalness'         → metalness intensity (0–1)
+   * 'displacementScale' → displacementScale   (0–1)
    */
   public setMapIntensity(slot: MapIntensitySlot, value: number) {
     switch (slot) {
-      case 'ao':          this.pbrMaterial.aoMapIntensity   = value; break;
-      case 'emissive':    this.pbrMaterial.emissiveIntensity = value; break;
-      case 'normalScale': this.pbrMaterial.normalScale.set(value, value); break;
+      case 'ao':                this.pbrMaterial.aoMapIntensity     = value; break;
+      case 'emissive':          this.pbrMaterial.emissiveIntensity   = value; break;
+      case 'normalScale':       this.pbrMaterial.normalScale.set(value, value); break;
+      case 'metalness':         this.pbrMaterial.metalness           = value; break;
+      case 'displacementScale': this.pbrMaterial.displacementScale   = value; break;
     }
   }
 
@@ -421,11 +451,13 @@ export class ThreePainter {
     const scale  = 3.0 / maxDim;
     object.scale.set(scale, scale, scale);
     object.position.multiplyScalar(scale);
+    this.calculateUVIslands();
     this.frameModel();
     this.updateTexture();
   }
 
   public clearLoadedModel() {
+    this.uvIslands = [];
     if (this.loadedModelGroup) {
       this.scene.remove(this.loadedModelGroup);
       this.loadedModelGroup.traverse((child) => {
@@ -525,6 +557,106 @@ export class ThreePainter {
     } catch (e) { console.warn('Eyedropper failed:', e); }
   }
 
+  private calculateUVIslands() {
+    this.uvIslands = [];
+    if (!this.paintableMeshes.length) return;
+
+    const allTriangles: Array<{
+      a: THREE.Vector2;
+      b: THREE.Vector2;
+      c: THREE.Vector2;
+      index: number;
+    }> = [];
+
+    let triangleCounter = 0;
+    const edgeMap = new Map<string, number[]>();
+
+    this.paintableMeshes.forEach(mesh => {
+      const uvAttr = mesh.geometry.attributes.uv;
+      const indexAttr = mesh.geometry.index;
+      if (!uvAttr) return;
+
+      const numTriangles = indexAttr ? indexAttr.count / 3 : uvAttr.count / 3;
+
+      const getVertexKey = (idx: number) => {
+        const u = uvAttr.getX(idx);
+        const v = uvAttr.getY(idx);
+        // Round to 3 decimal places to tolerate minor float inaccuracies at seams
+        const ru = Math.round(u * 1000) / 1000;
+        const rv = Math.round(v * 1000) / 1000;
+        return `${ru},${rv}`;
+      };
+
+      const getEdgeKey = (k0: string, k1: string) => {
+        return k0 < k1 ? `${k0}_${k1}` : `${k1}_${k0}`;
+      };
+
+      for (let i = 0; i < numTriangles; i++) {
+        let idx0, idx1, idx2;
+        if (indexAttr) {
+          idx0 = indexAttr.getX(i * 3);
+          idx1 = indexAttr.getX(i * 3 + 1);
+          idx2 = indexAttr.getX(i * 3 + 2);
+        } else {
+          idx0 = i * 3;
+          idx1 = i * 3 + 1;
+          idx2 = i * 3 + 2;
+        }
+
+        const uv0 = new THREE.Vector2(uvAttr.getX(idx0), uvAttr.getY(idx0));
+        const uv1 = new THREE.Vector2(uvAttr.getX(idx1), uvAttr.getY(idx1));
+        const uv2 = new THREE.Vector2(uvAttr.getX(idx2), uvAttr.getY(idx2));
+
+        const globalTriangleIndex = triangleCounter++;
+        allTriangles.push({ a: uv0, b: uv1, c: uv2, index: globalTriangleIndex });
+
+        const k0 = getVertexKey(idx0);
+        const k1 = getVertexKey(idx1);
+        const k2 = getVertexKey(idx2);
+
+        const edges = [
+          getEdgeKey(k0, k1),
+          getEdgeKey(k1, k2),
+          getEdgeKey(k2, k0)
+        ];
+
+        edges.forEach(edge => {
+          if (!edgeMap.has(edge)) edgeMap.set(edge, []);
+          edgeMap.get(edge)!.push(globalTriangleIndex);
+        });
+      }
+    });
+
+    const dsu = new DSU(triangleCounter);
+    edgeMap.forEach(triangleIndices => {
+      if (triangleIndices.length > 1) {
+        for (let j = 1; j < triangleIndices.length; j++) {
+          dsu.union(triangleIndices[0], triangleIndices[j]);
+        }
+      }
+    });
+
+    const islandMap = new Map<number, Array<{ a: THREE.Vector2; b: THREE.Vector2; c: THREE.Vector2 }>>();
+    allTriangles.forEach(tri => {
+      const root = dsu.find(tri.index);
+      if (!islandMap.has(root)) islandMap.set(root, []);
+      islandMap.get(root)!.push({ a: tri.a, b: tri.b, c: tri.c });
+    });
+
+    this.uvIslands = Array.from(islandMap.values());
+  }
+
+  public getUVIslandTrianglesAt(u: number, v: number): Array<{ a: THREE.Vector2; b: THREE.Vector2; c: THREE.Vector2 }> | null {
+    for (const island of this.uvIslands) {
+      for (const tri of island) {
+        if (pointInTriangle(u, v, tri.a.x, tri.a.y, tri.b.x, tri.b.y, tri.c.x, tri.c.y)) {
+          return island;
+        }
+      }
+    }
+    return null;
+  }
+
   // ── Disposal ─────────────────────────────────────────────────────────────────
 
   public dispose() {
@@ -541,4 +673,47 @@ export class ThreePainter {
     this.pbrMaterial.dispose();
     this.renderer.dispose();
   }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+class DSU {
+  parent: number[];
+  constructor(size: number) {
+    this.parent = Array.from({ length: size }, (_, i) => i);
+  }
+  find(x: number): number {
+    if (this.parent[x] === x) return x;
+    return this.parent[x] = this.find(this.parent[x]);
+  }
+  union(x: number, y: number) {
+    const rootX = this.find(x);
+    const rootY = this.find(y);
+    if (rootX !== rootY) {
+      this.parent[rootX] = rootY;
+    }
+  }
+}
+
+function pointInTriangle(
+  px: number, py: number,
+  ax: number, ay: number,
+  bx: number, by: number,
+  cx: number, cy: number
+): boolean {
+  const v0x = cx - ax, v0y = cy - ay;
+  const v1x = bx - ax, v1y = by - ay;
+  const v2x = px - ax, v2y = py - ay;
+
+  const dot00 = v0x * v0x + v0y * v0y;
+  const dot01 = v0x * v1x + v0y * v1y;
+  const dot02 = v0x * v2x + v0y * v2y;
+  const dot11 = v1x * v1x + v1y * v1y;
+  const dot12 = v1x * v2x + v1y * v2y;
+
+  const invDenom = 1 / (dot00 * dot11 - dot01 * dot01);
+  const u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+  const v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+
+  return u >= 0 && v >= 0 && u + v <= 1;
 }
