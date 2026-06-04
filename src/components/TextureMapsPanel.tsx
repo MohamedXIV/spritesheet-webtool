@@ -2,8 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import * as THREE from 'three';
-import { ChevronDown, ChevronRight, Upload, X, ImageIcon, Compass, Percent, Sparkles, Layers } from 'lucide-react';
-import { useThreePainterContext } from '@/contexts/ThreePainterContext';
+import { ChevronDown, ChevronRight, Upload, X, ImageIcon, Layers } from 'lucide-react';
+import { useThreePainterContext, PaintingLayer } from '@/contexts/ThreePainterContext';
 import { MapSlot } from '@/lib/threePainter';
 import styles from './TextureMapsPanel.module.css';
 
@@ -203,14 +203,19 @@ function MatcapSlot({ painter }: { painter: PainterRef }) {
 // ── AlbedoSlot ───────────────────────────────────────────────────────────────────
 
 interface AlbedoSlotProps {
-  layers: any[];
+  layers: PaintingLayer[];
   activeLayerId: string;
   importImageToLayer?: (file: File, id: string) => void;
   clearLayer?: (id: string) => void;
 }
 
 function AlbedoSlot({ layers, activeLayerId, importImageToLayer, clearLayer }: AlbedoSlotProps) {
-  const [targetLayerId, setTargetLayerId] = useState(activeLayerId);
+  const fillLayers = layers.filter(l => l.type === 'fill');
+  
+  const [targetLayerId, setTargetLayerId] = useState(() => {
+    const activeFill = fillLayers.find(l => l.id === activeLayerId);
+    return activeFill ? activeFill.id : (fillLayers[0]?.id || '');
+  });
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const prevUrl = useRef<string | null>(null);
@@ -218,8 +223,11 @@ function AlbedoSlot({ layers, activeLayerId, importImageToLayer, clearLayer }: A
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => {
-    if (layers.some(l => l.id === activeLayerId)) {
-      setTargetLayerId(activeLayerId);
+    const activeFill = fillLayers.find(l => l.id === activeLayerId);
+    if (activeFill) {
+      setTargetLayerId(activeFill.id);
+    } else if (!fillLayers.some(l => l.id === targetLayerId) && fillLayers.length > 0) {
+      setTargetLayerId(fillLayers[0].id);
     }
   }, [activeLayerId, layers]);
 
@@ -230,6 +238,12 @@ function AlbedoSlot({ layers, activeLayerId, importImageToLayer, clearLayer }: A
   }, []);
 
   const load = (file: File) => {
+    const targetLayer = fillLayers.find(l => l.id === targetLayerId);
+    if (targetLayer && targetLayer.fillTextureName) {
+      const proceed = confirm(`Are you sure you want to replace the existing texture map "${targetLayer.fillTextureName}" on this Fill Layer?`);
+      if (!proceed) return;
+    }
+
     if (prevUrl.current) URL.revokeObjectURL(prevUrl.current);
     const url = URL.createObjectURL(file);
     prevUrl.current = url;
@@ -257,9 +271,29 @@ function AlbedoSlot({ layers, activeLayerId, importImageToLayer, clearLayer }: A
     if (file && file.type.startsWith('image/')) load(file);
   };
 
+  if (fillLayers.length === 0) {
+    return (
+      <Section label="ALBEDO / DIFFUSE" badge="Core Fill Layer Only">
+        <p className={styles.slotHint}>Import an external image directly into a fill layer. Updates the 3D model & applies pixelation instantly.</p>
+        <div style={{
+          padding: '12px 10px',
+          background: 'rgba(239, 68, 68, 0.05)',
+          border: '1px dashed rgba(239, 68, 68, 0.25)',
+          borderRadius: '6px',
+          color: '#f87171',
+          fontSize: '11px',
+          lineHeight: '1.4',
+          textAlign: 'center'
+        }}>
+          ⚠️ Please create a <strong>Fill Layer</strong> in the Canvas Layers panel first to import Albedo maps.
+        </div>
+      </Section>
+    );
+  }
+
   return (
-    <Section label="ALBEDO / DIFFUSE" badge="Core Paint Layer">
-      <p className={styles.slotHint}>Import an external image directly into a painting layer. Updates the 3D model & applies pixelation instantly.</p>
+    <Section label="ALBEDO / DIFFUSE" badge="Core Fill Layer Only">
+      <p className={styles.slotHint}>Import an external image directly into a fill layer. Updates the 3D model & applies pixelation instantly.</p>
       
       <div className={styles.layerSelectRow}>
         <span className={styles.sliderLabel}>Target Layer</span>
@@ -268,7 +302,7 @@ function AlbedoSlot({ layers, activeLayerId, importImageToLayer, clearLayer }: A
           value={targetLayerId}
           onChange={(e) => setTargetLayerId(e.target.value)}
         >
-          {layers.map(l => (
+          {fillLayers.map(l => (
             <option key={l.id} value={l.id}>{l.name}</option>
           ))}
         </select>

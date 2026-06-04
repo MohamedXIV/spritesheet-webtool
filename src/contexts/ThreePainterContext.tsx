@@ -8,10 +8,30 @@ import { ShadingMode, LightingSettings } from '@/lib/lightingPresets';
 export interface PaintingLayer {
   id: string;
   name: string;
+  type: 'paint' | 'fill';
   opacity: number;
   visible: boolean;
   blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
   canvas: HTMLCanvasElement | null;
+
+  // Fill settings
+  fillColor?: string;
+  fillTextureName?: string | null;
+  fillTextureUrl?: string | null;
+
+  // Mask settings
+  maskCanvas?: HTMLCanvasElement | null;
+  maskVisible?: boolean;
+  maskActive?: boolean;
+
+  // Filters & Curves
+  filters?: {
+    hue: number;
+    saturation: number;
+    brightness: number;
+    contrast: number;
+    curvesPoints: [number, number, number, number]; // [y0, x1, y1, y2]
+  };
 }
 
 export type BrushTool = 'brush' | 'eraser' | 'eyedropper' | 'bucket' | 'island-bucket';
@@ -36,7 +56,7 @@ export interface ThreePainterContextValue {
   layers: PaintingLayer[];
   activeLayerId: string;
   setActiveLayerId: (id: string) => void;
-  addLayer: () => void;
+  addLayer: (type?: 'paint' | 'fill') => void;
   deleteLayer: (id: string) => void;
   toggleLayerVisibility: (id: string) => void;
   setLayerOpacity: (id: string, opacity: number) => void;
@@ -44,6 +64,13 @@ export interface ThreePainterContextValue {
   reorderLayers: (fromIndex: number, toIndex: number) => void;
   importImageToLayer?: (file: File, layerId: string) => void;
   clearLayer?: (layerId: string) => void;
+  
+  // Layer Fills, Masks, Filters
+  toggleMask: (layerId: string) => void;
+  setMaskVisible: (layerId: string, visible: boolean) => void;
+  setMaskActive: (layerId: string, active: boolean) => void;
+  updateLayerFillSettings: (layerId: string, settings: Partial<Pick<PaintingLayer, 'fillColor' | 'fillTextureName' | 'fillTextureUrl'>>) => void;
+  updateLayerFilters: (layerId: string, filters: Partial<NonNullable<PaintingLayer['filters']>>) => void;
 
   // Brush
   activeTool: BrushTool;

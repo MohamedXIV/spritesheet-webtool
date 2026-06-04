@@ -26,10 +26,21 @@ export interface ProjectMetadata {
     layers: {
       id: string;
       name: string;
+      type: 'paint' | 'fill';
       opacity: number;
       visible: boolean;
       blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
-      frameId: string;
+      fillColor?: string;
+      fillTextureName?: string | null;
+      maskVisible?: boolean;
+      maskActive?: boolean;
+      filters?: {
+        hue: number;
+        saturation: number;
+        brightness: number;
+        contrast: number;
+        curvesPoints: [number, number, number, number];
+      };
     }[];
   };
 }
