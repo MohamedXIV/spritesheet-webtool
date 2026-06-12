@@ -18,14 +18,20 @@ export function AIGenerationPanel() {
     layers,
     activeLayerId,
     importImageToLayer,
-    isModelLoaded
+    isModelLoaded,
+    painter
   } = useThreePainterContext();
 
-  const [provider, setProvider] = useState<'openai' | 'google' | 'custom'>('openai');
+  const [provider, setProvider] = useState<'openai' | 'google' | 'custom' | 'local-cli'>('openai');
   const [prompt, setPrompt] = useState('');
   const [openaiKey, setOpenaiKey] = useState('');
   const [googleKey, setGoogleKey] = useState('');
   const [showKey, setShowKey] = useState(false);
+
+  // Local CLI Provider settings
+  const [cliCommand, setCliCommand] = useState('python scripts/generate.py --prompt "${prompt}" --output "${output}"');
+  const [cliOutputMethod, setCliOutputMethod] = useState<'file' | 'stdout'>('file');
+  const [cliOutputPath, setCliOutputPath] = useState('');
 
   // Settings
   const [size, setSize] = useState('512x512');
@@ -55,6 +61,9 @@ export function AIGenerationPanel() {
       const savedHeaders = localStorage.getItem('tp_ai_custom_headers');
       const savedPayload = localStorage.getItem('tp_ai_custom_payload');
       const savedProvider = localStorage.getItem('tp_ai_provider');
+      const savedCliCommand = localStorage.getItem('tp_ai_cli_command');
+      const savedCliOutputMethod = localStorage.getItem('tp_ai_cli_output_method');
+      const savedCliOutputPath = localStorage.getItem('tp_ai_cli_output_path');
 
       if (savedOpenai) setOpenaiKey(savedOpenai);
       if (savedGoogle) setGoogleKey(savedGoogle);
@@ -62,6 +71,9 @@ export function AIGenerationPanel() {
       if (savedHeaders) setCustomHeadersRaw(savedHeaders);
       if (savedPayload) setCustomPayloadRaw(savedPayload);
       if (savedProvider) setProvider(savedProvider as any);
+      if (savedCliCommand) setCliCommand(savedCliCommand);
+      if (savedCliOutputMethod) setCliOutputMethod(savedCliOutputMethod as any);
+      if (savedCliOutputPath) setCliOutputPath(savedCliOutputPath);
     } catch (e) {
       console.warn('Failed to load saved keys from localStorage', e);
     }
@@ -81,8 +93,10 @@ export function AIGenerationPanel() {
     }
   }, [layers, targetLayer]);
 
-  // Save values on change
-  const saveKey = (type: 'openai' | 'google' | 'endpoint' | 'headers' | 'payload' | 'provider', val: string) => {
+  const saveKey = (
+    type: 'openai' | 'google' | 'endpoint' | 'headers' | 'payload' | 'provider' | 'cliCommand' | 'cliOutputMethod' | 'cliOutputPath',
+    val: string
+  ) => {
     try {
       if (type === 'openai') {
         setOpenaiKey(val);
@@ -102,6 +116,15 @@ export function AIGenerationPanel() {
       } else if (type === 'provider') {
         setProvider(val as any);
         localStorage.setItem('tp_ai_provider', val);
+      } else if (type === 'cliCommand') {
+        setCliCommand(val);
+        localStorage.setItem('tp_ai_cli_command', val);
+      } else if (type === 'cliOutputMethod') {
+        setCliOutputMethod(val as any);
+        localStorage.setItem('tp_ai_cli_output_method', val);
+      } else if (type === 'cliOutputPath') {
+        setCliOutputPath(val);
+        localStorage.setItem('tp_ai_cli_output_path', val);
       }
     } catch (e) {
       console.error(e);
@@ -128,6 +151,68 @@ export function AIGenerationPanel() {
     }
 
     return new Blob(byteArrays, { type: contentType });
+  };
+
+  const getUVSnapshot = (): string | null => {
+    if (!painter) return null;
+    const meshes = painter.getPaintableMeshes();
+    if (!meshes.length) return null;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+
+    meshes.forEach(mesh => {
+      const uvAttr = mesh.geometry.attributes.uv;
+      const indexAttr = mesh.geometry.index;
+      if (!uvAttr) return;
+
+      if (indexAttr) {
+        for (let i = 0; i < indexAttr.count; i += 3) {
+          const idx0 = indexAttr.getX(i);
+          const idx1 = indexAttr.getX(i + 1);
+          const idx2 = indexAttr.getX(i + 2);
+
+          const u0 = uvAttr.getX(idx0) * 1024;
+          const v0 = (1 - uvAttr.getY(idx0)) * 1024;
+          const u1 = uvAttr.getX(idx1) * 1024;
+          const v1 = (1 - uvAttr.getY(idx1)) * 1024;
+          const u2 = uvAttr.getX(idx2) * 1024;
+          const v2 = (1 - uvAttr.getY(idx2)) * 1024;
+
+          ctx.moveTo(u0, v0);
+          ctx.lineTo(u1, v1);
+          ctx.lineTo(u2, v2);
+          ctx.closePath();
+        }
+      } else {
+        for (let i = 0; i < uvAttr.count; i += 3) {
+          const u0 = uvAttr.getX(i) * 1024;
+          const v0 = (1 - uvAttr.getY(i)) * 1024;
+          const u1 = uvAttr.getX(i + 1) * 1024;
+          const v1 = (1 - uvAttr.getY(i + 1)) * 1024;
+          const u2 = uvAttr.getX(i + 2) * 1024;
+          const v2 = (1 - uvAttr.getY(i + 2)) * 1024;
+
+          ctx.moveTo(u0, v0);
+          ctx.lineTo(u1, v1);
+          ctx.lineTo(u2, v2);
+          ctx.closePath();
+        }
+      }
+    });
+    ctx.stroke();
+
+    return canvas.toDataURL('image/png');
   };
 
   const triggerGeneration = async () => {
@@ -179,6 +264,12 @@ export function AIGenerationPanel() {
           customEndpoint: provider === 'custom' ? customEndpoint : undefined,
           customHeaders: provider === 'custom' ? parsedHeaders : undefined,
           customPayload: provider === 'custom' ? parsedPayload : undefined,
+          cliCommand: provider === 'local-cli' ? cliCommand : undefined,
+          cliOutputMethod: provider === 'local-cli' ? cliOutputMethod : undefined,
+          cliOutputPath: provider === 'local-cli' ? cliOutputPath : undefined,
+          openaiKey,
+          googleKey,
+          uvSnapshot: getUVSnapshot() || undefined,
         }),
       });
 
@@ -251,6 +342,7 @@ export function AIGenerationPanel() {
             <option value="openai">OpenAI (DALL-E 2 / 3)</option>
             <option value="google">Google Nanobanana (Gemini/Imagen)</option>
             <option value="custom">Custom JSON REST Endpoint</option>
+            <option value="local-cli">Local CLI Command (Shell)</option>
           </select>
         </div>
 
@@ -350,6 +442,74 @@ export function AIGenerationPanel() {
             )}
           </>
         )}
+
+        {provider === 'local-cli' && (
+          <>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>AGENT CLI PRESET</label>
+              <select
+                className={styles.select}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === 'antigravity') {
+                    saveKey('cliCommand', 'agy --dangerously-skip-permissions -p "Please create a ${width}x${height} PNG texture map matching this description: \'${prompt}\'. A UV layout wireframe of the target 3D model is provided at \'${uv}\'. Write a python script using Pillow/numpy to draw textures conforming to these UV islands (drawn as white lines on a black background), and run it to save the output file to: \'${output}\'."');
+                  } else if (val === 'claude') {
+                    saveKey('cliCommand', 'claude -y -p "Please create a ${width}x${height} PNG texture map matching this description: \'${prompt}\'. A UV layout wireframe of the target 3D model is provided at \'${uv}\'. Write a python script using Pillow/numpy to draw textures conforming to these UV islands (drawn as white lines on a black background), and run it to save the output file to: \'${output}\'."');
+                  } else if (val === 'custom') {
+                    saveKey('cliCommand', 'python scripts/generate.py --prompt "${prompt}" --output "${output}"');
+                  }
+                }}
+                defaultValue=""
+              >
+                <option value="" disabled>Select a CLI template...</option>
+                <option value="custom">Standard Command (Python/Local Script)</option>
+                <option value="antigravity">Antigravity CLI Agent (agy)</option>
+                <option value="claude">Claude Code Agent (claude)</option>
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>SHELL COMMAND</label>
+              <textarea
+                className={`${styles.textarea} ${styles.codeArea}`}
+                style={{ height: '70px' }}
+                placeholder='python scripts/generate.py --prompt "${prompt}" --output "${output}"'
+                value={cliCommand}
+                onChange={(e) => saveKey('cliCommand', e.target.value)}
+              />
+              <span style={{ fontSize: '8px', color: '#71717a', marginTop: '2px' }}>
+                Variables: {"${prompt}"}, {"${output}"}, {"${width}"}, {"${height}"}, {"${size}"}
+              </span>
+            </div>
+
+            <div className={styles.grid}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>OUTPUT METHOD</label>
+                <select
+                  className={styles.select}
+                  value={cliOutputMethod}
+                  onChange={(e) => saveKey('cliOutputMethod', e.target.value)}
+                >
+                  <option value="file">File Output (${"output"})</option>
+                  <option value="stdout">Stdout (Base64)</option>
+                </select>
+              </div>
+
+              {cliOutputMethod === 'file' && (
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>CUSTOM OUTPUT PATH (OPTIONAL)</label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    placeholder="e.g. out.png (default: temp)"
+                    value={cliOutputPath}
+                    onChange={(e) => saveKey('cliOutputPath', e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* 2. Generation Prompt & Preset Chips */}
@@ -435,6 +595,12 @@ export function AIGenerationPanel() {
                 <option>Custom defined payload</option>
               </select>
             )}
+
+            {provider === 'local-cli' && (
+              <select className={styles.select} disabled>
+                <option>Managed by local command</option>
+              </select>
+            )}
           </div>
         </div>
 
@@ -459,7 +625,14 @@ export function AIGenerationPanel() {
         <button
           type="button"
           className={styles.generateBtn}
-          disabled={isGenerating || !prompt.trim() || (provider === 'openai' && !openaiKey) || (provider === 'google' && !googleKey) || (provider === 'custom' && !customEndpoint)}
+          disabled={
+            isGenerating ||
+            !prompt.trim() ||
+            (provider === 'openai' && !openaiKey) ||
+            (provider === 'google' && !googleKey) ||
+            (provider === 'custom' && !customEndpoint) ||
+            (provider === 'local-cli' && !cliCommand.trim())
+          }
           onClick={triggerGeneration}
         >
           <Cpu size={14} />

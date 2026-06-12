@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { spawn } from 'child_process';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,6 +16,12 @@ export async function POST(req: NextRequest) {
       customEndpoint,
       customHeaders,
       customPayload,
+      cliCommand,
+      cliOutputMethod,
+      cliOutputPath,
+      openaiKey,
+      googleKey,
+      uvSnapshot,
     } = body;
 
     if (!prompt) {
@@ -309,6 +319,183 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json({ success: true, image: imageContent });
+    }
+
+    if (provider === 'local-cli') {
+      if (!cliCommand) {
+        return NextResponse.json(
+          { success: false, error: 'CLI Command is required for local-cli provider' },
+          { status: 400 }
+        );
+      }
+
+      // Parse width/height from size (e.g. '512x512' -> 512, 512)
+      let width = 512;
+      let height = 512;
+      if (size && size.includes('x')) {
+        const parts = size.split('x');
+        width = parseInt(parts[0], 10) || 512;
+        height = parseInt(parts[1], 10) || 512;
+      }
+
+      const tempDir = os.tmpdir();
+      const tempFileName = `spritesheet-ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.png`;
+      const tempFilePath = path.join(tempDir, tempFileName);
+
+      const tempUvFileName = `spritesheet-uv-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.png`;
+      const tempUvFilePath = path.join(tempDir, tempUvFileName);
+
+      try {
+        if (uvSnapshot) {
+          let uvBase64 = uvSnapshot;
+          if (uvBase64.includes('base64,')) {
+            uvBase64 = uvBase64.split('base64,')[1];
+          }
+          fs.writeFileSync(tempUvFilePath, Buffer.from(uvBase64, 'base64'));
+        }
+
+        const replacements: Record<string, string> = {
+          '${prompt}': prompt,
+          '${width}': String(width),
+          '${height}': String(height),
+          '${size}': size || '512x512',
+          '${output}': tempFilePath,
+          '${uv}': uvSnapshot ? tempUvFilePath : '',
+        };
+
+        // Replace placeholders in the CLI command
+        let resolvedCommand = cliCommand;
+        for (const [placeholder, val] of Object.entries(replacements)) {
+          resolvedCommand = resolvedCommand.replaceAll(placeholder, val);
+        }
+
+        console.log(`Executing Local CLI command: ${resolvedCommand}`);
+
+        const isWindows = process.platform === 'win32';
+        const runsAgent = resolvedCommand.includes('agy') || resolvedCommand.includes('claude');
+        const spawnCwd = runsAgent ? tempDir : process.cwd();
+        
+        // Run using spawn in a shell
+        const child = spawn(resolvedCommand, {
+          shell: isWindows ? 'cmd.exe' : '/bin/sh',
+          windowsVerbatimArguments: true,
+          cwd: spawnCwd,
+          env: {
+            ...process.env,
+            GEMINI_API_KEY: googleKey || apiKey || process.env.GEMINI_API_KEY || '',
+            GOOGLE_API_KEY: googleKey || apiKey || process.env.GOOGLE_API_KEY || '',
+            OPENAI_API_KEY: openaiKey || apiKey || process.env.OPENAI_API_KEY || '',
+            ANTHROPIC_API_KEY: openaiKey || apiKey || process.env.ANTHROPIC_API_KEY || '',
+          }
+        });
+
+        // Close stdin so interactive CLIs don't hang waiting for input
+        child.stdin?.end();
+
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+
+        child.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+
+        const exitCode = await new Promise<number | null | string>((resolve) => {
+          const timeout = setTimeout(() => {
+            child.kill();
+            resolve('TIMEOUT');
+          }, 60000); // 60 second timeout
+
+          child.on('close', (code) => {
+            clearTimeout(timeout);
+            resolve(code);
+          });
+        });
+
+        if (exitCode === 'TIMEOUT') {
+          return NextResponse.json(
+            { 
+              success: false, 
+              error: 'CLI command timed out after 60 seconds',
+              debugResponse: { stdout, stderr, exitCode: 'TIMEOUT' }
+            },
+            { status: 500 }
+          );
+        }
+
+        if (exitCode !== 0) {
+          return NextResponse.json(
+            { 
+              success: false, 
+              error: `CLI Command failed with exit code ${exitCode}. Stderr: ${stderr}`,
+              debugResponse: { stdout, stderr, exitCode }
+            },
+            { status: 500 }
+          );
+        }
+
+        let imageBase64 = '';
+
+        if (cliOutputMethod === 'stdout') {
+          let cleanStdout = stdout.trim();
+          if (cleanStdout.includes('base64,')) {
+            cleanStdout = cleanStdout.split('base64,')[1];
+          }
+          // Remove non-base64 characters
+          cleanStdout = cleanStdout.replace(/[^A-Za-z0-9+/=]/g, '');
+          imageBase64 = cleanStdout;
+        } else {
+          const finalFilePath = cliOutputPath ? cliOutputPath.replace(/\${output}/g, tempFilePath) : tempFilePath;
+          
+          if (!fs.existsSync(finalFilePath)) {
+            return NextResponse.json(
+              { 
+                success: false, 
+                error: `CLI command executed successfully but output file was not found at path: ${finalFilePath}. Stderr: ${stderr}`,
+                debugResponse: { stdout, stderr, exitCode }
+              },
+              { status: 500 }
+            );
+          }
+
+          try {
+            const fileBuffer = fs.readFileSync(finalFilePath);
+            imageBase64 = fileBuffer.toString('base64');
+          } catch (readErr: any) {
+            return NextResponse.json(
+              { 
+                success: false, 
+                error: `Failed to read output file: ${readErr.message}`,
+                debugResponse: { stdout, stderr, exitCode }
+              },
+              { status: 500 }
+            );
+          }
+        }
+
+        if (!imageBase64) {
+          return NextResponse.json(
+            { 
+              success: false, 
+              error: 'CLI command returned empty output or invalid base64',
+              debugResponse: { stdout, stderr, exitCode }
+            },
+            { status: 500 }
+          );
+        }
+
+        return NextResponse.json({ success: true, image: imageBase64 });
+      } finally {
+        if (fs.existsSync(tempFilePath)) {
+          try { fs.unlinkSync(tempFilePath); } catch {}
+        }
+        if (fs.existsSync(tempUvFilePath)) {
+          try { fs.unlinkSync(tempUvFilePath); } catch {}
+        }
+      }
     }
 
     return NextResponse.json(
