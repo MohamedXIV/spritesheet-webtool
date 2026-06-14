@@ -327,10 +327,22 @@ export function disposeFrames(state: FrameState): void {
   state.frames.forEach(f => {
     try {
       f.bitmap.close();
-    } catch {
-      // Bitmap may already be closed
+    } catch {}
+    if (f.layerContents) {
+      Object.values(f.layerContents).forEach(bmp => {
+        if (bmp) {
+          try {
+            bmp.close();
+          } catch {}
+        }
+      });
     }
   });
+}
+
+export interface SerializedFrameLayer {
+  layerId: string;
+  blob: Blob | null;
 }
 
 export interface SerializedFrame {
@@ -340,6 +352,7 @@ export interface SerializedFrame {
   sourceId: string;
   sourceColor: string;
   blob: Blob;
+  layers?: SerializedFrameLayer[];
 }
 
 export interface SerializedProject {
@@ -347,6 +360,7 @@ export interface SerializedProject {
     folders: Folder[];
     selectedIds: string[];
     fps?: number;
+    globalLayers?: any[];
   };
   frames: SerializedFrame[];
 }
@@ -357,7 +371,8 @@ export interface SerializedProject {
  */
 export async function serializeProject(
   state: FrameState,
-  fps?: number
+  fps?: number,
+  globalLayers?: any[]
 ): Promise<SerializedProject> {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -374,6 +389,27 @@ export async function serializeProject(
     });
 
     if (blob) {
+      const serializedLayers: SerializedFrameLayer[] = [];
+      if (frame.layerContents) {
+        for (const [layerId, bmp] of Object.entries(frame.layerContents)) {
+          if (bmp) {
+            canvas.width = bmp.width;
+            canvas.height = bmp.height;
+            ctx?.clearRect(0, 0, canvas.width, canvas.height);
+            ctx?.drawImage(bmp, 0, 0);
+            
+            const layerBlob = await new Promise<Blob | null>((resolve) => {
+              canvas.toBlob((b) => resolve(b), 'image/png');
+            });
+            
+            serializedLayers.push({
+              layerId,
+              blob: layerBlob,
+            });
+          }
+        }
+      }
+
       serializedFrames.push({
         id: frame.id,
         index: frame.index,
@@ -381,6 +417,7 @@ export async function serializeProject(
         sourceId: frame.sourceId,
         sourceColor: frame.sourceColor,
         blob,
+        layers: serializedLayers.length > 0 ? serializedLayers : undefined,
       });
     }
   }
@@ -390,6 +427,7 @@ export async function serializeProject(
       folders: state.folders,
       selectedIds: Array.from(state.selectedIds),
       fps,
+      globalLayers,
     },
     frames: serializedFrames,
   };

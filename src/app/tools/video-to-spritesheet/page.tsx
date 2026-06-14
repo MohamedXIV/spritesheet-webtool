@@ -32,7 +32,10 @@ import {
   reorderFramesInFolder,
   deleteSelectedFrames
 } from '@/lib/frameStore';
-import { FrameData, ExtractionProgress, SourceInfo, SOURCE_COLORS, Folder } from '@/types';
+import { FrameData, ExtractionProgress, SourceInfo, SOURCE_COLORS, Folder, ProjectLayer } from '@/types';
+import { BrushTool } from '@/contexts/EditorContext';
+import { FrameLayersPanel } from '@/components/FrameLayersPanel';
+import { FrameEditorPanel } from '@/components/FrameEditorPanel';
 import styles from './page.module.css';
 import { useFrameHistory } from '@/hooks/useFrameHistory';
 import { useProjectSave } from '@/hooks/useProjectSave';
@@ -40,6 +43,35 @@ import { useProjectSave } from '@/hooks/useProjectSave';
 type EditorState = 'idle' | 'extracting' | 'ready';
 
 const FRAME_WARNING_THRESHOLD = 240;
+
+const compositeFrameLayers = async (
+  layerContents: Record<string, ImageBitmap | null>,
+  layers: ProjectLayer[],
+  width: number,
+  height: number
+): Promise<ImageBitmap> => {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, width, height);
+
+  for (const layer of layers) {
+    if (!layer.visible) continue;
+    const bmp = layerContents[layer.id];
+    if (bmp) {
+      ctx.globalAlpha = layer.opacity;
+      ctx.globalCompositeOperation = layer.blendMode === 'normal' ? 'source-over' : layer.blendMode;
+      ctx.drawImage(bmp, 0, 0);
+    }
+  }
+
+  // Restore defaults
+  ctx.globalAlpha = 1.0;
+  ctx.globalCompositeOperation = 'source-over';
+
+  return await createImageBitmap(canvas);
+};
 
 export default function EditorPage() {
   const [editorState, setEditorState] = useState<EditorState>('idle');
@@ -68,6 +100,25 @@ export default function EditorPage() {
   const [previewBgMode, setPreviewBgMode] = useState<BackgroundMode>('none');
   const [previewBgColor, setPreviewBgColor] = useState('#1a1a2e');
   const [previewOutline, setPreviewOutline] = useState<Partial<OutlineOptions>>({ enabled: false });
+
+  // --- PAINT LAYERS & BRUSH STATES ---
+  const [globalLayers, setGlobalLayers] = useState<ProjectLayer[]>([
+    { id: 'layer-base', name: 'Base Frame', visible: true, opacity: 1, blendMode: 'normal' }
+  ]);
+  const [activeLayerId, setActiveLayerId] = useState<string>('layer-base');
+  
+  // Brush Settings
+  const [activeTool, setActiveTool] = useState<BrushTool>('brush');
+  const [brushColor, setBrushColor] = useState('#8b5cf6');
+  const [brushSize, setBrushSize] = useState(8);
+  const [brushOpacity, setBrushOpacity] = useState(1.0);
+  const [brushHardness, setBrushHardness] = useState(0.8);
+
+  // Onion Skinning Settings
+  const [onionSkinEnabled, setOnionSkinEnabled] = useState(false);
+  const [onionSkinPrevFrames, setOnionSkinPrevFrames] = useState(1);
+  const [onionSkinNextFrames, setOnionSkinNextFrames] = useState(0);
+  const [onionSkinOpacity, setOnionSkinOpacity] = useState(0.4);
   
   // Save Subsystem states
   const [projectId, setProjectId] = useState<string>('');
@@ -96,7 +147,8 @@ export default function EditorPage() {
     previewBgMode,
     previewBgColor,
     isDirty,
-    markSaved
+    markSaved,
+    globalLayers,
   });
 
   // URL project deep-linking restore effect
@@ -125,14 +177,48 @@ export default function EditorPage() {
         setPreviewBgMode((project.metadata.previewBgMode as any) || 'none');
         setPreviewBgColor(project.metadata.previewBgColor || '#1a1a2e');
         
+        // Restore global layers config
+        if (project.metadata.globalLayers) {
+          setGlobalLayers(project.metadata.globalLayers);
+          if (project.metadata.globalLayers.length > 0) {
+            setActiveLayerId(project.metadata.globalLayers[0].id);
+          }
+        } else {
+          setGlobalLayers([
+            { id: 'layer-base', name: 'Base Frame', visible: true, opacity: 1, blendMode: 'normal' }
+          ]);
+          setActiveLayerId('layer-base');
+        }
+
         // Re-construct FrameState from Blob frames
         const restoredFrames: FrameData[] = [];
         for (const f of project.frames) {
           const bitmap = await createImageBitmap(f.blob);
+          const layerContents: Record<string, ImageBitmap | null> = {};
+          
+          if (f.layers && f.layers.length > 0) {
+            for (const layer of f.layers) {
+              if (layer.blob) {
+                layerContents[layer.layerId] = await createImageBitmap(layer.blob);
+              } else {
+                layerContents[layer.layerId] = null;
+              }
+            }
+          } else {
+            // Default base frame layer setup
+            const canvas = document.createElement('canvas');
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            const ctx = canvas.getContext('2d')!;
+            ctx.drawImage(bitmap, 0, 0);
+            layerContents['layer-base'] = await createImageBitmap(canvas);
+          }
+
           restoredFrames.push({
             id: f.id,
             index: f.index,
             timestamp: f.timestamp,
+            layerContents,
             bitmap,
             sourceId: f.sourceId,
             sourceColor: f.sourceColor
@@ -184,7 +270,7 @@ export default function EditorPage() {
   // Panel visibility tracking
   const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set([
     'media-loader', 'frame-grid', 'preview', 'timeline',
-    'bg-removal', 'outline', 'watermark', 'export'
+    'bg-removal', 'outline', 'watermark', 'export', 'frame-editor', 'frame-layers'
   ]));
   const dockLayoutRef = useRef<DockLayoutRef>(null);
   
@@ -198,6 +284,132 @@ export default function EditorPage() {
   
   // Store original bitmaps for revert functionality
   const originalFramesRef = useRef<Map<string, ImageBitmap>>(new Map());
+
+  // --- PAINT LAYERS OPERATIONS ---
+  const addGlobalLayer = useCallback((name?: string) => {
+    const newId = `layer-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newName = name || `Layer ${globalLayers.length + 1}`;
+    const newLayer: ProjectLayer = {
+      id: newId,
+      name: newName,
+      visible: true,
+      opacity: 1.0,
+      blendMode: 'normal'
+    };
+    
+    setGlobalLayers(prev => [...prev, newLayer]);
+    setActiveLayerId(newId);
+  }, [globalLayers]);
+
+  const deleteGlobalLayer = useCallback((id: string) => {
+    if (id === 'layer-base') return;
+    
+    setFrameState(prev => {
+      if (!prev) return prev;
+      prev.frames.forEach(f => {
+        if (f.layerContents && f.layerContents[id]) {
+          try { f.layerContents[id]?.close(); } catch {}
+          delete f.layerContents[id];
+        }
+      });
+      return { ...prev };
+    });
+    
+    setGlobalLayers(prev => prev.filter(l => l.id !== id));
+    if (activeLayerId === id) {
+      setActiveLayerId('layer-base');
+    }
+  }, [activeLayerId]);
+
+  const reorderGlobalLayers = useCallback((fromIndex: number, toIndex: number) => {
+    setGlobalLayers(prev => {
+      const copy = [...prev];
+      const [moved] = copy.splice(fromIndex, 1);
+      copy.splice(toIndex, 0, moved);
+      
+      if (frameState && frameState.frames.length > 0) {
+        Promise.all(frameState.frames.map(async f => {
+          if (!f.layerContents) return f;
+          const w = f.bitmap.width;
+          const h = f.bitmap.height;
+          const nextComposited = await compositeFrameLayers(f.layerContents, copy, w, h);
+          return {
+            ...f,
+            bitmap: nextComposited
+          };
+        })).then(updatedFrames => {
+          setFrameState({
+            ...frameState,
+            frames: updatedFrames
+          });
+        });
+      }
+      
+      return copy;
+    });
+  }, [frameState]);
+
+  const updateGlobalLayer = useCallback((id: string, updates: Partial<ProjectLayer>) => {
+    setGlobalLayers(prev => {
+      const nextLayers = prev.map(l => l.id === id ? { ...l, ...updates } : l);
+      
+      if (
+        updates.visible !== undefined ||
+        updates.opacity !== undefined ||
+        updates.blendMode !== undefined
+      ) {
+        if (frameState && frameState.frames.length > 0) {
+          Promise.all(frameState.frames.map(async f => {
+            if (!f.layerContents) return f;
+            const w = f.bitmap.width;
+            const h = f.bitmap.height;
+            const nextComposited = await compositeFrameLayers(f.layerContents, nextLayers, w, h);
+            return {
+              ...f,
+              bitmap: nextComposited
+            };
+          })).then(updatedFrames => {
+            setFrameState({
+              ...frameState,
+              frames: updatedFrames
+            });
+          });
+        }
+      }
+      
+      return nextLayers;
+    });
+  }, [frameState]);
+
+  const updateFrameLayer = useCallback(async (frameId: string, layerId: string, canvas: HTMLCanvasElement) => {
+    if (!frameState) return;
+
+    const newLayerBmp = await createImageBitmap(canvas);
+
+    const updatedFrames = await Promise.all(frameState.frames.map(async f => {
+      if (f.id === frameId) {
+        const nextContents = {
+          ...(f.layerContents || {}),
+          [layerId]: newLayerBmp
+        };
+        const w = canvas.width;
+        const h = canvas.height;
+        const nextCompositedBmp = await compositeFrameLayers(nextContents, globalLayers, w, h);
+
+        return {
+          ...f,
+          layerContents: nextContents,
+          bitmap: nextCompositedBmp
+        };
+      }
+      return f;
+    }));
+
+    setFrameState({
+      ...frameState,
+      frames: updatedFrames
+    });
+  }, [frameState, globalLayers]);
 
   // Folder helper actions
   const folders = frameState ? frameState.folders : [];
@@ -428,6 +640,25 @@ export default function EditorPage() {
         }
 
         fileIndex++;
+      }
+
+      // Initialize layerContents for all newly loaded/extracted frames
+      for (const frame of newFrames) {
+        const canvas = document.createElement('canvas');
+        canvas.width = frame.bitmap.width;
+        canvas.height = frame.bitmap.height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(frame.bitmap, 0, 0);
+        
+        const layerContents: Record<string, ImageBitmap | null> = {};
+        for (const layer of globalLayers) {
+          if (layer.id === 'layer-base') {
+            layerContents[layer.id] = await createImageBitmap(canvas);
+          } else {
+            layerContents[layer.id] = null;
+          }
+        }
+        frame.layerContents = layerContents;
       }
 
       // Combine with existing frames and folders if any
@@ -768,7 +999,39 @@ export default function EditorPage() {
       setContrast: setPixelatorContrast,
       setSaturation: setPixelatorSaturation,
       setBrightness: setPixelatorBrightness
-    }
+    },
+
+    // Paint Layers states & callbacks
+    globalLayers,
+    activeLayerId,
+    setActiveLayerId,
+    addGlobalLayer,
+    deleteGlobalLayer,
+    reorderGlobalLayers,
+    updateGlobalLayer,
+    updateFrameLayer,
+
+    // Brush Settings
+    activeTool,
+    setActiveTool,
+    brushColor,
+    setBrushColor,
+    brushSize,
+    setBrushSize,
+    brushOpacity,
+    setBrushOpacity,
+    brushHardness,
+    setBrushHardness,
+
+    // Onion Skinning Settings
+    onionSkinEnabled,
+    setOnionSkinEnabled,
+    onionSkinPrevFrames,
+    setOnionSkinPrevFrames,
+    onionSkinNextFrames,
+    setOnionSkinNextFrames,
+    onionSkinOpacity,
+    setOnionSkinOpacity,
   }), [
     editorState,
     progress,
@@ -828,7 +1091,35 @@ export default function EditorPage() {
     triggerSave,
     triggerSaveAs,
     isSaving,
-    autosaveNotification
+    autosaveNotification,
+
+    // Paint states dependencies
+    globalLayers,
+    activeLayerId,
+    setActiveLayerId,
+    addGlobalLayer,
+    deleteGlobalLayer,
+    reorderGlobalLayers,
+    updateGlobalLayer,
+    updateFrameLayer,
+    activeTool,
+    setActiveTool,
+    brushColor,
+    setBrushColor,
+    brushSize,
+    setBrushSize,
+    brushOpacity,
+    setBrushOpacity,
+    brushHardness,
+    setBrushHardness,
+    onionSkinEnabled,
+    setOnionSkinEnabled,
+    onionSkinPrevFrames,
+    setOnionSkinPrevFrames,
+    onionSkinNextFrames,
+    setOnionSkinNextFrames,
+    onionSkinOpacity,
+    setOnionSkinOpacity
   ]);
 
   return (

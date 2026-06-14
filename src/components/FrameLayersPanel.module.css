@@ -1,0 +1,296 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-deep, #0c0c10);
+  color: var(--fg-primary, #e4e4e7);
+  font-family: var(--font-sans, sans-serif);
+  padding: 12px;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-secondary, #a1a1aa);
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #8b5cf6, #6366f1);
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.addButton:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.addButton:disabled {
+  background: #27272a;
+  color: #71717a;
+  cursor: not-allowed;
+}
+
+.layersList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.emptyState {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100px;
+  color: #71717a;
+  font-size: 11px;
+  text-align: center;
+}
+
+.layerRow {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  padding: 6px 8px;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.layerRow:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.activeRow {
+  background: rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.iconButton {
+  background: transparent;
+  border: none;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.iconButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.visibleIcon {
+  color: #10b981;
+}
+
+.hiddenIcon {
+  color: #ef4444;
+}
+
+.nameContainer {
+  flex: 1;
+  min-width: 80px;
+}
+
+.nameTextRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.layerName {
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.renameButton {
+  opacity: 0;
+  background: transparent;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 2px;
+}
+
+.layerRow:hover .renameButton {
+  opacity: 1;
+}
+
+.renameButton:hover {
+  color: white;
+}
+
+.renameInputRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.renameInput {
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  color: white;
+  font-size: 11px;
+  padding: 2px 4px;
+  width: 100%;
+  outline: none;
+}
+
+.renameInput:focus {
+  border-color: #8b5cf6;
+}
+
+.saveRenameButton {
+  background: #8b5cf6;
+  border: none;
+  color: white;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+}
+
+.controlsCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blendSelect {
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  color: #d4d4d8;
+  font-size: 11px;
+  padding: 2px 4px;
+  outline: none;
+  cursor: pointer;
+}
+
+.blendSelect:focus {
+  border-color: #8b5cf6;
+}
+
+.opacityContainer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.opacitySlider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 50px;
+  height: 3px;
+  background: #27272a;
+  border-radius: 2px;
+  outline: none;
+}
+
+.opacitySlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8b5cf6;
+  cursor: pointer;
+}
+
+.opacityLabel {
+  font-size: 10px;
+  color: #71717a;
+  min-width: 26px;
+  text-align: right;
+}
+
+.actionCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reorderButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.reorderButton {
+  background: transparent;
+  border: none;
+  color: #52525b;
+  cursor: pointer;
+  padding: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 2px;
+}
+
+.reorderButton:hover:not(:disabled) {
+  color: white;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.reorderButton:disabled {
+  color: #27272a;
+  cursor: not-allowed;
+}
+
+.deleteButton {
+  background: transparent;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.deleteButton:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}

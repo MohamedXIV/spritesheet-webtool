@@ -56,24 +56,48 @@ export function useFrameHistory(maxDepth: number = 8): UseFrameHistoryReturn {
     // Gather all currently reachable/alive ImageBitmaps
     const aliveBitmaps = new Set<ImageBitmap>();
     
+    const addFrameBitmaps = (frames: any[]) => {
+      frames.forEach(f => {
+        if (f.bitmap) aliveBitmaps.add(f.bitmap);
+        if (f.layerContents) {
+          Object.values(f.layerContents).forEach(bmp => {
+            if (bmp && bmp instanceof ImageBitmap) {
+              aliveBitmaps.add(bmp);
+            }
+          });
+        }
+      });
+    };
+
     if (currentState) {
-      currentState.frames.forEach(f => aliveBitmaps.add(f.bitmap));
+      addFrameBitmaps(currentState.frames);
     }
     pastStack.forEach(state => {
-      state.frames.forEach(f => aliveBitmaps.add(f.bitmap));
+      addFrameBitmaps(state.frames);
     });
     futureStack.forEach(state => {
-      state.frames.forEach(f => aliveBitmaps.add(f.bitmap));
+      addFrameBitmaps(state.frames);
     });
-
+ 
     // Close any bitmap in the discarded state that is no longer reachable
     discardedState.frames.forEach(f => {
-      if (!aliveBitmaps.has(f.bitmap)) {
+      if (f.bitmap && !aliveBitmaps.has(f.bitmap)) {
         try {
           f.bitmap.close();
         } catch (err) {
           console.debug('FrameHistory GC: could not close evicted bitmap', f.id, err);
         }
+      }
+      if (f.layerContents) {
+        Object.values(f.layerContents).forEach(bmp => {
+          if (bmp && bmp instanceof ImageBitmap && !aliveBitmaps.has(bmp)) {
+            try {
+              bmp.close();
+            } catch (err) {
+              console.debug('FrameHistory GC: could not close evicted layer bitmap', f.id, err);
+            }
+          }
+        });
       }
     });
   }, []);
@@ -206,11 +230,25 @@ export function useFrameHistory(maxDepth: number = 8): UseFrameHistoryReturn {
       pastRef.current.forEach(state => {
         state.frames.forEach(f => {
           try { f.bitmap.close(); } catch {}
+          if (f.layerContents) {
+            Object.values(f.layerContents).forEach(bmp => {
+              if (bmp && bmp instanceof ImageBitmap) {
+                try { bmp.close(); } catch {}
+              }
+            });
+          }
         });
       });
       futureRef.current.forEach(state => {
         state.frames.forEach(f => {
           try { f.bitmap.close(); } catch {}
+          if (f.layerContents) {
+            Object.values(f.layerContents).forEach(bmp => {
+              if (bmp && bmp instanceof ImageBitmap) {
+                try { bmp.close(); } catch {}
+              }
+            });
+          }
         });
       });
     };

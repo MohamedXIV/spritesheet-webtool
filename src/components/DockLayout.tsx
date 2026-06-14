@@ -18,8 +18,9 @@ import { ExportPanel } from '@/components/ExportPanel';
 import { BackgroundRemovalPanel } from '@/components/BackgroundRemovalPanel';
 import { OutlinePanel } from '@/components/OutlinePanel';
 import { WatermarkRemovalPanel } from '@/components/WatermarkRemovalPanel';
-import { ProgressBar } from '@/components/ProgressBar';
 import { PixelationPanel } from '@/components/PixelationPanel';
+import { FrameEditorPanel } from '@/components/FrameEditorPanel';
+import { FrameLayersPanel } from '@/components/FrameLayersPanel';
 
 import styles from './DockLayout.module.css';
 
@@ -36,6 +37,8 @@ const PANEL_INFO: Record<string, { name: string }> = {
   'pixelate': { name: 'Pixelation' },
   'watermark': { name: 'Watermark' },
   'export': { name: 'Export' },
+  'frame-editor': { name: 'Frame Editor' },
+  'frame-layers': { name: 'Layers' },
 };
 
 // Ref type for external control
@@ -78,6 +81,7 @@ const defaultLayout = {
             weight: 70,
             children: [
               { type: 'tab', name: 'Preview', component: 'preview' },
+              { type: 'tab', name: 'Frame Editor', component: 'frame-editor' },
             ],
           },
           {
@@ -93,6 +97,7 @@ const defaultLayout = {
         type: 'tabset',
         weight: 30,
         children: [
+          { type: 'tab', name: 'Layers', component: 'frame-layers' },
           { type: 'tab', name: 'Background Removal', component: 'bg-removal' },
           { type: 'tab', name: 'Outline', component: 'outline' },
           { type: 'tab', name: 'Pixelation', component: 'pixelate' },
@@ -154,6 +159,20 @@ export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function Do
     const component = node.getComponent();
     
     switch (component) {
+      case 'frame-editor':
+        return (
+          <div className={styles.panelContent}>
+            <FrameEditorPanel />
+          </div>
+        );
+        
+      case 'frame-layers':
+        return (
+          <div className={styles.panelContent}>
+            <FrameLayersPanel />
+          </div>
+        );
+
       case 'media-loader':
         return (
           <div className={styles.panelContent}>

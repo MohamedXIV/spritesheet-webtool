@@ -5,11 +5,13 @@
  */
 
 import React, { createContext, useContext, ReactNode } from 'react';
-import { FrameData, SourceInfo, Folder } from '@/types';
+import { FrameData, SourceInfo, Folder, ProjectLayer } from '@/types';
 import { FrameState } from '@/lib/frameStore';
 import { LoopMode } from '@/components/Timeline';
 import { BackgroundMode } from '@/components/PreviewPlayer';
 import { OutlineOptions } from '@/lib/outlineGenerator';
+
+export type BrushTool = 'brush' | 'eraser' | 'eyedropper' | 'bucket';
 
 interface EditorContextValue {
   // Editor state
@@ -135,6 +137,38 @@ interface EditorContextValue {
   triggerSaveAs?: (newName: string) => Promise<void>;
   isSaving?: boolean;
   autosaveNotification?: string | null;
+
+  // --- NEW PAINT LAYERS & BRUSH STATE ---
+  globalLayers?: ProjectLayer[];
+  activeLayerId?: string;
+  setActiveLayerId?: (id: string) => void;
+  addGlobalLayer?: (name?: string) => void;
+  deleteGlobalLayer?: (id: string) => void;
+  reorderGlobalLayers?: (fromIndex: number, toIndex: number) => void;
+  updateGlobalLayer?: (id: string, updates: Partial<ProjectLayer>) => void;
+  updateFrameLayer?: (frameId: string, layerId: string, canvas: HTMLCanvasElement) => Promise<void>;
+
+  // Brush settings
+  activeTool?: BrushTool;
+  setActiveTool?: (tool: BrushTool) => void;
+  brushColor?: string;
+  setBrushColor?: (color: string) => void;
+  brushSize?: number;
+  setBrushSize?: (size: number) => void;
+  brushOpacity?: number;
+  setBrushOpacity?: (opacity: number) => void;
+  brushHardness?: number;
+  setBrushHardness?: (hardness: number) => void;
+
+  // Onion Skinning settings
+  onionSkinEnabled?: boolean;
+  setOnionSkinEnabled?: (enabled: boolean) => void;
+  onionSkinPrevFrames?: number;
+  setOnionSkinPrevFrames?: (num: number) => void;
+  onionSkinNextFrames?: number;
+  setOnionSkinNextFrames?: (num: number) => void;
+  onionSkinOpacity?: number;
+  setOnionSkinOpacity?: (opacity: number) => void;
 }
 
 const EditorContext = createContext<EditorContextValue | null>(null);

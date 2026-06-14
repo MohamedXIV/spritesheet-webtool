@@ -12,10 +12,19 @@ export const SOURCE_COLORS = [
   '#ef4444', // Red
 ] as const;
 
+export interface ProjectLayer {
+  id: string;
+  name: string;
+  visible: boolean;
+  opacity: number; // 0 to 1
+  blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
+}
+
 export interface FrameData {
   id: string;
   index: number;
   timestamp: number;
+  layerContents?: Record<string, ImageBitmap | null>; // Maps globalLayerId -> ImageBitmap
   bitmap: ImageBitmap;
   thumbnailUrl?: string;
   sourceId: string;      // ID of source video/image
@@ -78,5 +87,20 @@ export interface Folder {
   collapsed: boolean;
   color: string;
 }
+
+export interface TextureSourceSlot {
+  id: string;
+  type: 'material' | 'udim';
+  name: string;
+  originalTextureUrl: string | null;
+  originalColor: string; // hex color
+  userTextureUrl: string | null;
+  userTextureFile: File | null;
+  weight: number;
+  included: boolean;
+  detectedUdimTile?: number;
+  meshNames: string[];
+}
+
 
 

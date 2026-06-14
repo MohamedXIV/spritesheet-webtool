@@ -22,6 +22,7 @@ export function useProjectSave(options: {
   slicerOptions?: any;
   isDirty: boolean;
   markSaved?: () => void;
+  globalLayers?: any[];
 }) {
   const {
     projectId,
@@ -51,7 +52,7 @@ export function useProjectSave(options: {
       if (currentOpts.customFrames) {
         dbFrames = await currentOpts.customFrames();
       } else if (currentOpts.frameState) {
-        const serialized = await serializeProject(currentOpts.frameState, currentOpts.fps);
+        const serialized = await serializeProject(currentOpts.frameState, currentOpts.fps, currentOpts.globalLayers);
         dbFrames = serialized.frames;
       }
 
@@ -66,6 +67,7 @@ export function useProjectSave(options: {
         pixelatorOptions: currentOpts.pixelatorOptions,
         slicerOptions: currentOpts.slicerOptions,
         threePainterOptions: currentOpts.threePainterOptions,
+        globalLayers: currentOpts.globalLayers,
       };
 
       // 3. Construct DbProject record
@@ -108,7 +110,7 @@ export function useProjectSave(options: {
       if (currentOpts.customFrames) {
         dbFrames = await currentOpts.customFrames();
       } else if (currentOpts.frameState) {
-        const serialized = await serializeProject(currentOpts.frameState, currentOpts.fps);
+        const serialized = await serializeProject(currentOpts.frameState, currentOpts.fps, currentOpts.globalLayers);
         dbFrames = serialized.frames;
       }
 
@@ -123,6 +125,7 @@ export function useProjectSave(options: {
         pixelatorOptions: currentOpts.pixelatorOptions,
         slicerOptions: currentOpts.slicerOptions,
         threePainterOptions: currentOpts.threePainterOptions,
+        globalLayers: currentOpts.globalLayers,
       };
 
       // 4. Construct DbProject record

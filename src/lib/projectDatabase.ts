@@ -43,6 +43,18 @@ export interface ProjectMetadata {
       };
     }[];
   };
+  globalLayers?: {
+    id: string;
+    name: string;
+    visible: boolean;
+    opacity: number;
+    blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
+  }[];
+}
+
+export interface DbProjectFrameLayer {
+  layerId: string;
+  blob: Blob | null; // Compressed PNG layer image
 }
 
 export interface DbProjectFrame {
@@ -52,6 +64,7 @@ export interface DbProjectFrame {
   sourceId: string;
   sourceColor: string;
   blob: Blob; // Binary PNG frame stored in database
+  layers?: DbProjectFrameLayer[]; // Optional layers storage
 }
 
 export interface DbProject {
