@@ -4,6 +4,7 @@ import React, { createContext, useContext, ReactNode } from 'react';
 import { ThreePainter } from '@/lib/threePainter';
 import { PixelatorOptions } from '@/lib/pixelator';
 import { ShadingMode, LightingSettings } from '@/lib/lightingPresets';
+import { TextureSourceSlot } from '@/types';
 
 export interface PaintingLayer {
   id: string;
@@ -32,6 +33,21 @@ export interface PaintingLayer {
     contrast: number;
     curvesPoints: [number, number, number, number]; // [y0, x1, y1, y2]
   };
+
+  // Smart Mask settings
+  smartMaskType?: 'edges' | 'cavities' | 'height' | null;
+  smartMaskContrast?: number;
+  smartMaskThreshold?: number;
+  smartMaskIntensity?: number;
+  smartMaskInvert?: boolean;
+
+  // Stylized shadow settings
+  shadowTintEnabled?: boolean;
+  shadowTintColor?: string;
+
+  // Color quantization/banding
+  quantizeColorsEnabled?: boolean;
+  quantizeColorCount?: number;
 }
 
 export type BrushTool = 'brush' | 'eraser' | 'eyedropper' | 'bucket' | 'island-bucket';
@@ -71,6 +87,7 @@ export interface ThreePainterContextValue {
   setMaskActive: (layerId: string, active: boolean) => void;
   updateLayerFillSettings: (layerId: string, settings: Partial<Pick<PaintingLayer, 'fillColor' | 'fillTextureName' | 'fillTextureUrl'>>) => void;
   updateLayerFilters: (layerId: string, filters: Partial<NonNullable<PaintingLayer['filters']>>) => void;
+  updateLayerSmartMaskSettings: (layerId: string, settings: Partial<Pick<PaintingLayer, 'smartMaskType' | 'smartMaskContrast' | 'smartMaskThreshold' | 'smartMaskIntensity' | 'smartMaskInvert' | 'shadowTintEnabled' | 'shadowTintColor' | 'quantizeColorsEnabled' | 'quantizeColorCount'>>) => void;
 
   // Brush
   activeTool: BrushTool;
@@ -121,6 +138,21 @@ export interface ThreePainterContextValue {
   visiblePanels: Set<string>;
   togglePanel: (panelId: string) => void;
   resetLayout: () => void;
+
+  // Material Merger & UDIM Atlas Packing
+  textureSlots: TextureSourceSlot[];
+  setTextureSlots: React.Dispatch<React.SetStateAction<TextureSourceSlot[]>>;
+  analyzeLoadedModel: () => void;
+  applyTextureAtlas: (atlasSize: number) => Promise<void>;
+
+  // Smart Materials baking & presets
+  smartMaps: {
+    edges: HTMLCanvasElement | null;
+    cavities: HTMLCanvasElement | null;
+    height: HTMLCanvasElement | null;
+  } | null;
+  bakeModelSmartMaps: () => Promise<void>;
+  applySmartMaterialPreset: (presetId: string) => void;
 }
 
 export type { ShadingMode, LightingSettings };

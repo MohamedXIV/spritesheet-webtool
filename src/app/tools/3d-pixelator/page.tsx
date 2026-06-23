@@ -9,6 +9,7 @@ import { ShadingMode, LightingSettings, LIGHTING_PRESETS, DEFAULT_LIGHTING_PRESE
 import { ThreePainterDockLayout, ThreePainterDockLayoutRef } from '@/components/ThreePainterDockLayout';
 import { ThreePainterMenuBar } from '@/components/ThreePainterMenuBar';
 import { ThreePainter } from '@/lib/threePainter';
+import { TextureSourceSlot } from '@/types';
 import styles from './page.module.css';
 
 export default function ThreePainterPage() {
@@ -47,9 +48,16 @@ export default function ThreePainterPage() {
     palette: 'none',
   });
 
+  const [textureSlots, setTextureSlots] = useState<TextureSourceSlot[]>([]);
+  const [smartMaps, setSmartMaps] = useState<{
+    edges: HTMLCanvasElement | null;
+    cavities: HTMLCanvasElement | null;
+    height: HTMLCanvasElement | null;
+  } | null>(null);
+
   const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set([
     '3d-preview', '2d-preview', 'brush-panel', 'layers-panel', 'lighting-panel',
-    'texture-maps', 'pixelate-panel', 'export-panel', 'ai-generation',
+    'texture-maps', 'pixelate-panel', 'export-panel', 'ai-generation', 'material-merger',
   ]));
 
   const dockLayoutRef     = useRef<ThreePainterDockLayoutRef>(null);
@@ -95,11 +103,13 @@ export default function ThreePainterPage() {
     const compositeCanvas = document.getElementById('three-painter-composite-canvas') as HTMLCanvasElement;
     const ctx = compositeCanvas?.getContext('2d');
     if (!compositeCanvas || !ctx) return;
-    ctx.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
+    const W = compositeCanvas.width;
+    const H = compositeCanvas.height;
+    ctx.clearRect(0, 0, W, H);
 
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = 512;
-    tempCanvas.height = 512;
+    tempCanvas.width = W;
+    tempCanvas.height = H;
     const tempCtx = tempCanvas.getContext('2d')!;
 
     for (let i = 0; i < layers.length; i++) {
@@ -108,7 +118,7 @@ export default function ThreePainterPage() {
       const layerCanvas = document.getElementById(`layer-canvas-${layer.id}`) as HTMLCanvasElement;
       if (!layerCanvas) continue;
 
-      tempCtx.clearRect(0, 0, 512, 512);
+      tempCtx.clearRect(0, 0, W, H);
 
       // Apply CSS Filters (Hue, Saturation, Brightness, Contrast)
       let filterStr = '';
@@ -120,10 +130,11 @@ export default function ThreePainterPage() {
         if (contrast !== 1) filterStr += `contrast(${contrast}) `;
       }
       tempCtx.filter = filterStr.trim() || 'none';
-      tempCtx.drawImage(layerCanvas, 0, 0);
+      tempCtx.drawImage(layerCanvas, 0, 0, W, H);
       tempCtx.filter = 'none';
 
-      // Apply Curves and Mask visibility multipliers
+      // Apply Curves, Smart Masks, Shadow Tint, and Quantization
+      const hasSmartMask = layer.smartMaskType && smartMaps && smartMaps[layer.smartMaskType];
       const hasMask = layer.maskCanvas && layer.maskVisible !== false;
       const hasCurves = layer.filters && (
         layer.filters.curvesPoints[0] !== 0 ||
@@ -131,9 +142,10 @@ export default function ThreePainterPage() {
         layer.filters.curvesPoints[2] !== 128 ||
         layer.filters.curvesPoints[3] !== 255
       );
+      const needsPixelLoop = hasMask || hasCurves || hasSmartMask || layer.quantizeColorsEnabled || layer.shadowTintEnabled;
 
-      if (hasMask || hasCurves) {
-        const imgData = tempCtx.getImageData(0, 0, 512, 512);
+      if (needsPixelLoop) {
+        const imgData = tempCtx.getImageData(0, 0, W, H);
         const pixels = imgData.data;
 
         let maskPixels: Uint8ClampedArray | null = null;
@@ -141,7 +153,16 @@ export default function ThreePainterPage() {
           const mCanvas = document.getElementById(`layer-mask-canvas-${layer.id}`) as HTMLCanvasElement;
           if (mCanvas) {
             const mCtx = mCanvas.getContext('2d')!;
-            maskPixels = mCtx.getImageData(0, 0, 512, 512).data;
+            maskPixels = mCtx.getImageData(0, 0, W, H).data;
+          }
+        }
+
+        let smartMaskPixels: Uint8ClampedArray | null = null;
+        if (hasSmartMask) {
+          const sCanvas = smartMaps[layer.smartMaskType!];
+          if (sCanvas) {
+            const sCtx = sCanvas.getContext('2d')!;
+            smartMaskPixels = sCtx.getImageData(0, 0, W, H).data;
           }
         }
 
@@ -154,16 +175,59 @@ export default function ThreePainterPage() {
             )
           : null;
 
+        const contrast = layer.smartMaskContrast !== undefined ? layer.smartMaskContrast : 1.0;
+        const threshold = layer.smartMaskThreshold !== undefined ? layer.smartMaskThreshold : 0.5;
+        const intensity = layer.smartMaskIntensity !== undefined ? layer.smartMaskIntensity : 1.0;
+        const invert = !!layer.smartMaskInvert;
+
+        let shadowR = 0, shadowG = 0, shadowB = 0;
+        if (layer.shadowTintEnabled && layer.shadowTintColor) {
+          const hex = layer.shadowTintColor.replace('#', '');
+          shadowR = parseInt(hex.substring(0, 2), 16) || 0;
+          shadowG = parseInt(hex.substring(2, 4), 16) || 0;
+          shadowB = parseInt(hex.substring(4, 6), 16) || 0;
+        }
+
+        const quantizeCount = layer.quantizeColorCount !== undefined ? layer.quantizeColorCount : 8;
+
         for (let j = 0; j < pixels.length; j += 4) {
           if (lut) {
-            pixels[j] = lut[pixels[j]];
+            pixels[j]   = lut[pixels[j]];
             pixels[j+1] = lut[pixels[j+1]];
             pixels[j+2] = lut[pixels[j+2]];
           }
-          if (maskPixels) {
-            const maskVal = maskPixels[j] / 255;
-            pixels[j+3] = pixels[j+3] * maskVal;
+
+          let smartMaskVal = 1.0;
+          if (smartMaskPixels) {
+            const raw = smartMaskPixels[j] / 255.0;
+            let val = (raw - threshold) * contrast + 0.5;
+            val = Math.max(0.0, Math.min(1.0, val));
+            if (invert) val = 1.0 - val;
+            smartMaskVal = val * intensity;
           }
+
+          if (layer.shadowTintEnabled && layer.smartMaskType === 'cavities') {
+            pixels[j]     = pixels[j]     * (1.0 - smartMaskVal) + shadowR * smartMaskVal;
+            pixels[j+1]   = pixels[j+1]   * (1.0 - smartMaskVal) + shadowG * smartMaskVal;
+            pixels[j+2]   = pixels[j+2]   * (1.0 - smartMaskVal) + shadowB * smartMaskVal;
+          }
+
+          if (layer.quantizeColorsEnabled && quantizeCount > 1) {
+            pixels[j]     = Math.round(pixels[j] / (255 / (quantizeCount - 1))) * (255 / (quantizeCount - 1));
+            pixels[j+1]   = Math.round(pixels[j+1] / (255 / (quantizeCount - 1))) * (255 / (quantizeCount - 1));
+            pixels[j+2]   = Math.round(pixels[j+2] / (255 / (quantizeCount - 1))) * (255 / (quantizeCount - 1));
+          }
+
+          let maskVal = 1.0;
+          if (hasMask && maskPixels) {
+            maskVal = maskPixels[j] / 255;
+          }
+
+          if (smartMaskPixels && (!layer.shadowTintEnabled || layer.smartMaskType !== 'cavities')) {
+            maskVal *= smartMaskVal;
+          }
+
+          pixels[j+3] = pixels[j+3] * maskVal;
         }
         tempCtx.putImageData(imgData, 0, 0);
       }
@@ -188,7 +252,7 @@ export default function ThreePainterPage() {
       } catch (err) { console.warn('Canvas pixelation skip:', err); }
     }
     if (painter) painter.updateTexture();
-  }, [layers, pixelatorOptions, painter]);
+  }, [layers, pixelatorOptions, painter, smartMaps]);
 
   useEffect(() => { if (layers.length > 0) compositeAndPixelate(); }, [layers, pixelatorOptions, compositeAndPixelate]);
 
@@ -315,6 +379,21 @@ export default function ThreePainterPage() {
       if (painter) {
         await painter.loadModel(data, file.name);
         initializeLayerCanvases(undefined, painter.getLoadedOriginalTextureImage());
+        
+        // Analyze model for materials/UDIMs
+        const slots = painter.analyzeModel();
+        setTextureSlots(slots);
+
+        // Bake smart maps
+        try {
+          const maps = painter.bakeSmartMaps(512, 512);
+          if (maps) {
+            setSmartMaps(maps);
+          }
+        } catch (bakeErr) {
+          console.warn('Smart maps baking failed:', bakeErr);
+        }
+
         setIsDirty(true);
         setTimeout(() => { painter.handleResize(); painter.frameModel(); }, 80);
       }
@@ -401,11 +480,93 @@ export default function ThreePainterPage() {
   const resetWorkspace = () => {
     setLoadedModelName(null); setLoadedModelSize(null);
     setLayers([]); setActiveLayerId('');
+    setTextureSlots([]);
+    setSmartMaps(null);
     modelFileBlobRef.current = null;
     undoStackRef.current = []; redoStackRef.current = [];
     setIsDirty(false);
     if (painter) painter.clearLoadedModel();
   };
+
+  const analyzeLoadedModel = useCallback(() => {
+    if (painter) {
+      const slots = painter.analyzeModel();
+      setTextureSlots(slots);
+    }
+  }, [painter]);
+
+  const applyTextureAtlas = useCallback(async (atlasSize: number) => {
+    if (!painter) return;
+    try {
+      const atlasCanvas = await painter.repackAndAtlas(textureSlots, atlasSize);
+      
+      const baseLayer = layers.find(l => l.name === 'Base Texture' || l.type === 'fill') || layers[0];
+      if (baseLayer) {
+        const canvas = document.getElementById(`layer-canvas-${baseLayer.id}`) as HTMLCanvasElement;
+        const ctx = canvas?.getContext('2d');
+        if (canvas && ctx) {
+          canvas.width = atlasSize;
+          canvas.height = atlasSize;
+          ctx.clearRect(0, 0, atlasSize, atlasSize);
+          ctx.drawImage(atlasCanvas, 0, 0, atlasSize, atlasSize);
+        }
+        
+        layers.forEach(layer => {
+          const lCanvas = document.getElementById(`layer-canvas-${layer.id}`) as HTMLCanvasElement;
+          if (lCanvas && lCanvas !== canvas) {
+            const temp = document.createElement('canvas');
+            temp.width = lCanvas.width;
+            temp.height = lCanvas.height;
+            const tempCtx = temp.getContext('2d');
+            if (tempCtx) {
+              tempCtx.drawImage(lCanvas, 0, 0);
+            }
+            
+            lCanvas.width = atlasSize;
+            lCanvas.height = atlasSize;
+            const newCtx = lCanvas.getContext('2d');
+            if (newCtx) {
+              newCtx.drawImage(temp, 0, 0, atlasSize, atlasSize);
+            }
+          }
+          
+          if (layer.maskCanvas) {
+            const mCanvas = document.getElementById(`layer-mask-canvas-${layer.id}`) as HTMLCanvasElement;
+            if (mCanvas) {
+              const temp = document.createElement('canvas');
+              temp.width = mCanvas.width;
+              temp.height = mCanvas.height;
+              const tempCtx = temp.getContext('2d');
+              if (tempCtx) {
+                tempCtx.drawImage(mCanvas, 0, 0);
+              }
+              
+              mCanvas.width = atlasSize;
+              mCanvas.height = atlasSize;
+              const newCtx = mCanvas.getContext('2d');
+              if (newCtx) {
+                newCtx.drawImage(temp, 0, 0, atlasSize, atlasSize);
+              }
+            }
+          }
+        });
+
+        const compositeCanvas = document.getElementById('three-painter-composite-canvas') as HTMLCanvasElement;
+        if (compositeCanvas) {
+          compositeCanvas.width = atlasSize;
+          compositeCanvas.height = atlasSize;
+        }
+
+        setIsDirty(true);
+        await compositeAndPixelate();
+        
+        setTextureSlots(painter.analyzeModel());
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert(e.message || 'Failed to repack and apply texture atlas.');
+    }
+  }, [painter, textureSlots, layers, compositeAndPixelate]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -762,6 +923,321 @@ export default function ThreePainterPage() {
     compositeAndPixelate();
   }, [layers, compositeAndPixelate]);
 
+  const bakeModelSmartMaps = useCallback(async () => {
+    if (!painter) return;
+    try {
+      const maps = painter.bakeSmartMaps(512, 512);
+      if (maps) {
+        setSmartMaps(maps);
+      }
+    } catch (e) {
+      console.warn('Failed to bake smart maps:', e);
+    }
+  }, [painter]);
+
+  const applySmartMaterialPreset = useCallback((presetId: string) => {
+    undoStackRef.current.push(captureHistorySnapshot());
+    
+    document.querySelectorAll('[id^="layer-canvas-"]').forEach(el => el.remove());
+    document.querySelectorAll('[id^="layer-mask-canvas-"]').forEach(el => el.remove());
+
+    const now = Date.now();
+    let newLayers: PaintingLayer[] = [];
+
+    const createLayerCanvas = (id: string, width = 512, height = 512) => {
+      const c = document.createElement('canvas');
+      c.id = `layer-canvas-${id}`;
+      c.width = width;
+      c.height = height;
+      c.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
+      document.body.appendChild(c);
+      return c;
+    };
+
+    if (presetId === 'hand-painted') {
+      const baseId = `layer-${now}-base`;
+      const baseC = createLayerCanvas(baseId);
+      const baseCtx = baseC.getContext('2d')!;
+      baseCtx.fillStyle = '#7f8899';
+      baseCtx.fillRect(0, 0, 512, 512);
+
+      const aoId = `layer-${now}-ao`;
+      const aoC = createLayerCanvas(aoId);
+      const aoCtx = aoC.getContext('2d')!;
+      aoCtx.fillStyle = '#261b30';
+      aoCtx.fillRect(0, 0, 512, 512);
+
+      const heightId = `layer-${now}-height`;
+      const heightC = createLayerCanvas(heightId);
+      const heightCtx = heightC.getContext('2d')!;
+      heightCtx.fillStyle = '#ffffff';
+      heightCtx.fillRect(0, 0, 512, 512);
+
+      const edgeId = `layer-${now}-edges`;
+      const edgeC = createLayerCanvas(edgeId);
+      const edgeCtx = edgeC.getContext('2d')!;
+      edgeCtx.fillStyle = '#ebf0ff';
+      edgeCtx.fillRect(0, 0, 512, 512);
+
+      newLayers = [
+        {
+          id: baseId,
+          name: 'Base Tone',
+          type: 'fill',
+          opacity: 1.0,
+          visible: true,
+          blendMode: 'normal',
+          canvas: baseC,
+          fillColor: '#7f8899',
+        },
+        {
+          id: aoId,
+          name: 'Ambient Crevices',
+          type: 'fill',
+          opacity: 0.8,
+          visible: true,
+          blendMode: 'multiply',
+          canvas: aoC,
+          fillColor: '#261b30',
+          smartMaskType: 'cavities',
+          smartMaskIntensity: 0.85,
+          smartMaskThreshold: 0.2,
+          smartMaskContrast: 1.6,
+          shadowTintEnabled: true,
+          shadowTintColor: '#261b30',
+        },
+        {
+          id: heightId,
+          name: 'Height Ambient',
+          type: 'fill',
+          opacity: 0.35,
+          visible: true,
+          blendMode: 'overlay',
+          canvas: heightC,
+          fillColor: '#ffffff',
+          smartMaskType: 'height',
+          smartMaskIntensity: 0.5,
+          smartMaskThreshold: 0.0,
+          smartMaskContrast: 1.0,
+        },
+        {
+          id: edgeId,
+          name: 'Stylized Edge Highlights',
+          type: 'fill',
+          opacity: 0.75,
+          visible: true,
+          blendMode: 'normal',
+          canvas: edgeC,
+          fillColor: '#ebf0ff',
+          smartMaskType: 'edges',
+          smartMaskIntensity: 0.75,
+          smartMaskThreshold: 0.35,
+          smartMaskContrast: 2.2,
+        }
+      ];
+    } else if (presetId === 'scratched-metal') {
+      const baseId = `layer-${now}-base`;
+      const baseC = createLayerCanvas(baseId);
+      const baseCtx = baseC.getContext('2d')!;
+      baseCtx.fillStyle = '#3f444a';
+      baseCtx.fillRect(0, 0, 512, 512);
+
+      const dirtId = `layer-${now}-dirt`;
+      const dirtC = createLayerCanvas(dirtId);
+      const dirtCtx = dirtC.getContext('2d')!;
+      dirtCtx.fillStyle = '#382a20';
+      dirtCtx.fillRect(0, 0, 512, 512);
+
+      const scratchesId = `layer-${now}-scratches`;
+      const scratchesC = createLayerCanvas(scratchesId);
+      const scratchesCtx = scratchesC.getContext('2d')!;
+      scratchesCtx.fillStyle = '#e5e7eb';
+      scratchesCtx.fillRect(0, 0, 512, 512);
+
+      newLayers = [
+        {
+          id: baseId,
+          name: 'Gunmetal Base',
+          type: 'fill',
+          opacity: 1.0,
+          visible: true,
+          blendMode: 'normal',
+          canvas: baseC,
+          fillColor: '#3f444a',
+        },
+        {
+          id: dirtId,
+          name: 'Cavity Rust & Dirt',
+          type: 'fill',
+          opacity: 0.75,
+          visible: true,
+          blendMode: 'multiply',
+          canvas: dirtC,
+          fillColor: '#382a20',
+          smartMaskType: 'cavities',
+          smartMaskIntensity: 0.8,
+          smartMaskThreshold: 0.15,
+          smartMaskContrast: 1.5,
+        },
+        {
+          id: scratchesId,
+          name: 'Worn Edges (Scratches)',
+          type: 'fill',
+          opacity: 0.9,
+          visible: true,
+          blendMode: 'normal',
+          canvas: scratchesC,
+          fillColor: '#e5e7eb',
+          smartMaskType: 'edges',
+          smartMaskIntensity: 0.9,
+          smartMaskThreshold: 0.4,
+          smartMaskContrast: 3.0,
+        }
+      ];
+    } else if (presetId === 'ancient-stone') {
+      const baseId = `layer-${now}-base`;
+      const baseC = createLayerCanvas(baseId);
+      const baseCtx = baseC.getContext('2d')!;
+      baseCtx.fillStyle = '#5c636e';
+      baseCtx.fillRect(0, 0, 512, 512);
+
+      const mossId = `layer-${now}-moss`;
+      const mossC = createLayerCanvas(mossId);
+      const mossCtx = mossC.getContext('2d')!;
+      mossCtx.fillStyle = '#2f4233';
+      mossCtx.fillRect(0, 0, 512, 512);
+
+      const edgeId = `layer-${now}-edges`;
+      const edgeC = createLayerCanvas(edgeId);
+      const edgeCtx = edgeC.getContext('2d')!;
+      edgeCtx.fillStyle = '#c5cad4';
+      edgeCtx.fillRect(0, 0, 512, 512);
+
+      newLayers = [
+        {
+          id: baseId,
+          name: 'Stone Base',
+          type: 'fill',
+          opacity: 1.0,
+          visible: true,
+          blendMode: 'normal',
+          canvas: baseC,
+          fillColor: '#5c636e',
+        },
+        {
+          id: mossId,
+          name: 'Crevice Moss & Grime',
+          type: 'fill',
+          opacity: 0.8,
+          visible: true,
+          blendMode: 'normal',
+          canvas: mossC,
+          fillColor: '#2f4233',
+          smartMaskType: 'cavities',
+          smartMaskIntensity: 0.8,
+          smartMaskThreshold: 0.25,
+          smartMaskContrast: 1.4,
+        },
+        {
+          id: edgeId,
+          name: 'Stone Highlights',
+          type: 'fill',
+          opacity: 0.7,
+          visible: true,
+          blendMode: 'normal',
+          canvas: edgeC,
+          fillColor: '#c5cad4',
+          smartMaskType: 'edges',
+          smartMaskIntensity: 0.7,
+          smartMaskThreshold: 0.35,
+          smartMaskContrast: 1.8,
+        }
+      ];
+    } else if (presetId === 'cel-shaded') {
+      const baseId = `layer-${now}-base`;
+      const baseC = createLayerCanvas(baseId);
+      const baseCtx = baseC.getContext('2d')!;
+      baseCtx.fillStyle = '#e23c52';
+      baseCtx.fillRect(0, 0, 512, 512);
+
+      const shadowId = `layer-${now}-shadow`;
+      const shadowC = createLayerCanvas(shadowId);
+      const shadowCtx = shadowC.getContext('2d')!;
+      shadowCtx.fillStyle = '#7a1728';
+      shadowCtx.fillRect(0, 0, 512, 512);
+
+      const highlightId = `layer-${now}-highlight`;
+      const highlightC = createLayerCanvas(highlightId);
+      const highlightCtx = highlightC.getContext('2d')!;
+      highlightCtx.fillStyle = '#ffd2d7';
+      highlightCtx.fillRect(0, 0, 512, 512);
+
+      newLayers = [
+        {
+          id: baseId,
+          name: 'Flat Base Tone',
+          type: 'fill',
+          opacity: 1.0,
+          visible: true,
+          blendMode: 'normal',
+          canvas: baseC,
+          fillColor: '#e23c52',
+        },
+        {
+          id: shadowId,
+          name: 'Banded Shadows',
+          type: 'fill',
+          opacity: 0.95,
+          visible: true,
+          blendMode: 'normal',
+          canvas: shadowC,
+          fillColor: '#7a1728',
+          smartMaskType: 'cavities',
+          smartMaskIntensity: 0.9,
+          smartMaskThreshold: 0.2,
+          smartMaskContrast: 8.0,
+          quantizeColorsEnabled: true,
+          quantizeColorCount: 2,
+        },
+        {
+          id: highlightId,
+          name: 'Banded Highlights',
+          type: 'fill',
+          opacity: 0.75,
+          visible: true,
+          blendMode: 'normal',
+          canvas: highlightC,
+          fillColor: '#ffd2d7',
+          smartMaskType: 'edges',
+          smartMaskIntensity: 0.75,
+          smartMaskThreshold: 0.45,
+          smartMaskContrast: 8.0,
+          quantizeColorsEnabled: true,
+          quantizeColorCount: 2,
+        }
+      ];
+    } else {
+      return;
+    }
+
+    setLayers(newLayers);
+    setActiveLayerId(newLayers[newLayers.length - 1].id);
+    setIsDirty(true);
+    setTimeout(() => compositeAndPixelate(), 0);
+  }, [captureHistorySnapshot, compositeAndPixelate]);
+
+  const updateLayerSmartMaskSettings = useCallback((
+    layerId: string,
+    settings: Partial<Pick<PaintingLayer, 'smartMaskType' | 'smartMaskContrast' | 'smartMaskThreshold' | 'smartMaskIntensity' | 'smartMaskInvert' | 'shadowTintEnabled' | 'shadowTintColor' | 'quantizeColorsEnabled' | 'quantizeColorCount'>>
+  ) => {
+    setLayers(prev => prev.map(l => {
+      if (l.id !== layerId) return l;
+      return { ...l, ...settings };
+    }));
+    setIsDirty(true);
+    setTimeout(() => compositeAndPixelate(), 0);
+  }, [compositeAndPixelate]);
+
   const handleUpdateLightingSettings = (settings: Partial<LightingSettings>) => {
     setLightingSettings(prev => ({ ...prev, ...settings } as LightingSettings));
   };
@@ -800,6 +1276,7 @@ export default function ThreePainterPage() {
     setMaskActive,
     updateLayerFillSettings,
     updateLayerFilters,
+    updateLayerSmartMaskSettings,
     activeTool, setActiveTool, brushColor, setBrushColor,
     brushSize, setBrushSize, brushOpacity, setBrushOpacity, brushHardness, setBrushHardness,
     pixelatorOptions,
@@ -811,20 +1288,24 @@ export default function ThreePainterPage() {
     painter, setPainterInstance: setPainter,
     undo, redo, canUndo, canRedo, isDirty, triggerSave, triggerSaveAs,
     visiblePanels, togglePanel, resetLayout,
+    textureSlots, setTextureSlots, analyzeLoadedModel, applyTextureAtlas,
+    smartMaps, bakeModelSmartMaps, applySmartMaterialPreset,
   }), [
     projectId, projectName, setProjectName, isSaving, autosaveNotification,
     loadedModelName, loadedModelSize, isModelLoaded, loadNewModel, resetWorkspace, isLoadingModel, loadProgress,
     layers, activeLayerId, setActiveLayerId,
     handleAddLayer, handleDeleteLayer, captureHistorySnapshot,
     handleImportImageToLayer, handleClearLayer,
-    toggleMask, setMaskVisible, setMaskActive, updateLayerFillSettings, updateLayerFilters,
+    toggleMask, setMaskVisible, setMaskActive, updateLayerFillSettings, updateLayerFilters, updateLayerSmartMaskSettings,
     activeTool, setActiveTool, brushColor, setBrushColor,
     brushSize, setBrushSize, brushOpacity, setBrushOpacity, brushHardness, setBrushHardness,
     pixelatorOptions, psxEnabled, setPsxEnabled, isPaintMode, setIsPaintMode,
     shadingMode, setShadingMode, activeLightingPresetId, setActiveLightingPresetId,
     lightingSettings, handleUpdateLightingSettings, painter, setPainter,
     undo, redo, canUndo, canRedo, isDirty, triggerSave, triggerSaveAs,
-    visiblePanels, togglePanel, resetLayout
+    visiblePanels, togglePanel, resetLayout,
+    textureSlots, analyzeLoadedModel, applyTextureAtlas,
+    smartMaps, bakeModelSmartMaps, applySmartMaterialPreset,
   ]);
 
   return (

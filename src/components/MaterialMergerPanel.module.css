@@ -1,0 +1,464 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: #f4f4f5;
+  background-color: #121214;
+  font-family: 'Outfit', 'Inter', system-ui, sans-serif;
+  overflow-y: auto;
+  padding: 12px;
+  gap: 12px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #71717a;
+  padding: 24px;
+  text-align: center;
+  gap: 8px;
+}
+
+.emptyIcon {
+  color: #3f3f46;
+  margin-bottom: 8px;
+  animation: pulse 2s infinite ease-in-out;
+}
+
+.empty h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e4e4e7;
+  margin: 0;
+}
+
+.empty p {
+  font-size: 11px;
+  color: #71717a;
+  margin: 0;
+  max-width: 200px;
+  line-height: 1.4;
+}
+
+.schematicSection {
+  background: rgba(24, 24, 27, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.canvasWrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 200px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.previewCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background-color: #09090b;
+}
+
+.canvasOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(9, 9, 11, 0.85);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 0;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+.controlsBar {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.controlGroup {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 4px;
+}
+
+.label {
+  font-size: 8px;
+  font-weight: 700;
+  color: #a1a1aa;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.select {
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  color: #e4e4e7;
+  font-size: 11px;
+  padding: 6px 8px;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.select:focus {
+  border-color: #8b5cf6;
+  background-color: #202024;
+}
+
+.bakeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  border: none;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  height: 28px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.bakeBtn:hover:not(:disabled) {
+  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+}
+
+.bakeBtn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.bakeBtn:disabled {
+  background: #27272a;
+  color: #71717a;
+  cursor: not-allowed;
+}
+
+.slotsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #71717a;
+  margin-top: 4px;
+}
+
+.modeBadge {
+  background: rgba(139, 92, 246, 0.1);
+  color: #c084fc;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.slotsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.slotCard {
+  background: rgba(24, 24, 27, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.slotCardExcluded {
+  opacity: 0.5;
+  border-color: transparent;
+  background: rgba(9, 9, 11, 0.2);
+}
+
+.slotRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.includeToggle {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #71717a;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.includeToggle:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e4e4e7;
+}
+
+.toggleActive {
+  color: #8b5cf6;
+}
+
+.toggleInactive {
+  color: #52525b;
+}
+
+.slotDetails {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.slotName {
+  font-size: 11px;
+  font-weight: 600;
+  color: #e4e4e7;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slotType {
+  font-size: 7px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #27272a;
+  color: #a1a1aa;
+  padding: 1px 4px;
+  border-radius: 2px;
+  letter-spacing: 0.02em;
+}
+
+.meshCount {
+  font-size: 8px;
+  color: #71717a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+
+.thumbnailWrapper {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #09090b;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumbnailImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.colorBlock {
+  width: 100%;
+  height: 100%;
+}
+
+.slotBody {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sliderRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sliderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bodyLabel {
+  font-size: 8px;
+  font-weight: 600;
+  color: #a1a1aa;
+  text-transform: uppercase;
+}
+
+.weightVal {
+  font-size: 9px;
+  font-weight: 700;
+  color: #c084fc;
+}
+
+.weightSlider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 3px;
+  background: #27272a;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+}
+
+.weightSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #8b5cf6;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.weightSlider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.uploadRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.uploadBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  padding: 3px 6px;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 600;
+  color: #a1a1aa;
+  transition: all 0.15s ease;
+}
+
+.uploadBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #8b5cf6;
+  color: #e4e4e7;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.fileLabel {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 4px;
+  padding: 2px 6px;
+  max-width: 140px;
+}
+
+.fileName {
+  font-size: 8px;
+  color: #c084fc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.removeFileBtn {
+  background: none;
+  border: none;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 1px;
+  display: flex;
+  align-items: center;
+  border-radius: 2px;
+}
+
+.removeFileBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f43f5e;
+}
+
+.infoNotice {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  background: rgba(234, 179, 8, 0.05);
+  border: 1px solid rgba(234, 179, 8, 0.15);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 9px;
+  line-height: 1.35;
+  color: #eab308;
+  margin-top: auto;
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}

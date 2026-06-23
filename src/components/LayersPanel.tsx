@@ -248,6 +248,9 @@ export function LayersPanel() {
     setMaskActive,
     updateLayerFillSettings,
     updateLayerFilters,
+    updateLayerSmartMaskSettings,
+    applySmartMaterialPreset,
+    smartMaps,
   } = useThreePainterContext();
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -323,7 +326,23 @@ export function LayersPanel() {
       {/* Header controls */}
       <div className={styles.header}>
         <span className={styles.layerCount}>{layers.length} / 5 Layers</span>
-        <div className={styles.addBtnGroup}>
+        <div className={styles.addBtnGroup} style={{ gap: '6px' }}>
+          <select
+            className={styles.presetSelect}
+            onChange={(e) => {
+              if (e.target.value) {
+                applySmartMaterialPreset(e.target.value);
+                e.target.value = '';
+              }
+            }}
+            defaultValue=""
+          >
+            <option value="" disabled>✨ Smart Presets</option>
+            <option value="hand-painted">Stylized Hand-Painted</option>
+            <option value="scratched-metal">Scratched Metal</option>
+            <option value="ancient-stone">Ancient Stone</option>
+            <option value="cel-shaded">Cel-Shaded / Anime</option>
+          </select>
           <button
             className={styles.addBtn}
             onClick={() => addLayer('paint')}
@@ -599,6 +618,147 @@ export function LayersPanel() {
                   </div>
                 </div>
               </div>
+
+              {/* Smart Mask Section */}
+              {isActive && (
+                <div className={styles.smartMaskConfig} onClick={(e) => e.stopPropagation()}>
+                  <div className={styles.configHeader}>
+                    <Sparkles size={11} className={styles.sparkleIcon} />
+                    <span>Smart Mask & Stylization</span>
+                  </div>
+
+                  <div className={styles.controlRow}>
+                    <label>Mask Source:</label>
+                    <select
+                      className={styles.select}
+                      value={layer.smartMaskType || ''}
+                      onChange={(e) => updateLayerSmartMaskSettings(layer.id, { smartMaskType: (e.target.value || null) as any })}
+                    >
+                      <option value="">None (Plain)</option>
+                      <option value="edges">Edges (Curvature)</option>
+                      <option value="cavities">Cavities (Crevices/AO)</option>
+                      <option value="height">Height Gradient</option>
+                    </select>
+                  </div>
+
+                  {layer.smartMaskType && !smartMaps && (
+                    <div style={{ color: '#ef4444', fontSize: '9px', marginLeft: '75px', marginTop: '2px' }}>
+                      ⚠️ No smart maps baked yet.
+                    </div>
+                  )}
+
+                  {layer.smartMaskType && smartMaps && (
+                    <>
+                      <div className={styles.controlRow}>
+                        <label>Intensity:</label>
+                        <div className={styles.sliderContainer}>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={Math.round((layer.smartMaskIntensity ?? 1.0) * 100)}
+                            onChange={(e) => updateLayerSmartMaskSettings(layer.id, { smartMaskIntensity: parseInt(e.target.value) / 100 })}
+                            className={styles.slider}
+                          />
+                          <span className={styles.percentageVal}>{Math.round((layer.smartMaskIntensity ?? 1.0) * 100)}%</span>
+                        </div>
+                      </div>
+
+                      <div className={styles.controlRow}>
+                        <label>Width/Thresh:</label>
+                        <div className={styles.sliderContainer}>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={Math.round((layer.smartMaskThreshold ?? 0.5) * 100)}
+                            onChange={(e) => updateLayerSmartMaskSettings(layer.id, { smartMaskThreshold: parseInt(e.target.value) / 100 })}
+                            className={styles.slider}
+                          />
+                          <span className={styles.percentageVal}>{Math.round((layer.smartMaskThreshold ?? 0.5) * 100)}%</span>
+                        </div>
+                      </div>
+
+                      <div className={styles.controlRow}>
+                        <label>Contrast:</label>
+                        <div className={styles.sliderContainer}>
+                          <input
+                            type="range"
+                            min="10"
+                            max="500"
+                            value={Math.round((layer.smartMaskContrast ?? 1.0) * 100)}
+                            onChange={(e) => updateLayerSmartMaskSettings(layer.id, { smartMaskContrast: parseInt(e.target.value) / 100 })}
+                            className={styles.slider}
+                          />
+                          <span className={styles.percentageVal}>{(layer.smartMaskContrast ?? 1.0).toFixed(2)}x</span>
+                        </div>
+                      </div>
+
+                      <div className={styles.checkboxRow}>
+                        <label className={styles.checkboxLabel}>
+                          <input
+                            type="checkbox"
+                            checked={!!layer.smartMaskInvert}
+                            onChange={(e) => updateLayerSmartMaskSettings(layer.id, { smartMaskInvert: e.target.checked })}
+                          />
+                          Invert Mask
+                        </label>
+                      </div>
+
+                      {layer.smartMaskType === 'cavities' && (
+                        <div className={styles.shadowTintRow}>
+                          <label className={styles.checkboxLabel}>
+                            <input
+                              type="checkbox"
+                              checked={!!layer.shadowTintEnabled}
+                              onChange={(e) => updateLayerSmartMaskSettings(layer.id, { shadowTintEnabled: e.target.checked })}
+                            />
+                            Stylized Shadow Tint
+                          </label>
+                          {layer.shadowTintEnabled && (
+                            <input
+                              type="color"
+                              className={styles.colorSwatch}
+                              value={layer.shadowTintColor || '#1e1b4b'}
+                              onChange={(e) => updateLayerSmartMaskSettings(layer.id, { shadowTintColor: e.target.value })}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  <div className={styles.quantizeDivider} />
+
+                  <div className={styles.checkboxRow}>
+                    <label className={styles.checkboxLabel}>
+                      <input
+                        type="checkbox"
+                        checked={!!layer.quantizeColorsEnabled}
+                        onChange={(e) => updateLayerSmartMaskSettings(layer.id, { quantizeColorsEnabled: e.target.checked })}
+                      />
+                      Color Quantization (Banding)
+                    </label>
+                  </div>
+
+                  {layer.quantizeColorsEnabled && (
+                    <div className={styles.controlRow}>
+                      <label>Color Bands:</label>
+                      <div className={styles.sliderContainer}>
+                        <input
+                          type="range"
+                          min="2"
+                          max="16"
+                          value={layer.quantizeColorCount ?? 8}
+                          onChange={(e) => updateLayerSmartMaskSettings(layer.id, { quantizeColorCount: parseInt(e.target.value) })}
+                          className={styles.slider}
+                        />
+                        <span className={styles.percentageVal}>{layer.quantizeColorCount ?? 8}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Expanded Filters and Curves Controls */}
               {expandedFilterId === layer.id && (

@@ -10,6 +10,9 @@ import {
   DEFAULT_LIGHTING_PRESET_ID,
   lightDirectionFromAngles,
 } from './lightingPresets';
+import { TextureSourceSlot } from '@/types';
+import { packRects } from './atlasPacker';
+
 
 const PSX_VERTEX_SHADER = `#version 300 es
 in vec3 position;
@@ -419,6 +422,7 @@ export class ThreePainter {
       if (child instanceof THREE.Mesh) {
         if (child.material) {
           const mats = Array.isArray(child.material) ? child.material : [child.material];
+          child.userData.originalMaterials = mats;
           mats.forEach(mat => {
             mat.side = THREE.DoubleSide;
             if (mat.map && !originalTexture) originalTexture = mat.map;
@@ -426,6 +430,10 @@ export class ThreePainter {
         }
         const hasUVs = child.geometry.attributes.uv !== undefined;
         if (hasUVs) {
+          // Backup original UVs before any modifications
+          if (!child.userData.originalUvs) {
+            child.userData.originalUvs = child.geometry.attributes.uv.clone();
+          }
           // Copy UV0 → UV2 so aoMap works without a separately baked UV channel
           if (!child.geometry.attributes.uv2) {
             child.geometry.setAttribute('uv2', child.geometry.attributes.uv);
@@ -673,6 +681,541 @@ export class ThreePainter {
     this.pbrMaterial.dispose();
     this.renderer.dispose();
   }
+
+  // ── Texture Merger & Atlas Packing ──────────────────────────────────────────
+
+  private getOriginalImageForSlot(slot: TextureSourceSlot): HTMLImageElement | HTMLCanvasElement | null {
+    if (slot.type === 'udim') {
+      if (slot.detectedUdimTile === 1001) {
+        return this.loadedOriginalTextureImage as any;
+      }
+      return null;
+    }
+    // Material slot: find in paintableMeshes
+    for (const mesh of this.paintableMeshes) {
+      const mats = mesh.userData.originalMaterials || [];
+      for (const mat of mats) {
+        if (mat.name === slot.name && mat.map && mat.map.image) {
+          return mat.map.image;
+        }
+      }
+    }
+    return null;
+  }
+
+  private getMaterialNameForVertex(mesh: THREE.Mesh, vertexIndex: number): string {
+    const originalMats = mesh.userData.originalMaterials;
+    if (!originalMats || originalMats.length === 0) {
+      return 'Default';
+    }
+    if (originalMats.length === 1) {
+      return originalMats[0].name || 'Default';
+    }
+    const groups = mesh.geometry.groups;
+    if (!groups || groups.length === 0) {
+      return originalMats[0].name || 'Default';
+    }
+    
+    const indexAttr = mesh.geometry.index;
+    if (indexAttr) {
+      for (let i = 0; i < indexAttr.count; i++) {
+        if (indexAttr.getX(i) === vertexIndex) {
+          for (const group of groups) {
+            if (i >= group.start && i < group.start + group.count) {
+              const mat = originalMats[group.materialIndex || 0];
+              return mat?.name || 'Default';
+            }
+          }
+        }
+      }
+    } else {
+      for (const group of groups) {
+        if (vertexIndex >= group.start && vertexIndex < group.start + group.count) {
+          const mat = originalMats[group.materialIndex || 0];
+          return mat?.name || 'Default';
+        }
+      }
+    }
+    return originalMats[0].name || 'Default';
+  }
+
+  public analyzeModel(): TextureSourceSlot[] {
+    const slots: TextureSourceSlot[] = [];
+    if (!this.paintableMeshes.length) return slots;
+
+    // 1. Detect if we have any UDIM coordinates
+    let isUdim = false;
+    this.paintableMeshes.forEach(mesh => {
+      const uvs = mesh.userData.originalUvs || mesh.geometry.attributes.uv;
+      if (!uvs) return;
+      for (let i = 0; i < uvs.count; i++) {
+        const u = uvs.getX(i);
+        const v = uvs.getY(i);
+        if (Math.abs(Math.floor(u)) > 0 || Math.abs(Math.floor(v)) > 0) {
+          isUdim = true;
+          break;
+        }
+      }
+    });
+
+    const meshMap = new Map<string, string[]>(); // slotId -> meshNames[]
+
+    if (isUdim) {
+      // Collect UDIM tiles
+      const udimTiles = new Set<number>();
+      this.paintableMeshes.forEach(mesh => {
+        const uvs = mesh.userData.originalUvs || mesh.geometry.attributes.uv;
+        if (!uvs) return;
+        for (let i = 0; i < uvs.count; i++) {
+          const u = uvs.getX(i);
+          const v = uvs.getY(i);
+          const tileU = Math.floor(u);
+          const tileV = Math.floor(v);
+          if (tileU >= 0 && tileU < 10 && tileV >= 0 && tileV < 10) {
+            const tileId = 1001 + tileU + 10 * tileV;
+            udimTiles.add(tileId);
+            
+            const slotId = `udim-${tileId}`;
+            if (!meshMap.has(slotId)) meshMap.set(slotId, []);
+            const names = meshMap.get(slotId)!;
+            if (!names.includes(mesh.name || 'Unnamed Mesh')) {
+              names.push(mesh.name || 'Unnamed Mesh');
+            }
+          }
+        }
+      });
+
+      // Expose UDIM slots
+      Array.from(udimTiles).sort().forEach((tileId, idx) => {
+        const slotId = `udim-${tileId}`;
+        const pastelColors = ['#f87171', '#fb923c', '#fbbf24', '#34d399', '#22d3ee', '#60a5fa', '#818cf8', '#a78bfa', '#f472b6'];
+        const color = pastelColors[idx % pastelColors.length];
+
+        let originalTextureUrl: string | null = null;
+        let originalTextureImage: any = null;
+
+        // If it's the first tile (1001) and we have a loaded original image, show it
+        if (tileId === 1001 && this.loadedOriginalTextureImage) {
+          originalTextureImage = this.loadedOriginalTextureImage;
+          originalTextureUrl = getTextureThumbnail(originalTextureImage);
+        }
+
+        slots.push({
+          id: slotId,
+          type: 'udim',
+          name: `Tile ${tileId}`,
+          originalTextureUrl,
+          originalColor: color,
+          userTextureUrl: null,
+          userTextureFile: null,
+          weight: 1.0,
+          included: true,
+          detectedUdimTile: tileId,
+          meshNames: meshMap.get(slotId) || [],
+        });
+      });
+
+    } else {
+      // Material-based grouping
+      const materialRegistry = new Map<string, {
+        mat: THREE.Material;
+        meshes: string[];
+      }>();
+
+      this.paintableMeshes.forEach(mesh => {
+        const mats = mesh.userData.originalMaterials || (Array.isArray(mesh.material) ? mesh.material : [mesh.material]);
+        if (!mats) return;
+
+        mats.forEach((mat: THREE.Material) => {
+          const matName = mat.name || 'Default';
+          if (!materialRegistry.has(matName)) {
+            materialRegistry.set(matName, { mat, meshes: [] });
+          }
+          const reg = materialRegistry.get(matName)!;
+          if (!reg.meshes.includes(mesh.name || 'Unnamed Mesh')) {
+            reg.meshes.push(mesh.name || 'Unnamed Mesh');
+          }
+        });
+      });
+
+      materialRegistry.forEach((reg, matName) => {
+        const mat = reg.mat;
+        let hexColor = '#e4e4e7';
+        if ((mat as any).color) {
+          hexColor = '#' + (mat as any).color.getHexString();
+        }
+
+        let originalTextureUrl: string | null = null;
+        let originalTextureImage: any = null;
+
+        if ((mat as any).map && (mat as any).map.image) {
+          originalTextureImage = (mat as any).map.image;
+          originalTextureUrl = getTextureThumbnail(originalTextureImage);
+        }
+
+        slots.push({
+          id: `material-${matName}`,
+          type: 'material',
+          name: matName,
+          originalTextureUrl,
+          originalColor: hexColor,
+          userTextureUrl: null,
+          userTextureFile: null,
+          weight: 1.0,
+          included: true,
+          meshNames: reg.meshes,
+        });
+
+        // Cache original texture image reference on the mesh userData for packing
+        this.paintableMeshes.forEach(mesh => {
+          const mats = mesh.userData.originalMaterials || [];
+          mats.forEach((m: THREE.Material) => {
+            if (m.name === matName && (m as any).map) {
+              mesh.userData[`originalTexture_${matName}`] = (m as any).map.image;
+            }
+          });
+        });
+      });
+    }
+
+    return slots;
+  }
+
+  public async repackAndAtlas(slots: TextureSourceSlot[], targetSize: number): Promise<HTMLCanvasElement> {
+    const activeSlots = slots.filter(s => s.included);
+    if (activeSlots.length === 0) {
+      throw new Error('Please select at least one texture slot to include in the merge.');
+    }
+
+    const packingItems = await Promise.all(activeSlots.map(async slot => {
+      let width = 512;
+      let height = 512;
+
+      const originalImg = this.getOriginalImageForSlot(slot);
+      if (originalImg) {
+        width = originalImg.width || 512;
+        height = originalImg.height || 512;
+      }
+
+      width = Math.round(width * slot.weight);
+      height = Math.round(height * slot.weight);
+
+      return {
+        id: slot.id,
+        width,
+        height
+      };
+    }));
+
+    const { packedItems } = packRects(packingItems, targetSize);
+
+    const atlasCanvas = document.createElement('canvas');
+    atlasCanvas.width = targetSize;
+    atlasCanvas.height = targetSize;
+    const ctx = atlasCanvas.getContext('2d')!;
+
+    ctx.fillStyle = '#18181b';
+    ctx.fillRect(0, 0, targetSize, targetSize);
+
+    const loadedUserImages = new Map<string, HTMLImageElement>();
+    await Promise.all(activeSlots.map(async slot => {
+      if (slot.userTextureUrl) {
+        try {
+          const img = await loadImage(slot.userTextureUrl);
+          loadedUserImages.set(slot.id, img);
+        } catch (err) {
+          console.warn(`Failed to load user texture for slot ${slot.name}:`, err);
+        }
+      }
+    }));
+
+    packedItems.forEach(item => {
+      const slot = activeSlots.find(s => s.id === item.id)!;
+      const userImg = loadedUserImages.get(slot.id);
+      const originalImg = this.getOriginalImageForSlot(slot);
+
+      if (userImg) {
+        ctx.drawImage(userImg, item.x, item.y, item.width, item.height);
+      } else if (originalImg) {
+        ctx.drawImage(originalImg, item.x, item.y, item.width, item.height);
+      } else {
+        ctx.fillStyle = slot.originalColor || '#52525b';
+        ctx.fillRect(item.x, item.y, item.width, item.height);
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `bold ${Math.max(10, Math.floor(item.height * 0.06))}px Outfit, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(slot.name, item.x + item.width / 2, item.y + item.height / 2);
+      }
+    });
+
+    const isUdim = activeSlots[0]?.type === 'udim';
+
+    this.paintableMeshes.forEach(mesh => {
+      const originalUvs = mesh.userData.originalUvs;
+      if (!originalUvs) return;
+
+      const count = originalUvs.count;
+      const newUvs = new Float32Array(count * 2);
+
+      for (let i = 0; i < count; i++) {
+        const u = originalUvs.getX(i);
+        const v = originalUvs.getY(i);
+
+        let slotId = '';
+        if (isUdim) {
+          const tileU = Math.floor(u);
+          const tileV = Math.floor(v);
+          const tileId = 1001 + tileU + 10 * tileV;
+          slotId = `udim-${tileId}`;
+        } else {
+          const matName = this.getMaterialNameForVertex(mesh, i);
+          slotId = `material-${matName}`;
+        }
+
+        const item = packedItems.find(p => p.id === slotId);
+
+        if (item) {
+          const u_local = isUdim ? (u - Math.floor(u)) : u;
+          const v_local = isUdim ? (v - Math.floor(v)) : v;
+
+          const u_clamped = Math.max(0.0, Math.min(1.0, u_local));
+          const v_clamped = Math.max(0.0, Math.min(1.0, v_local));
+
+          const u_new = (item.x + u_clamped * item.width) / targetSize;
+          const v_new = 1.0 - ((item.y + (1.0 - v_clamped) * item.height) / targetSize);
+
+          newUvs[i * 2] = u_new;
+          newUvs[i * 2 + 1] = v_new;
+        } else {
+          newUvs[i * 2] = 0;
+          newUvs[i * 2 + 1] = 0;
+        }
+      }
+
+      mesh.geometry.setAttribute('uv', new THREE.Float32BufferAttribute(newUvs, 2));
+      mesh.geometry.attributes.uv.needsUpdate = true;
+
+      mesh.geometry.setAttribute('uv2', mesh.geometry.attributes.uv);
+      if (mesh.geometry.attributes.uv2) {
+        mesh.geometry.attributes.uv2.needsUpdate = true;
+      }
+
+      mesh.material = this.getActiveMaterial();
+    });
+
+    this.updateTexture();
+
+    return atlasCanvas;
+  }
+
+  public bakeSmartMaps(width: number = 512, height: number = 512): {
+    edges: HTMLCanvasElement;
+    cavities: HTMLCanvasElement;
+    height: HTMLCanvasElement;
+  } | null {
+    if (!this.loadedModelGroup || this.paintableMeshes.length === 0) return null;
+
+    // Find bounding box for Y normalization
+    const box = new THREE.Box3().setFromObject(this.loadedModelGroup);
+    const minY = box.min.y;
+    const maxY = box.max.y;
+
+    const rt = new THREE.WebGLRenderTarget(width, height, {
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      format: THREE.RGBAFormat,
+      type: THREE.UnsignedByteType,
+    });
+
+    const vertexShader = `
+      varying vec3 vPosition;
+      varying vec3 vNormal;
+      varying float vHeightPct;
+      uniform float minY;
+      uniform float maxY;
+
+      void main() {
+        // Flat UV projection (transform [0,1] UV to [-1,1] NDC space)
+        gl_Position = vec4(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0, 0.0, 1.0);
+        vPosition = position;
+        vNormal = normalMatrix * normal;
+        vHeightPct = clamp((position.y - minY) / (maxY - minY), 0.0, 1.0);
+      }
+    `;
+
+    const fragmentShader = `
+      varying vec3 vPosition;
+      varying vec3 vNormal;
+      varying float vHeightPct;
+
+      void main() {
+        vec3 n = normalize(vNormal);
+        vec3 p = vPosition;
+
+        // Compute derivatives to approximate curvature
+        vec3 dxN = dFdx(n);
+        vec3 dyN = dFdy(n);
+        vec3 dxP = dFdx(p);
+        vec3 dyP = dFdy(p);
+
+        float lenP = length(dxP) + length(dyP);
+        float curvature = 0.0;
+        if (lenP > 0.0001) {
+          float dotX = dot(dxP, dxN);
+          float dotY = dot(dyP, dyN);
+          curvature = (dotX + dotY) / lenP;
+        }
+
+        // Adjust scale factor for visual sensitivity
+        float edgeScale = 6.0;
+        float edgeVal = clamp(curvature * edgeScale, 0.0, 1.0);
+        float cavityVal = clamp(-curvature * edgeScale, 0.0, 1.0);
+
+        // Red = Edges, Green = Cavities, Blue = Height
+        gl_FragColor = vec4(edgeVal, cavityVal, vHeightPct, 1.0);
+      }
+    `;
+
+    const bakeMaterial = new THREE.ShaderMaterial({
+      vertexShader,
+      fragmentShader,
+      uniforms: {
+        minY: { value: minY },
+        maxY: { value: maxY },
+      },
+      side: THREE.DoubleSide,
+    });
+
+    const originalOverride = this.scene.overrideMaterial;
+    const originalBg = this.scene.background;
+
+    this.scene.overrideMaterial = bakeMaterial;
+    this.scene.background = null;
+
+    const originalCulling = new Map<THREE.Mesh, boolean>();
+    const hiddenObjects: THREE.Object3D[] = [];
+
+    // Setup meshes for baking
+    this.scene.traverse(obj => {
+      if (obj instanceof THREE.Mesh) {
+        if (this.paintableMeshes.includes(obj)) {
+          originalCulling.set(obj, obj.frustumCulled);
+          obj.frustumCulled = false;
+        } else if (obj.visible) {
+          obj.visible = false;
+          hiddenObjects.push(obj);
+        }
+      }
+    });
+
+    // Render to texture
+    this.renderer.setRenderTarget(rt);
+    this.renderer.setClearColor('#000000', 0.0);
+    this.renderer.clear();
+    this.renderer.render(this.scene, this.camera);
+
+    // Restore visibility and culling states
+    hiddenObjects.forEach(obj => {
+      obj.visible = true;
+    });
+    this.paintableMeshes.forEach(mesh => {
+      const c = originalCulling.get(mesh);
+      if (c !== undefined) mesh.frustumCulled = c;
+    });
+
+    this.scene.overrideMaterial = originalOverride;
+    this.scene.background = originalBg;
+
+    // Read pixels back
+    const buffer = new Uint8Array(width * height * 4);
+    this.renderer.readRenderTargetPixels(rt, 0, 0, width, height, buffer);
+    rt.dispose();
+
+    // Create 2D canvases for CPU masking
+    const edgesCanvas = document.createElement('canvas');
+    edgesCanvas.width = width;
+    edgesCanvas.height = height;
+    const edgesCtx = edgesCanvas.getContext('2d')!;
+
+    const cavitiesCanvas = document.createElement('canvas');
+    cavitiesCanvas.width = width;
+    cavitiesCanvas.height = height;
+    const cavitiesCtx = cavitiesCanvas.getContext('2d')!;
+
+    const heightCanvas = document.createElement('canvas');
+    heightCanvas.width = width;
+    heightCanvas.height = height;
+    const heightCtx = heightCanvas.getContext('2d')!;
+
+    const edgesImgData = edgesCtx.createImageData(width, height);
+    const cavitiesImgData = cavitiesCtx.createImageData(width, height);
+    const heightImgData = heightCtx.createImageData(width, height);
+
+    // Flip vertically to match Canvas coordinates
+    for (let y = 0; y < height; y++) {
+      const srcY = height - 1 - y;
+      for (let x = 0; x < width; x++) {
+        const srcIdx = (srcY * width + x) * 4;
+        const dstIdx = (y * width + x) * 4;
+
+        const r = buffer[srcIdx];
+        const g = buffer[srcIdx + 1];
+        const b = buffer[srcIdx + 2];
+        const a = buffer[srcIdx + 3];
+
+        edgesImgData.data[dstIdx]     = r;
+        edgesImgData.data[dstIdx + 1] = r;
+        edgesImgData.data[dstIdx + 2] = r;
+        edgesImgData.data[dstIdx + 3] = a;
+
+        cavitiesImgData.data[dstIdx]     = g;
+        cavitiesImgData.data[dstIdx + 1] = g;
+        cavitiesImgData.data[dstIdx + 2] = g;
+        cavitiesImgData.data[dstIdx + 3] = a;
+
+        heightImgData.data[dstIdx]     = b;
+        heightImgData.data[dstIdx + 1] = b;
+        heightImgData.data[dstIdx + 2] = b;
+        heightImgData.data[dstIdx + 3] = a;
+      }
+    }
+
+    edgesCtx.putImageData(edgesImgData, 0, 0);
+    cavitiesCtx.putImageData(cavitiesImgData, 0, 0);
+    heightCtx.putImageData(heightImgData, 0, 0);
+
+    return { edges: edgesCanvas, cavities: cavitiesCanvas, height: heightCanvas };
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function getTextureThumbnail(image: any): string | null {
+  if (!image) return null;
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.drawImage(image, 0, 0, 64, 64);
+    return canvas.toDataURL('image/png');
+  } catch (e) {
+    console.warn('Failed to generate texture thumbnail:', e);
+    return null;
+  }
+}
+
+async function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = url;
+    img.onload = () => resolve(img);
+    img.onerror = (e) => reject(e);
+  });
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

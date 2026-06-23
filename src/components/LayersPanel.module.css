@@ -576,3 +576,111 @@
 .curvesResetLink:hover {
   color: #60a5fa;
 }
+
+/* Smart Materials & Masks */
+
+.presetGroup {
+  margin-left: 8px;
+}
+
+.presetSelect {
+  background: rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(124, 58, 237, 0.35);
+  border-radius: 6px;
+  color: #c084fc;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.presetSelect:hover {
+  background: rgba(124, 58, 237, 0.25);
+  border-color: rgba(124, 58, 237, 0.5);
+}
+
+.smartMaskConfig {
+  background: rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  padding: 8px;
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.configHeader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #c084fc;
+}
+
+.sparkleIcon {
+  color: #c084fc;
+}
+
+.controlRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.controlRow label {
+  font-size: 0.7rem;
+  color: #a1a1aa;
+  min-width: 75px;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  margin-left: 75px;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: #a1a1aa;
+  cursor: pointer;
+}
+
+.checkboxLabel input[type="checkbox"] {
+  accent-color: #8b5cf6;
+  cursor: pointer;
+}
+
+.shadowTintRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-left: 75px;
+  width: calc(100% - 75px);
+  gap: 8px;
+}
+
+.colorSwatch {
+  width: 28px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.quantizeDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.04);
+  margin: 2px 0;
+}

@@ -13,6 +13,8 @@ import { ThreePainterPixelatePanel } from '@/components/ThreePainterPixelatePane
 import { ThreePainterExportPanel } from '@/components/ThreePainterExportPanel';
 import { ThreePainter2DPreview } from '@/components/ThreePainter2DPreview';
 import { AIGenerationPanel } from '@/components/AIGenerationPanel';
+import { MaterialMergerPanel } from '@/components/MaterialMergerPanel';
+import { MaterialLibraryPanel } from '@/components/MaterialLibraryPanel';
 import styles from './ThreePainterDockLayout.module.css';
 
 const STORAGE_KEY = 'three-painter-dock-layout';
@@ -27,6 +29,8 @@ const PANEL_INFO: Record<string, { name: string }> = {
   'pixelate-panel':  { name: 'Retro Pixelation' },
   'export-panel':    { name: 'Export Assets' },
   'ai-generation':   { name: 'AI Generator' },
+  'material-merger': { name: 'UDIM & Material Merger' },
+  'material-library':{ name: 'Material Library' },
 };
 
 export interface ThreePainterDockLayoutRef {
@@ -73,8 +77,10 @@ const defaultLayout = {
         weight: 25,
         children: [
           { type: 'tab', name: 'Lighting & Shading',   component: 'lighting-panel'  },
+          { type: 'tab', name: 'Material Library',     component: 'material-library' },
           { type: 'tab', name: 'Texture Maps',         component: 'texture-maps'    },
           { type: 'tab', name: 'Pixelation & Shading', component: 'pixelate-panel'  },
+          { type: 'tab', name: 'Material Merger',      component: 'material-merger' },
           { type: 'tab', name: 'Export Output',        component: 'export-panel'    },
         ],
       },
@@ -157,6 +163,8 @@ export const ThreePainterDockLayout = forwardRef<ThreePainterDockLayoutRef, Thre
         case 'pixelate-panel': return <div className={styles.panelContent}><ThreePainterPixelatePanel /></div>;
         case '2d-preview':     return <div className={styles.panelContent}><ThreePainter2DPreview /></div>;
         case 'ai-generation':  return <div className={styles.panelContent}><AIGenerationPanel /></div>;
+        case 'material-merger': return <div className={styles.panelContent}><MaterialMergerPanel /></div>;
+        case 'material-library': return <div className={styles.panelContent}><MaterialLibraryPanel /></div>;
         default: return <div className={styles.placeholder}>Unknown Panel: {component}</div>;
       }
     }, [ctx.isModelLoaded]);
