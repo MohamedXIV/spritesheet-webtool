@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { useEditorContext } from '@/contexts/EditorContext';
+import { ThemeToggle } from './ThemeToggle';
 import styles from './PixelatorMenuBar.module.css';
 
 const PANELS = [
@@ -272,6 +273,9 @@ export function PixelatorMenuBar() {
           Saving...
         </span>
       )}
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', paddingLeft: '12px' }}>
+        <ThemeToggle />
+      </div>
     </div>
   );
 }

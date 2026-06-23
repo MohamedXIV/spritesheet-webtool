@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { Home, Undo2, Redo2, Save, FolderOpen, Loader2, ArrowLeft, LayoutDashboard, ChevronDown, Check, RotateCcw } from 'lucide-react';
 import { useThreePainterContext } from '@/contexts/ThreePainterContext';
+import { ThemeToggle } from './ThemeToggle';
 import styles from './ThreePainterMenuBar.module.css';
 
 // Panel definitions shown in the View menu
@@ -12,6 +13,7 @@ const VIEW_PANELS = [
   { id: 'brush-panel',    label: 'Brush Options' },
   { id: 'layers-panel',   label: 'Layers' },
   { id: 'lighting-panel', label: 'Lighting & Shading' },
+  { id: 'material-library', label: 'Material Library' },
   { id: 'texture-maps',   label: 'Texture Maps' },
   { id: 'pixelate-panel', label: 'Pixelation' },
   { id: 'export-panel',   label: 'Export' },
@@ -191,6 +193,12 @@ export function ThreePainterMenuBar() {
         <button className={styles.iconButton} onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Y)">
           <Redo2 size={16} />
         </button>
+
+        <div className={styles.divider} />
+        
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <ThemeToggle />
+        </div>
       </div>
     </div>
   );
