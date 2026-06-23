@@ -3,43 +3,42 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Colors - Zenless Zone Zero x Cyberpunk Edgerunners Theme */
-  --background-color: #0B0B0F;
-  --surface-color: #16161E;
-  --surface-hover: #21212B;
-  --border-color: #2E2E38;
+  /* Colors - Neo-Brutalist Beige & Navy Theme */
+  --background-color: #FAF8F5; /* Warm light cream */
+  --surface-color: #FFFFFF;
+  --surface-hover: #F3EFE7;
+  --border-color: #0B0B0F; /* Solid navy/black border */
+  --border-color-muted: #E2DDD3;
 
-  /* Primary: ZZZ Electric Lime-Yellow */
-  --primary-color: #CCFF00;
-  --primary-hover: #B8E600;
-  --primary-color-alpha: rgba(204, 255, 0, 0.15);
+  /* Primary: Violet/Indigo */
+  --primary-color: #7C3AED;
+  --primary-hover: #6D28D9;
+  --primary-color-alpha: rgba(124, 58, 237, 0.12);
 
-  /* Accent: Edgerunners Cyan */
-  --accent-color: #00F0FF;
-  --accent-hover: #00D8E6;
+  /* Accent: Amber/Yellow */
+  --accent-color: #FBBF24;
+  --accent-hover: #F59E0B;
 
-  /* Danger / Highlight: Hot Magenta */
-  --danger-color: #FF007F;
+  /* Danger / Highlight: Bright Red */
+  --danger-color: #EF4444;
   
-  /* Warning/Tertiary: Amber Yellow */
-  --warning-color: #FED639;
+  /* Warning: Orange/Amber */
+  --warning-color: #F59E0B;
 
   /* Text */
-  --text-color: #F4F4F9;
-  --text-muted: #A0A0B0;
+  --text-color: #0B0B0F;
+  --text-muted: #4B5563;
 
-  /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #CCFF00 0%, #00F0FF 100%);
-  --gradient-accent: linear-gradient(135deg, #00F0FF 0%, #FF007F 100%);
-  --gradient-zzz: linear-gradient(135deg, #CCFF00 0%, #FF007F 100%);
+  /* Shadows (Neo-Brutalist flat offset shadows) */
+  --shadow-sm: 2px 2px 0px #0B0B0F;
+  --shadow-md: 4px 4px 0px #0B0B0F;
+  --shadow-lg: 6px 6px 0px #0B0B0F;
+  --shadow-glow: 0 0 0px transparent;
 
-  /* Shadows (Thick gamey shadow borders as per ZZZ style) */
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.6);
-  --shadow-glow: 0 0 15px rgba(204, 255, 0, 0.25);
+  /* Button Offset Shadow Color */
+  --button-shadow-color: #0B0B0F;
 
-  /* Typography - Geist Sans and Inter with system fallback variables */
+  /* Typography */
   --font-geist: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-inter: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-family: var(--font-geist, sans-serif), var(--font-inter, sans-serif), sans-serif;
@@ -51,33 +50,96 @@
   --spacing-lg: 24px;
   --spacing-xl: 32px;
 
-  /* Border Radius - Cute, Semi-Rounded 12px corners */
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  /* Border Radius - Neo-Brutalist Sharp/Clean Corners */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
   --radius-full: 9999px;
-  --radius: 12px;
+  --radius: 6px;
   
+  /* Shadcn CSS Variables - Light Theme Mapping */
+  --background: #FAF8F5;
+  --foreground: #0B0B0F;
+  --card: #FFFFFF;
+  --card-foreground: #0B0B0F;
+  --popover: #FFFFFF;
+  --popover-foreground: #0B0B0F;
+  --primary: #7C3AED;
+  --primary-foreground: #FFFFFF;
+  --secondary: #FAF8F5;
+  --secondary-foreground: #0B0B0F;
+  --muted: #F3EFE7;
+  --muted-foreground: #4B5563;
+  --accent: #F3EFE7;
+  --accent-foreground: #0B0B0F;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: #0B0B0F;
+  --input: #0B0B0F;
+  --ring: #7C3AED;
+}
+
+.dark {
+  --background-color: #0B0B0F; /* Classic deep slate/navy */
+  --surface-color: #16161E;
+  --surface-hover: #21212B;
+  --border-color: #FAF8F5; /* Soft white/gray border */
+  --border-color-muted: #2E2E38;
+
+  /* Primary: Violet/Indigo */
+  --primary-color: #A78BFA;
+  --primary-hover: #C084FC;
+  --primary-color-alpha: rgba(167, 139, 250, 0.15);
+
+  /* Accent: Gold/Yellow */
+  --accent-color: #FBBF24;
+  --accent-hover: #F59E0B;
+
+  /* Danger / Highlight: Coral Red */
+  --danger-color: #F87171;
+  
+  /* Warning */
+  --warning-color: #FBBF24;
+
+  /* Text */
+  --text-color: #FAF8F5;
+  --text-muted: #9CA3AF;
+
+  /* Shadows (Neo-Brutalist flat offset shadows in white/accent) */
+  --shadow-sm: 2px 2px 0px #FAF8F5;
+  --shadow-md: 4px 4px 0px #FAF8F5;
+  --shadow-lg: 6px 6px 0px #FAF8F5;
+  --shadow-glow: 0 0 0px transparent;
+
+  /* Button Offset Shadow Color */
+  --button-shadow-color: #FAF8F5;
+
+  /* Radius (remains consistent) */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius: 6px;
+
   /* Shadcn CSS Variables - Dark Theme Mapping */
   --background: #0B0B0F;
-  --foreground: #F4F4F9;
+  --foreground: #FAF8F5;
   --card: #16161E;
-  --card-foreground: #F4F4F9;
+  --card-foreground: #FAF8F5;
   --popover: #16161E;
-  --popover-foreground: #F4F4F9;
-  --primary: #CCFF00;
+  --popover-foreground: #FAF8F5;
+  --primary: #A78BFA;
   --primary-foreground: #0B0B0F;
   --secondary: #21212B;
-  --secondary-foreground: #F4F4F9;
+  --secondary-foreground: #FAF8F5;
   --muted: #1E1E26;
-  --muted-foreground: #A0A0B0;
+  --muted-foreground: #9CA3AF;
   --accent: #21212B;
-  --accent-foreground: #F4F4F9;
-  --destructive: #FF007F;
-  --destructive-foreground: #FFFFFF;
+  --accent-foreground: #FAF8F5;
+  --destructive: #F87171;
+  --destructive-foreground: #0B0B0F;
   --border: #2E2E38;
   --input: #2E2E38;
-  --ring: #CCFF00;
+  --ring: #A78BFA;
 }
 
 * {
@@ -214,3 +276,323 @@ button {
     @apply bg-background text-foreground;
   }
 }
+
+/* ==========================================================================
+   UNIFIED DOCKABLE WINDOWS (FLEXLAYOUT-REACT) THEME - CYAN ACCENT (#00f0ff)
+   ========================================================================== */
+
+/* Main layout background */
+.flexlayout__layout {
+  background-color: var(--background-color) !important;
+}
+
+/* Individual tabsets (dockable windows) */
+.flexlayout__tabset {
+  background-color: var(--surface-color) !important;
+  border-radius: var(--radius-md) !important;
+  overflow: hidden !important;
+  border: 2px solid var(--border-color) !important;
+  box-sizing: border-box !important;
+}
+
+/* Header of tabsets */
+.flexlayout__tabset_header {
+  background-color: var(--surface-hover) !important;
+  border-bottom: 2px solid var(--border-color) !important;
+  padding-left: 4px !important;
+}
+
+/* Splitter bars between windows */
+.flexlayout__splitter {
+  background-color: var(--background-color) !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.flexlayout__splitter:hover, 
+.flexlayout__splitter_drag {
+  background-color: var(--primary-color) !important;
+}
+
+/* Individual tab contents */
+.flexlayout__tab {
+  background-color: var(--surface-color) !important;
+}
+
+/* Tab buttons in headers */
+.flexlayout__tab_button {
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  color: var(--text-muted) !important;
+  padding: 4px 12px !important;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Selected active tab button */
+.flexlayout__tab_button--selected {
+  background-color: var(--surface-color) !important;
+  color: var(--primary-color) !important;
+  font-weight: 700 !important;
+  border-bottom: 2px solid var(--primary-color) !important;
+}
+
+/* Tab button hover */
+.flexlayout__tab_button:hover {
+  color: var(--text-color) !important;
+  background-color: var(--surface-hover) !important;
+}
+
+/* Dragging preview boxes */
+.flexlayout__drag_rect {
+  background: var(--primary-color) !important;
+  opacity: 0.25 !important;
+  border-radius: var(--radius-md) !important;
+}
+
+.flexlayout__outline_rect {
+  border: 2px solid var(--primary-color) !important;
+  border-radius: var(--radius-md) !important;
+}
+
+/* Toolbar buttons in headers (like Maximize/Close) */
+.flexlayout__tab_toolbar_button {
+  color: var(--text-muted) !important;
+}
+
+.flexlayout__tab_toolbar_button:hover {
+  color: var(--text-color) !important;
+  background: var(--surface-hover) !important;
+}
+
+/* Tab trailing close button */
+.flexlayout__tab_button_trailing {
+  margin-left: 8px !important;
+  color: var(--text-muted) !important;
+}
+
+.flexlayout__tab_button_trailing:hover {
+  color: var(--danger-color) !important;
+}
+
+/* ==========================================================================
+   UNIFIED NEO-BRUTALIST BUTTON THEME
+   ========================================================================== */
+
+/* Base transitions for buttons & labels acting as buttons */
+button,
+label[class*="button" i],
+label[class*="btn" i],
+.btn,
+.button {
+  transition: all 0.15s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+}
+
+/* ----------------------------------------------------
+   1. PRIMARY / ACTIVE / CONFIRM BUTTONS
+   ---------------------------------------------------- */
+button[class*="save" i],
+button[class*="generate" i],
+button[class*="primary" i],
+button[class*="Primary" i],
+button[class*="cta" i],
+button[class*="confirm" i],
+button[class*="active" i],
+button[class*="activate" i],
+button[class*="add" i],
+button[class*="confirmBtn" i],
+button[class*="ctaBtn" i],
+button[class*="actionBtn" i] {
+  background: var(--primary-color) !important;
+  border: 2px solid var(--border-color) !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: 2.5px 2.5px 0px var(--button-shadow-color) !important;
+  text-shadow: none !important;
+  transform: none !important;
+}
+
+button[class*="save" i]:hover:not(:disabled),
+button[class*="generate" i]:hover:not(:disabled),
+button[class*="primary" i]:hover:not(:disabled),
+button[class*="Primary" i]:hover:not(:disabled),
+button[class*="cta" i]:hover:not(:disabled),
+button[class*="confirm" i]:hover:not(:disabled),
+button[class*="active" i]:hover:not(:disabled),
+button[class*="activate" i]:hover:not(:disabled),
+button[class*="add" i]:hover:not(:disabled),
+button[class*="confirmBtn" i]:hover:not(:disabled),
+button[class*="ctaBtn" i]:hover:not(:disabled),
+button[class*="actionBtn" i]:hover:not(:disabled) {
+  background: var(--surface-color) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: 3.5px 3.5px 0px var(--button-shadow-color) !important;
+  transform: translate(-1px, -1px) !important;
+}
+
+button[class*="save" i]:active:not(:disabled),
+button[class*="generate" i]:active:not(:disabled),
+button[class*="primary" i]:active:not(:disabled),
+button[class*="Primary" i]:active:not(:disabled),
+button[class*="cta" i]:active:not(:disabled),
+button[class*="confirm" i]:active:not(:disabled),
+button[class*="active" i]:active:not(:disabled),
+button[class*="activate" i]:active:not(:disabled),
+button[class*="add" i]:active:not(:disabled),
+button[class*="confirmBtn" i]:active:not(:disabled),
+button[class*="ctaBtn" i]:active:not(:disabled),
+button[class*="actionBtn" i]:active:not(:disabled) {
+  box-shadow: 1px 1px 0px var(--button-shadow-color) !important;
+  transform: translate(1px, 1px) !important;
+}
+
+/* ----------------------------------------------------
+   2. ACCENT / LOAD / IMPORT BUTTONS
+   ---------------------------------------------------- */
+button[class*="load" i],
+button[class*="import" i],
+button[class*="upload" i],
+button[class*="open" i],
+button[class*="preset" i],
+button[class*="chip" i],
+button[class*="badge" i],
+label[class*="toolbarButton" i],
+label[class*="load" i],
+label[class*="import" i],
+label[class*="upload" i],
+label[class*="open" i] {
+  background: var(--accent-color) !important;
+  border: 2px solid var(--border-color) !important;
+  color: #0B0B0F !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: 2.5px 2.5px 0px var(--button-shadow-color) !important;
+  text-shadow: none !important;
+  transform: none !important;
+  cursor: pointer !important;
+}
+
+button[class*="load" i]:hover:not(:disabled),
+button[class*="import" i]:hover:not(:disabled),
+button[class*="upload" i]:hover:not(:disabled),
+button[class*="open" i]:hover:not(:disabled),
+button[class*="preset" i]:hover:not(:disabled),
+button[class*="chip" i]:hover:not(:disabled),
+button[class*="badge" i]:hover:not(:disabled),
+label[class*="toolbarButton" i]:hover,
+label[class*="load" i]:hover,
+label[class*="import" i]:hover,
+label[class*="upload" i]:hover,
+label[class*="open" i]:hover {
+  background: var(--surface-color) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: 3.5px 3.5px 0px var(--button-shadow-color) !important;
+  transform: translate(-1px, -1px) !important;
+}
+
+button[class*="load" i]:active:not(:disabled),
+button[class*="import" i]:active:not(:disabled),
+button[class*="upload" i]:active:not(:disabled),
+button[class*="open" i]:active:not(:disabled),
+button[class*="preset" i]:active:not(:disabled),
+button[class*="chip" i]:active:not(:disabled),
+button[class*="badge" i]:active:not(:disabled),
+label[class*="toolbarButton" i]:active,
+label[class*="load" i]:active,
+label[class*="import" i]:active,
+label[class*="upload" i]:active,
+label[class*="open" i]:active {
+  box-shadow: 1px 1px 0px var(--button-shadow-color) !important;
+  transform: translate(1px, 1px) !important;
+}
+
+/* ----------------------------------------------------
+   3. DESTRUCTIVE / DANGER BUTTONS
+   ---------------------------------------------------- */
+button[class*="delete" i],
+button[class*="remove" i],
+button[class*="clear" i],
+button[class*="danger" i],
+button[class*="destructive" i],
+button[class*="trash" i],
+button[class*="reset" i] {
+  background: var(--danger-color) !important;
+  border: 2px solid var(--border-color) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: 2.5px 2.5px 0px var(--button-shadow-color) !important;
+  text-shadow: none !important;
+  transform: none !important;
+}
+
+button[class*="delete" i]:hover:not(:disabled),
+button[class*="remove" i]:hover:not(:disabled),
+button[class*="clear" i]:hover:not(:disabled),
+button[class*="danger" i]:hover:not(:disabled),
+button[class*="destructive" i]:hover:not(:disabled),
+button[class*="trash" i]:hover:not(:disabled),
+button[class*="reset" i]:hover:not(:disabled) {
+  background: var(--surface-color) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: 3.5px 3.5px 0px var(--button-shadow-color) !important;
+  transform: translate(-1px, -1px) !important;
+}
+
+button[class*="delete" i]:active:not(:disabled),
+button[class*="remove" i]:active:not(:disabled),
+button[class*="clear" i]:active:not(:disabled),
+button[class*="danger" i]:active:not(:disabled),
+button[class*="destructive" i]:active:not(:disabled),
+button[class*="trash" i]:active:not(:disabled),
+button[class*="reset" i]:active:not(:disabled) {
+  box-shadow: 1px 1px 0px var(--button-shadow-color) !important;
+  transform: translate(1px, 1px) !important;
+}
+
+/* ----------------------------------------------------
+   4. SECONDARY / GENERAL / CANCEL BUTTONS
+   ---------------------------------------------------- */
+button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]) {
+  border: 1.5px solid var(--border-color-muted) !important;
+  background: var(--surface-color) !important;
+  color: var(--text-muted) !important;
+  border-radius: var(--radius-sm) !important;
+  font-weight: 550 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):hover:not(:disabled) {
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+  box-shadow: 2px 2px 0px var(--button-shadow-color) !important;
+  background: var(--surface-hover) !important;
+  transform: translate(-1px, -1px) !important;
+}
+
+button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):active:not(:disabled) {
+  box-shadow: 1px 1px 0px var(--button-shadow-color) !important;
+  transform: translate(1px, 1px) !important;
+}
+
+/* ----------------------------------------------------
+   5. DISABLED BUTTON RECOVERY
+   ---------------------------------------------------- */
+button:disabled,
+label:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
