@@ -83,8 +83,8 @@
   --background-color: #0B0B0F; /* Classic deep slate/navy */
   --surface-color: #16161E;
   --surface-hover: #21212B;
-  --border-color: #FAF8F5; /* Soft white/gray border */
-  --border-color-muted: #2E2E38;
+  --border-color: #0B0B0F; /* Keep dark border */
+  --border-color-muted: #1E1E26;
 
   /* Primary: Violet/Indigo */
   --primary-color: #A78BFA;
@@ -105,14 +105,14 @@
   --text-color: #FAF8F5;
   --text-muted: #9CA3AF;
 
-  /* Shadows (Neo-Brutalist flat offset shadows in white/accent) */
-  --shadow-sm: 2px 2px 0px #FAF8F5;
-  --shadow-md: 4px 4px 0px #FAF8F5;
-  --shadow-lg: 6px 6px 0px #FAF8F5;
+  /* Shadows (Neo-Brutalist flat offset shadows remain dark) */
+  --shadow-sm: 2px 2px 0px #000000;
+  --shadow-md: 4px 4px 0px #000000;
+  --shadow-lg: 6px 6px 0px #000000;
   --shadow-glow: 0 0 0px transparent;
 
   /* Button Offset Shadow Color */
-  --button-shadow-color: #FAF8F5;
+  --button-shadow-color: #000000;
 
   /* Radius (remains consistent) */
   --radius-sm: 3px;
@@ -137,8 +137,8 @@
   --accent-foreground: #FAF8F5;
   --destructive: #F87171;
   --destructive-foreground: #0B0B0F;
-  --border: #2E2E38;
-  --input: #2E2E38;
+  --border: #0B0B0F;
+  --input: #0B0B0F;
   --ring: #A78BFA;
 }
 
@@ -296,10 +296,13 @@ button {
 }
 
 /* Header of tabsets */
-.flexlayout__tabset_header {
+.flexlayout__tabset_header,
+.flexlayout__tabset_tabbar_outer,
+.flexlayout__tabset_tabbar_inner,
+.flexlayout__tabset_header_outer {
   background-color: var(--surface-hover) !important;
+  background: var(--surface-hover) !important;
   border-bottom: 2px solid var(--border-color) !important;
-  padding-left: 4px !important;
 }
 
 /* Splitter bars between windows */
@@ -326,6 +329,9 @@ button {
   padding: 4px 12px !important;
   border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important;
   transition: all 0.2s ease !important;
+  background-color: transparent !important;
+  background: transparent !important;
+  border: none !important;
 }
 
 /* Selected active tab button */
