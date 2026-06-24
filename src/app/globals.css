@@ -282,12 +282,12 @@ button {
    ========================================================================== */
 
 /* Main layout background */
-.flexlayout__layout {
+body .flexlayout__layout {
   background-color: var(--background-color) !important;
 }
 
 /* Individual tabsets (dockable windows) */
-.flexlayout__tabset {
+body .flexlayout__tabset {
   background-color: var(--surface-color) !important;
   border-radius: var(--radius-md) !important;
   overflow: hidden !important;
@@ -296,33 +296,34 @@ button {
 }
 
 /* Header of tabsets */
-.flexlayout__tabset_header,
-.flexlayout__tabset_tabbar_outer,
-.flexlayout__tabset_tabbar_inner,
-.flexlayout__tabset_header_outer {
+body .flexlayout__tabset_header,
+body .flexlayout__tabset_tabbar_outer,
+body .flexlayout__tabset_tabbar_inner,
+body .flexlayout__tabset_header_outer,
+body .flexlayout__tabset_tabbar {
   background-color: var(--surface-hover) !important;
   background: var(--surface-hover) !important;
   border-bottom: 2px solid var(--border-color) !important;
 }
 
 /* Splitter bars between windows */
-.flexlayout__splitter {
+body .flexlayout__splitter {
   background-color: var(--background-color) !important;
   transition: background-color 0.2s ease !important;
 }
 
-.flexlayout__splitter:hover, 
-.flexlayout__splitter_drag {
+body .flexlayout__splitter:hover, 
+body .flexlayout__splitter_drag {
   background-color: var(--primary-color) !important;
 }
 
 /* Individual tab contents */
-.flexlayout__tab {
+body .flexlayout__tab {
   background-color: var(--surface-color) !important;
 }
 
 /* Tab buttons in headers */
-.flexlayout__tab_button {
+body .flexlayout__tab_button {
   font-size: 0.75rem !important;
   font-weight: 600 !important;
   color: var(--text-muted) !important;
@@ -335,7 +336,7 @@ button {
 }
 
 /* Selected active tab button */
-.flexlayout__tab_button--selected {
+body .flexlayout__tab_button--selected {
   background-color: var(--surface-color) !important;
   color: var(--primary-color) !important;
   font-weight: 700 !important;
