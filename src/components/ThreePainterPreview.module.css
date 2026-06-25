@@ -2,7 +2,7 @@
   position: relative;
   width: 100%;
   height: 100%;
-  background: #121214;
+  background: var(--background-color);
   overflow: hidden;
   display: flex;
   align-items: center;
@@ -21,7 +21,7 @@
 }
 
 .dragActive {
-  outline: 2px dashed #8b5cf6;
+  outline: 2.5px dashed var(--primary-color);
   outline-offset: -8px;
 }
 
@@ -32,7 +32,6 @@
   width: 100%;
   height: 100%;
   padding: 24px;
-  background: radial-gradient(circle at center, rgba(139, 92, 246, 0.05) 0%, transparent 70%);
 }
 
 .uploadCard {
@@ -40,65 +39,69 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  background: rgba(255, 255, 255, 0.01);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  border-radius: 16px;
+  background: var(--surface-color);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 40px 24px;
   max-width: 400px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
 }
 
 .iconCircle {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: rgba(139, 92, 246, 0.1);
+  background: var(--primary-color-alpha);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 20px;
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  border: 1.5px solid var(--primary-color);
 }
 
 .uploadIcon {
-  color: #a855f7;
+  color: var(--primary-color);
 }
 
 .uploadCard h3 {
   font-size: 1.2rem;
-  font-weight: 650;
+  font-weight: 700;
   margin: 0 0 10px 0;
-  color: #ffffff;
+  color: var(--text-color);
 }
 
 .dropText {
   font-size: 0.85rem;
-  color: #a1a1aa;
+  color: var(--text-muted);
   margin: 0 0 24px 0;
   line-height: 1.5;
 }
 
 .dropText strong {
-  color: #d8b4fe;
+  color: var(--primary-color);
+  font-weight: 700;
 }
 
 .browseButton {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-  border: none;
-  border-radius: 8px;
+  background: var(--primary-color);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
   color: #ffffff;
   padding: 10px 24px;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
-  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.15s ease;
 }
 
 .browseButton:hover {
-  opacity: 0.9;
-  box-shadow: 0 6px 16px rgba(139, 92, 246, 0.3);
+  background: var(--surface-color);
+  color: var(--text-color);
+  box-shadow: 4px 4px 0px var(--border-color);
+  transform: translate(-1.5px, -1.5px);
 }
 
 .fileInput {
@@ -107,7 +110,7 @@
 
 .formatNotice {
   font-size: 0.7rem;
-  color: #71717a;
+  color: var(--text-muted);
   margin-top: 16px;
   line-height: 1.4;
   max-width: 280px;
@@ -119,12 +122,12 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(18, 18, 20, 0.85);
+  background: var(--background-color);
+  opacity: 0.95;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10;
-  backdrop-filter: blur(4px);
 }
 
 .loadingCard {
@@ -132,15 +135,16 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
+  background: var(--surface-color);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
   padding: 32px;
   width: 280px;
 }
 
 .spinner {
-  color: #a855f7;
+  color: var(--primary-color);
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
 }
@@ -152,31 +156,32 @@
 
 .loadingCard h3 {
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0 0 16px 0;
-  color: #ffffff;
+  color: var(--text-color);
 }
 
 .progressBarBg {
   width: 100%;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  height: 8px;
+  background: var(--border-color-muted);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-full);
   overflow: hidden;
   margin-bottom: 8px;
 }
 
 .progressBarFill {
   height: 100%;
-  background: linear-gradient(90deg, #8b5cf6, #ec4899);
-  border-radius: 3px;
+  background: var(--primary-color);
   transition: width 0.2s ease;
 }
 
 .progressPct {
   font-size: 0.75rem;
-  color: #a1a1aa;
+  color: var(--text-muted);
   font-family: monospace;
+  font-weight: 600;
 }
 
 .dragIndicator {
@@ -185,8 +190,8 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(139, 92, 246, 0.15);
-  border: 2px dashed #8b5cf6;
+  background: var(--primary-color-alpha);
+  border: 2.5px dashed var(--primary-color);
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -199,11 +204,11 @@
   flex-direction: column;
   align-items: center;
   gap: 16px;
-  color: #ffffff;
+  color: var(--text-color);
 }
 
 .dragIcon {
-  color: #c084fc;
+  color: var(--primary-color);
   animation: bounce 1s infinite alternate;
 }
 
@@ -214,9 +219,8 @@
 
 .dragCard h2 {
   font-size: 1.5rem;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
 }
 
 .hudOverlay {
@@ -240,36 +244,35 @@
 
 .hudBadge {
   align-self: flex-start;
-  background: rgba(0, 0, 0, 0.75);
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  border-radius: 20px;
-  color: #d8b4fe;
+  background: var(--surface-color);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  color: var(--text-color);
   padding: 6px 14px;
   font-size: 0.75rem;
-  font-weight: 600;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
 }
 
 .hudControls {
   display: flex;
   gap: 8px;
   align-items: center;
-  background: rgba(0, 0, 0, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  color: #a1a1aa;
+  background: var(--surface-color);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
   padding: 8px 12px;
   font-size: 0.72rem;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-sm);
   align-self: center;
 }
 
 .hudControls strong {
-  color: #ffffff;
+  color: var(--text-color);
+  font-weight: 700;
 }
 
 .separator {
-  color: rgba(255, 255, 255, 0.15);
+  color: var(--border-color-muted);
 }

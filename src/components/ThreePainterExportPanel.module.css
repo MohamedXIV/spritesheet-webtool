@@ -6,7 +6,7 @@
   height: 100%;
   overflow-y: auto;
   font-size: 11px;
-  color: #c9ccd4;
+  color: var(--text-color);
 }
 
 /* Section */
@@ -15,20 +15,20 @@
   flex-direction: column;
   gap: 6px;
   padding: 10px 10px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1.5px solid var(--border-color-muted);
 }
 
 .sectionTitle {
   font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.09em;
-  color: #52525b;
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
 .hint {
   font-size: 10px;
-  color: #3f3f46;
+  color: var(--text-muted);
   margin: 0;
   line-height: 1.45;
   font-style: italic;
@@ -41,21 +41,21 @@
   justify-content: center;
   gap: 6px;
   height: 28px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 4px;
-  color: #c4c4cc;
+  background: var(--surface-color);
+  border: 1.5px solid var(--border-color-muted);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition: all 0.12s ease;
   width: 100%;
 }
 
 .btn:hover:not(:disabled) {
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.14);
-  color: #ffffff;
+  background: var(--surface-hover);
+  border-color: var(--border-color);
+  color: var(--text-color);
 }
 
 .btn:disabled {
@@ -64,14 +64,21 @@
 }
 
 .btnPrimary {
-  background: rgba(124,58,237,0.15) !important;
-  border-color: rgba(124,58,237,0.4) !important;
-  color: #c4b5fd !important;
+  background: var(--primary-color) !important;
+  border: 2px solid var(--border-color) !important;
+  color: #ffffff !important;
+  box-shadow: var(--shadow-sm);
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .btnPrimary:hover:not(:disabled) {
-  background: rgba(124,58,237,0.25) !important;
-  border-color: rgba(124,58,237,0.6) !important;
+  background: var(--surface-color) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: 3.5px 3.5px 0px var(--border-color);
+  transform: translate(-1px, -1px);
 }
 
 /* Empty state */
@@ -87,7 +94,7 @@
 }
 
 .emptyIcon {
-  color: #3f3f46;
+  color: var(--text-muted);
   animation: float 3s ease-in-out infinite;
 }
 
@@ -98,7 +105,7 @@
 
 .empty p {
   font-size: 10.5px;
-  color: #52525b;
+  color: var(--text-muted);
   margin: 0;
   line-height: 1.4;
   max-width: 180px;

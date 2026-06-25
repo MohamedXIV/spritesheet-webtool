@@ -111,7 +111,7 @@ export function ThreePainterPixelatePanel() {
 
         {/* Generate Custom Palette sub-options */}
         {p.enabled && p.quantizationType === 'custom' && (
-          <div style={{ paddingLeft: '10px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', margin: '4px 0 8px 4px' }}>
+          <div style={{ paddingLeft: '10px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '1.5px solid var(--border-color-muted)', margin: '4px 0 8px 4px' }}>
             <ToggleRow label="Use pixelated input" checked={p.quantizeUsePixelated || false}
               onChange={(v) => updatePixelatorOptions({ quantizeUsePixelated: v })} />
             <SliderRow label="Subsampling" value={p.quantizeQuality || 2} min={1} max={8} displayValue={`${p.quantizeQuality || 2}x`}
@@ -133,7 +133,7 @@ export function ThreePainterPixelatePanel() {
 
         {/* Per Channel sub-options */}
         {p.enabled && p.quantizationType === 'per-channel' && (
-          <div style={{ paddingLeft: '10px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', margin: '4px 0 8px 4px' }}>
+          <div style={{ paddingLeft: '10px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '1.5px solid var(--border-color-muted)', margin: '4px 0 8px 4px' }}>
             <ToggleRow label="Adaptive Range" checked={p.quantizeUseRangeAdaptive || false}
               onChange={(v) => updatePixelatorOptions({ quantizeUseRangeAdaptive: v })} />
             <SliderRow label="Colors/Channel" value={p.quantizeColorsPerChannel || 256} min={2} max={256} displayValue={`${p.quantizeColorsPerChannel || 256}`}
@@ -143,7 +143,7 @@ export function ThreePainterPixelatePanel() {
 
         {/* Lookup Table sub-options */}
         {p.enabled && p.quantizationType === 'lut' && (
-          <div style={{ paddingLeft: '10px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '1px solid rgba(255,255,255,0.1)', margin: '4px 0 8px 4px' }}>
+          <div style={{ paddingLeft: '10px', display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '1.5px solid var(--border-color-muted)', margin: '4px 0 8px 4px' }}>
             <SelectRow label="Hardware Preset" value={p.quantizeLUTPreset || 'none'}
               onChange={(v) => updatePixelatorOptions({ quantizeLUTPreset: v as any })}
               options={[
