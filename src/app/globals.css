@@ -702,7 +702,7 @@ body [class*="value" i] {
 
 /* 4. Dropdowns (Select fields) */
 body select,
-body [class*="select" i]:not([class*="flexlayout" i]) {
+body [class*="select" i]:not([class*="flexlayout" i]):not([class*="label" i]):not([class*="row" i]):not([class*="wrapper" i]):not([class*="container" i]) {
   background: var(--surface-color) !important;
   border: 1.5px solid var(--border-color) !important;
   color: var(--text-color) !important;
@@ -714,12 +714,12 @@ body [class*="select" i]:not([class*="flexlayout" i]) {
   transition: all 0.12s ease !important;
 }
 body select:hover:not(:disabled),
-body [class*="select" i]:not([class*="flexlayout" i]):hover:not(:disabled) {
+body [class*="select" i]:not([class*="flexlayout" i]):not([class*="label" i]):not([class*="row" i]):not([class*="wrapper" i]):not([class*="container" i]):hover:not(:disabled) {
   background: var(--surface-hover) !important;
   border-color: var(--border-color) !important;
 }
 body select:focus,
-body [class*="select" i]:not([class*="flexlayout" i]):focus {
+body [class*="select" i]:not([class*="flexlayout" i]):not([class*="label" i]):not([class*="row" i]):not([class*="wrapper" i]):not([class*="container" i]):focus {
   border-color: var(--primary-color) !important;
 }
 body select option {
