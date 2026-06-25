@@ -303,7 +303,7 @@ body .flexlayout__tabset_header_outer,
 body .flexlayout__tabset_tabbar {
   background-color: var(--surface-hover) !important;
   background: var(--surface-hover) !important;
-  border-bottom: 2px solid var(--border-color) !important;
+  border-bottom: none !important;
 }
 
 /* Splitter bars between windows */
