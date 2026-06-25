@@ -11,6 +11,7 @@ import { FrameData } from '@/types';
 import { LoopMode } from './Timeline';
 import { addOutline, OutlineOptions } from '@/lib/outlineGenerator';
 import { pixelateImage } from '@/lib/pixelator';
+import { Play, Pause, SkipBack, SkipForward, ChevronLeft, ChevronRight } from 'lucide-react';
 import styles from './PreviewPlayer.module.css';
 
 export type BackgroundMode = 'none' | 'checkerboard' | 'color';
@@ -450,7 +451,7 @@ export function PreviewPlayer({
           title="Go to start"
           aria-label="Go to start"
         >
-          <span aria-hidden="true">⏮</span>
+          <SkipBack size={14} />
         </button>
         <button
           onClick={stepBack}
@@ -459,7 +460,7 @@ export function PreviewPlayer({
           title="Previous frame"
           aria-label="Previous frame"
         >
-          <span aria-hidden="true">⏪</span>
+          <ChevronLeft size={14} />
         </button>
         <button
           onClick={togglePlay}
@@ -468,7 +469,7 @@ export function PreviewPlayer({
           title={isPlaying ? 'Pause' : 'Play'}
           aria-label={isPlaying ? 'Pause' : 'Play'}
         >
-          <span aria-hidden="true">{isPlaying ? '⏸' : '▶'}</span>
+          {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" style={{ marginLeft: '2px' }} />}
         </button>
         <button
           onClick={stepForward}
@@ -477,7 +478,7 @@ export function PreviewPlayer({
           title="Next frame"
           aria-label="Next frame"
         >
-          <span aria-hidden="true">⏩</span>
+          <ChevronRight size={14} />
         </button>
         <button
           onClick={goToEnd}
@@ -486,7 +487,7 @@ export function PreviewPlayer({
           title="Go to end"
           aria-label="Go to end"
         >
-          <span aria-hidden="true">⏭</span>
+          <SkipForward size={14} />
         </button>
       </div>
     </div>

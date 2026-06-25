@@ -1,22 +1,25 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-  background: var(--surface-color, #1a1a2e);
-  border-radius: 12px;
+  gap: 12px;
+  padding: 12px;
+  background: var(--surface-color);
+  border-radius: var(--radius-md);
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .canvasContainer {
   position: relative;
-  background: var(--background-color, #0f0f1a);
-  border-radius: 8px;
+  background: var(--background-color);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 250px;
-  aspect-ratio: 16 / 9;
+  min-height: 160px;
+  flex: 1; /* scale dynamically with window */
 }
 
 .canvas {
@@ -32,60 +35,79 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: var(--text-muted, #9ca3af);
-  padding: 40px;
+  color: var(--text-muted);
+  padding: 20px;
   text-align: center;
 }
 
 .placeholder p {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .controls {
   display: flex;
   justify-content: center;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
 }
 
 .controlButton {
-  width: 40px;
-  height: 40px;
-  border: 1px solid var(--border-color, #4a5568);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-color, #e5e7eb);
-  font-size: 1rem;
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--border-color) !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--surface-color) !important;
+  color: var(--text-color) !important;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.1s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 2px 2px 0px var(--button-shadow-color) !important;
+  padding: 0 !important;
+  transform: none !important;
 }
 
 .controlButton:hover:not(:disabled) {
-  background: var(--surface-hover, #252542);
-  border-color: var(--primary-color, #6366f1);
+  background: var(--surface-hover) !important;
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 3px 3px 0px var(--button-shadow-color) !important;
+}
+
+.controlButton:active:not(:disabled) {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 1px 1px 0px var(--button-shadow-color) !important;
 }
 
 .controlButton:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   cursor: not-allowed;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 .playButton {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: var(--primary-color, #6366f1);
-  border-color: var(--primary-color, #6366f1);
-  font-size: 1.2rem;
+  width: 44px;
+  height: 44px;
+  background: var(--primary-color) !important;
+  border-color: var(--border-color) !important;
+  color: #FFFFFF !important;
+  border-radius: var(--radius-sm) !important;
+  font-size: 1rem;
 }
 
 .playButton:hover:not(:disabled) {
-  background: var(--primary-hover, #4f46e5);
-  border-color: var(--primary-hover, #4f46e5);
-  transform: scale(1.05);
+  background: var(--primary-hover) !important;
+  transform: translate(-1px, -1px) !important;
+  box-shadow: 3px 3px 0px var(--button-shadow-color) !important;
+}
+
+.playButton:active:not(:disabled) {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 1px 1px 0px var(--button-shadow-color) !important;
 }
 
 .loopIndicator {
