@@ -57,7 +57,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  background: linear-gradient(90deg, #ffffff, var(--text-muted, #A0A0B0));
+  background: linear-gradient(90deg, var(--text-color), var(--text-muted, #A0A0B0));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

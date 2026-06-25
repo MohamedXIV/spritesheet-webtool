@@ -632,3 +632,241 @@ label:disabled {
   box-shadow: none !important;
 }
 
+/* ==========================================================================
+   DOCK LAYOUT PANELS - NEO-BRUTALIST UNIFICATION
+   ========================================================================== */
+
+/* 1. Panel Container backgrounds & scrollbars */
+body [class*="panelContent" i],
+body [class*="container" i]:not(html):not(body):not([class*="dock" i]):not([class*="layout" i]) {
+  color: var(--text-color) !important;
+  background-color: var(--surface-color) !important;
+  background: var(--surface-color) !important;
+}
+
+body *::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
+}
+body *::-webkit-scrollbar-track {
+  background: var(--surface-color) !important;
+}
+body *::-webkit-scrollbar-thumb {
+  background: var(--border-color-muted) !important;
+  border-radius: var(--radius-sm) !important;
+}
+body *::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted) !important;
+}
+
+/* 2. Section Headers and Dividers */
+body [class*="sectionHeader" i] {
+  color: var(--text-color) !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+  background: var(--surface-hover) !important;
+  border-bottom: 1.5px solid var(--border-color-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  padding: 6px 10px !important;
+}
+body [class*="sectionHeader" i]:hover {
+  color: var(--primary-color) !important;
+  background: var(--surface-hover) !important;
+}
+body [class*="section" i] {
+  border-bottom: 1.5px solid var(--border-color-muted) !important;
+  background: transparent !important;
+}
+body [class*="divider" i],
+body [class*="menuDivider" i] {
+  height: 1.5px !important;
+  background: var(--border-color-muted) !important;
+}
+
+/* 3. Form Labels and Values */
+body [class*="label" i],
+body [class*="sliderLabel" i],
+body [class*="selectLabel" i],
+body [class*="toggleLabel" i] {
+  color: var(--text-color) !important;
+  font-weight: 600 !important;
+}
+body [class*="sliderValue" i],
+body [class*="hexVal" i],
+body [class*="value" i] {
+  color: var(--text-muted) !important;
+}
+
+/* 4. Dropdowns (Select fields) */
+body select,
+body [class*="select" i] {
+  background: var(--surface-color) !important;
+  border: 1.5px solid var(--border-color) !important;
+  color: var(--text-color) !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 2px 6px !important;
+  font-size: 11px !important;
+  outline: none !important;
+  cursor: pointer !important;
+  transition: all 0.12s ease !important;
+}
+body select:hover:not(:disabled),
+body [class*="select" i]:hover:not(:disabled) {
+  background: var(--surface-hover) !important;
+  border-color: var(--border-color) !important;
+}
+body select:focus,
+body [class*="select" i]:focus {
+  border-color: var(--primary-color) !important;
+}
+body select option {
+  background: var(--surface-color) !important;
+  color: var(--text-color) !important;
+}
+
+/* 5. Inputs (Text, Numbers) */
+body input[type="text"],
+body input[type="number"],
+body [class*="hexInput" i],
+body [class*="newPaletteInput" i],
+body [class*="input" i]:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]) {
+  background: var(--surface-color) !important;
+  border: 1.5px solid var(--border-color) !important;
+  color: var(--text-color) !important;
+  border-radius: var(--radius-sm) !important;
+  padding: 3px 6px !important;
+  font-size: 11px !important;
+  outline: none !important;
+  transition: all 0.12s ease !important;
+}
+body input[type="text"]:focus,
+body input[type="number"]:focus,
+body [class*="hexInput" i]:focus,
+body [class*="input" i]:focus {
+  border-color: var(--primary-color) !important;
+}
+
+/* 6. Range Sliders */
+body input[type="range"],
+body [class*="sliderTrack" i] {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  width: 100% !important;
+  height: 4px !important;
+  background: var(--border-color-muted) !important;
+  border-radius: var(--radius-full) !important;
+  outline: none !important;
+  cursor: pointer !important;
+  border: none !important;
+}
+body input[type="range"]::-webkit-slider-thumb,
+body [class*="sliderTrack" i]::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50% !important;
+  background: var(--primary-color) !important;
+  border: 1.5px solid var(--border-color) !important;
+  cursor: pointer !important;
+  margin-top: -4px !important;
+  transition: transform 0.1s !important;
+}
+body input[type="range"]::-webkit-slider-thumb:hover,
+body [class*="sliderTrack" i]::-webkit-slider-thumb:hover {
+  transform: scale(1.2) !important;
+}
+body input[type="range"]::-moz-range-thumb,
+body [class*="sliderTrack" i]::-moz-range-thumb {
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50% !important;
+  background: var(--primary-color) !important;
+  border: 1.5px solid var(--border-color) !important;
+}
+
+/* 7. Switch Toggles */
+body [class*="switchSlider" i] {
+  background: var(--border-color-muted) !important;
+  border: 1.5px solid var(--border-color) !important;
+  border-radius: 16px !important;
+}
+body [class*="switchSlider" i]:before {
+  background: var(--border-color) !important;
+}
+body input:checked + [class*="switchSlider" i] {
+  background: var(--primary-color-alpha) !important;
+  border-color: var(--primary-color) !important;
+}
+body input:checked + [class*="switchSlider" i]:before {
+  background: var(--primary-color) !important;
+}
+
+/* 8. Grid Tool and Swatch buttons */
+body [class*="toolBtn" i] {
+  background: var(--surface-color) !important;
+  border: 1.5px solid var(--border-color-muted) !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--text-muted) !important;
+  transition: all 0.12s ease !important;
+}
+body [class*="toolBtn" i]:hover {
+  background: var(--surface-hover) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+body [class*="toolBtnActive" i] {
+  background: var(--primary-color-alpha) !important;
+  border-color: var(--primary-color) !important;
+  color: var(--primary-color) !important;
+  box-shadow: 1.5px 1.5px 0px var(--border-color) !important;
+  transform: translate(-1px, -1px) !important;
+}
+
+body [class*="paletteMenu" i] {
+  background: var(--surface-color) !important;
+  border: 1.5px solid var(--border-color) !important;
+  border-radius: var(--radius-sm) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+body [class*="paletteMenuName" i] {
+  color: var(--text-muted) !important;
+}
+body [class*="paletteMenuName" i]:hover {
+  background: var(--surface-hover) !important;
+  color: var(--text-color) !important;
+}
+body [class*="paletteMenuActive" i] {
+  color: var(--primary-color) !important;
+  background: var(--primary-color-alpha) !important;
+}
+
+body [class*="colorSwatch" i]::-webkit-color-swatch {
+  border: 1.5px solid var(--border-color) !important;
+}
+
+/* 9. Layer items selection */
+body [class*="layerRow" i] {
+  background: var(--surface-color) !important;
+  border: 1.5px solid var(--border-color-muted) !important;
+  border-radius: var(--radius-md) !important;
+  transition: all 0.15s ease !important;
+}
+body [class*="layerRow" i]:hover {
+  background: var(--surface-hover) !important;
+  border-color: var(--border-color) !important;
+}
+body [class*="activeRow" i] {
+  background: var(--primary-color-alpha) !important;
+  border-color: var(--primary-color) !important;
+  box-shadow: 2px 2px 0px var(--border-color) !important;
+  transform: translate(-1.5px, -1.5px) !important;
+}
+body [class*="currentBadge" i] {
+  background: var(--surface-hover) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-muted) !important;
+  font-weight: 700 !important;
+}
+
+
