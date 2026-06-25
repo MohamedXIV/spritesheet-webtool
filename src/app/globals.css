@@ -287,8 +287,7 @@ body .flexlayout__layout {
 }
 
 /* Individual tabsets (dockable windows) */
-body .flexlayout__tabset,
-body .flexlayout__tabset-selected {
+body .flexlayout__tabset {
   background-color: var(--surface-color) !important;
   border-radius: var(--radius-md) !important;
   overflow: hidden !important;
