@@ -287,12 +287,14 @@ body .flexlayout__layout {
 }
 
 /* Individual tabsets (dockable windows) */
-body .flexlayout__tabset {
+body .flexlayout__tabset,
+body .flexlayout__tabset-selected {
   background-color: var(--surface-color) !important;
   border-radius: var(--radius-md) !important;
   overflow: hidden !important;
   border: 2px solid var(--border-color) !important;
   box-sizing: border-box !important;
+  outline: none !important;
 }
 
 /* Header of tabsets */
@@ -333,6 +335,7 @@ body .flexlayout__tab_button {
   background-color: transparent !important;
   background: transparent !important;
   border: none !important;
+  border-bottom: 2px solid transparent !important;
 }
 
 /* Selected active tab button */
@@ -386,7 +389,7 @@ body .flexlayout__tab_button--selected {
    ========================================================================== */
 
 /* Base transitions for buttons & labels acting as buttons */
-button,
+button:not([class*="flexlayout" i]),
 label[class*="button" i],
 label[class*="btn" i],
 .btn,
@@ -397,18 +400,18 @@ label[class*="btn" i],
 /* ----------------------------------------------------
    1. PRIMARY / ACTIVE / CONFIRM BUTTONS
    ---------------------------------------------------- */
-button[class*="save" i],
-button[class*="generate" i],
-button[class*="primary" i],
-button[class*="Primary" i],
-button[class*="cta" i],
-button[class*="confirm" i],
-button[class*="active" i],
-button[class*="activate" i],
-button[class*="add" i],
-button[class*="confirmBtn" i],
-button[class*="ctaBtn" i],
-button[class*="actionBtn" i] {
+button:not([class*="flexlayout" i])[class*="save" i],
+button:not([class*="flexlayout" i])[class*="generate" i],
+button:not([class*="flexlayout" i])[class*="primary" i],
+button:not([class*="flexlayout" i])[class*="Primary" i],
+button:not([class*="flexlayout" i])[class*="cta" i],
+button:not([class*="flexlayout" i])[class*="confirm" i],
+button:not([class*="flexlayout" i])[class*="active" i],
+button:not([class*="flexlayout" i])[class*="activate" i],
+button:not([class*="flexlayout" i])[class*="add" i],
+button:not([class*="flexlayout" i])[class*="confirmBtn" i],
+button:not([class*="flexlayout" i])[class*="ctaBtn" i],
+button:not([class*="flexlayout" i])[class*="actionBtn" i] {
   background: var(--primary-color) !important;
   border: 2px solid var(--border-color) !important;
   color: #FFFFFF !important;
@@ -421,18 +424,18 @@ button[class*="actionBtn" i] {
   transform: none !important;
 }
 
-button[class*="save" i]:hover:not(:disabled),
-button[class*="generate" i]:hover:not(:disabled),
-button[class*="primary" i]:hover:not(:disabled),
-button[class*="Primary" i]:hover:not(:disabled),
-button[class*="cta" i]:hover:not(:disabled),
-button[class*="confirm" i]:hover:not(:disabled),
-button[class*="active" i]:hover:not(:disabled),
-button[class*="activate" i]:hover:not(:disabled),
-button[class*="add" i]:hover:not(:disabled),
-button[class*="confirmBtn" i]:hover:not(:disabled),
-button[class*="ctaBtn" i]:hover:not(:disabled),
-button[class*="actionBtn" i]:hover:not(:disabled) {
+button:not([class*="flexlayout" i])[class*="save" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="generate" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="primary" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="Primary" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="cta" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="confirm" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="active" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="activate" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="add" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="confirmBtn" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="ctaBtn" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="actionBtn" i]:hover:not(:disabled) {
   background: var(--surface-color) !important;
   color: var(--text-color) !important;
   border-color: var(--border-color) !important;
@@ -440,18 +443,18 @@ button[class*="actionBtn" i]:hover:not(:disabled) {
   transform: translate(-1px, -1px) !important;
 }
 
-button[class*="save" i]:active:not(:disabled),
-button[class*="generate" i]:active:not(:disabled),
-button[class*="primary" i]:active:not(:disabled),
-button[class*="Primary" i]:active:not(:disabled),
-button[class*="cta" i]:active:not(:disabled),
-button[class*="confirm" i]:active:not(:disabled),
-button[class*="active" i]:active:not(:disabled),
-button[class*="activate" i]:active:not(:disabled),
-button[class*="add" i]:active:not(:disabled),
-button[class*="confirmBtn" i]:active:not(:disabled),
-button[class*="ctaBtn" i]:active:not(:disabled),
-button[class*="actionBtn" i]:active:not(:disabled) {
+button:not([class*="flexlayout" i])[class*="save" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="generate" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="primary" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="Primary" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="cta" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="confirm" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="active" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="activate" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="add" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="confirmBtn" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="ctaBtn" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="actionBtn" i]:active:not(:disabled) {
   box-shadow: 1px 1px 0px var(--button-shadow-color) !important;
   transform: translate(1px, 1px) !important;
 }
@@ -459,15 +462,15 @@ button[class*="actionBtn" i]:active:not(:disabled) {
 /* ----------------------------------------------------
    2. ACCENT / LOAD / IMPORT BUTTONS
    ---------------------------------------------------- */
-button[class*="load" i],
-button[class*="import" i],
-button[class*="upload" i],
-button[class*="open" i],
-button[class*="preset" i],
-button[class*="chip" i],
-button[class*="badge" i],
-button[class*="accent" i],
-button[class*="Accent" i],
+button:not([class*="flexlayout" i])[class*="load" i],
+button:not([class*="flexlayout" i])[class*="import" i],
+button:not([class*="flexlayout" i])[class*="upload" i],
+button:not([class*="flexlayout" i])[class*="open" i],
+button:not([class*="flexlayout" i])[class*="preset" i],
+button:not([class*="flexlayout" i])[class*="chip" i],
+button:not([class*="flexlayout" i])[class*="badge" i],
+button:not([class*="flexlayout" i])[class*="accent" i],
+button:not([class*="flexlayout" i])[class*="Accent" i],
 label[class*="toolbarButton" i],
 label[class*="load" i],
 label[class*="import" i],
@@ -486,15 +489,15 @@ label[class*="open" i] {
   cursor: pointer !important;
 }
 
-button[class*="load" i]:hover:not(:disabled),
-button[class*="import" i]:hover:not(:disabled),
-button[class*="upload" i]:hover:not(:disabled),
-button[class*="open" i]:hover:not(:disabled),
-button[class*="preset" i]:hover:not(:disabled),
-button[class*="chip" i]:hover:not(:disabled),
-button[class*="badge" i]:hover:not(:disabled),
-button[class*="accent" i]:hover:not(:disabled),
-button[class*="Accent" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="load" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="import" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="upload" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="open" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="preset" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="chip" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="badge" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="accent" i]:hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="Accent" i]:hover:not(:disabled),
 label[class*="toolbarButton" i]:hover,
 label[class*="load" i]:hover,
 label[class*="import" i]:hover,
@@ -507,15 +510,15 @@ label[class*="open" i]:hover {
   transform: translate(-1px, -1px) !important;
 }
 
-button[class*="load" i]:active:not(:disabled),
-button[class*="import" i]:active:not(:disabled),
-button[class*="upload" i]:active:not(:disabled),
-button[class*="open" i]:active:not(:disabled),
-button[class*="preset" i]:active:not(:disabled),
-button[class*="chip" i]:active:not(:disabled),
-button[class*="badge" i]:active:not(:disabled),
-button[class*="accent" i]:active:not(:disabled),
-button[class*="Accent" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="load" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="import" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="upload" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="open" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="preset" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="chip" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="badge" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="accent" i]:active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="Accent" i]:active:not(:disabled),
 label[class*="toolbarButton" i]:active,
 label[class*="load" i]:active,
 label[class*="import" i]:active,
@@ -528,13 +531,13 @@ label[class*="open" i]:active {
 /* ----------------------------------------------------
    3. DESTRUCTIVE / DANGER BUTTONS
    ---------------------------------------------------- */
-button[class*="delete" i]:not([class*="menu" i]):not([class*="Menu" i]),
-button[class*="remove" i]:not([class*="menu" i]):not([class*="Menu" i]),
-button[class*="clear" i]:not([class*="menu" i]):not([class*="Menu" i]),
-button[class*="danger" i]:not([class*="menu" i]):not([class*="Menu" i]),
-button[class*="destructive" i]:not([class*="menu" i]):not([class*="Menu" i]),
-button[class*="trash" i]:not([class*="menu" i]):not([class*="Menu" i]),
-button[class*="reset" i]:not([class*="menu" i]):not([class*="Menu" i]) {
+button:not([class*="flexlayout" i])[class*="delete" i]:not([class*="menu" i]):not([class*="Menu" i]),
+button:not([class*="flexlayout" i])[class*="remove" i]:not([class*="menu" i]):not([class*="Menu" i]),
+button:not([class*="flexlayout" i])[class*="clear" i]:not([class*="menu" i]):not([class*="Menu" i]),
+button:not([class*="flexlayout" i])[class*="danger" i]:not([class*="menu" i]):not([class*="Menu" i]),
+button:not([class*="flexlayout" i])[class*="destructive" i]:not([class*="menu" i]):not([class*="Menu" i]),
+button:not([class*="flexlayout" i])[class*="trash" i]:not([class*="menu" i]):not([class*="Menu" i]),
+button:not([class*="flexlayout" i])[class*="reset" i]:not([class*="menu" i]):not([class*="Menu" i]) {
   background: var(--danger-color) !important;
   border: 2px solid var(--border-color) !important;
   color: #ffffff !important;
@@ -547,13 +550,13 @@ button[class*="reset" i]:not([class*="menu" i]):not([class*="Menu" i]) {
   transform: none !important;
 }
 
-button[class*="delete" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
-button[class*="remove" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
-button[class*="clear" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
-button[class*="danger" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
-button[class*="destructive" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
-button[class*="trash" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
-button[class*="reset" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled) {
+button:not([class*="flexlayout" i])[class*="delete" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="remove" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="clear" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="danger" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="destructive" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="trash" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
+button:not([class*="flexlayout" i])[class*="reset" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled) {
   background: var(--surface-color) !important;
   color: var(--text-color) !important;
   border-color: var(--border-color) !important;
@@ -561,13 +564,13 @@ button[class*="reset" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not
   transform: translate(-1px, -1px) !important;
 }
 
-button[class*="delete" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
-button[class*="remove" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
-button[class*="clear" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
-button[class*="danger" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
-button[class*="destructive" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
-button[class*="trash" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
-button[class*="reset" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled) {
+button:not([class*="flexlayout" i])[class*="delete" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="remove" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="clear" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="danger" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="destructive" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="trash" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
+button:not([class*="flexlayout" i])[class*="reset" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled) {
   box-shadow: 1px 1px 0px var(--button-shadow-color) !important;
   transform: translate(1px, 1px) !important;
 }
@@ -575,7 +578,7 @@ button[class*="reset" i]:not([class*="menu" i]):not([class*="Menu" i]):active:no
 /* ----------------------------------------------------
    4. SECONDARY / GENERAL / CANCEL BUTTONS
    ---------------------------------------------------- */
-button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]):not([class*="menu" i]):not([class*="Menu" i]) {
+button:not([class*="flexlayout" i]):not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]):not([class*="menu" i]):not([class*="Menu" i]) {
   position: relative !important;
   overflow: visible !important;
   transform-style: preserve-3d !important;
@@ -588,7 +591,7 @@ button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i
   transform: translate(-1px, -1px) !important;
 }
 
-button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]):not([class*="menu" i]):not([class*="Menu" i])::after {
+button:not([class*="flexlayout" i]):not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]):not([class*="menu" i]):not([class*="Menu" i])::after {
   content: '' !important;
   position: absolute !important;
   top: -1.5px !important;
@@ -604,7 +607,7 @@ button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i
   transform: translate3d(0, 0, -1px) !important;
 }
 
-button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]):not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled) {
+button:not([class*="flexlayout" i]):not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]):not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled) {
   border-color: var(--border-color) !important;
   color: var(--text-color) !important;
   box-shadow: 2px 2px 0px var(--button-shadow-color) !important;
@@ -700,7 +703,7 @@ body [class*="value" i] {
 
 /* 4. Dropdowns (Select fields) */
 body select,
-body [class*="select" i] {
+body [class*="select" i]:not([class*="flexlayout" i]) {
   background: var(--surface-color) !important;
   border: 1.5px solid var(--border-color) !important;
   color: var(--text-color) !important;
@@ -712,12 +715,12 @@ body [class*="select" i] {
   transition: all 0.12s ease !important;
 }
 body select:hover:not(:disabled),
-body [class*="select" i]:hover:not(:disabled) {
+body [class*="select" i]:not([class*="flexlayout" i]):hover:not(:disabled) {
   background: var(--surface-hover) !important;
   border-color: var(--border-color) !important;
 }
 body select:focus,
-body [class*="select" i]:focus {
+body [class*="select" i]:not([class*="flexlayout" i]):focus {
   border-color: var(--primary-color) !important;
 }
 body select option {
