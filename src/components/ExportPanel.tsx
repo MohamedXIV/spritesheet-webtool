@@ -235,7 +235,7 @@ export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: E
         </button>
         <button
           onClick={handleExportJson}
-          className={`${styles.button} ${styles.secondary}`}
+          className={`${styles.button} accent`}
           disabled={!hasFrames}
         >
           Download JSON

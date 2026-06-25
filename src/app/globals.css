@@ -466,6 +466,8 @@ button[class*="open" i],
 button[class*="preset" i],
 button[class*="chip" i],
 button[class*="badge" i],
+button[class*="accent" i],
+button[class*="Accent" i],
 label[class*="toolbarButton" i],
 label[class*="load" i],
 label[class*="import" i],
@@ -491,6 +493,8 @@ button[class*="open" i]:hover:not(:disabled),
 button[class*="preset" i]:hover:not(:disabled),
 button[class*="chip" i]:hover:not(:disabled),
 button[class*="badge" i]:hover:not(:disabled),
+button[class*="accent" i]:hover:not(:disabled),
+button[class*="Accent" i]:hover:not(:disabled),
 label[class*="toolbarButton" i]:hover,
 label[class*="load" i]:hover,
 label[class*="import" i]:hover,
@@ -510,6 +514,8 @@ button[class*="open" i]:active:not(:disabled),
 button[class*="preset" i]:active:not(:disabled),
 button[class*="chip" i]:active:not(:disabled),
 button[class*="badge" i]:active:not(:disabled),
+button[class*="accent" i]:active:not(:disabled),
+button[class*="Accent" i]:active:not(:disabled),
 label[class*="toolbarButton" i]:active,
 label[class*="load" i]:active,
 label[class*="import" i]:active,
@@ -569,25 +575,27 @@ button[class*="reset" i]:active:not(:disabled) {
 /* ----------------------------------------------------
    4. SECONDARY / GENERAL / CANCEL BUTTONS
    ---------------------------------------------------- */
-button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]) {
-  border: 1.5px solid var(--border-color-muted) !important;
+button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]) {
+  border: 2px dashed var(--border-color) !important;
   background: var(--surface-color) !important;
-  color: var(--text-muted) !important;
+  color: var(--text-color) !important;
   border-radius: var(--radius-sm) !important;
-  font-weight: 550 !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
   box-shadow: none !important;
   transform: none !important;
 }
 
-button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):hover:not(:disabled) {
-  border-color: var(--border-color) !important;
+button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]):hover:not(:disabled) {
+  border: 2px solid var(--border-color) !important;
   color: var(--text-color) !important;
-  box-shadow: 2px 2px 0px var(--button-shadow-color) !important;
+  box-shadow: 2.5px 2.5px 0px var(--button-shadow-color) !important;
   background: var(--surface-hover) !important;
   transform: translate(-1px, -1px) !important;
 }
 
-button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):active:not(:disabled) {
+button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]):active:not(:disabled) {
   box-shadow: 1px 1px 0px var(--button-shadow-color) !important;
   transform: translate(1px, 1px) !important;
 }
