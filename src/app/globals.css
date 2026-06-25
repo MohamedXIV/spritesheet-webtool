@@ -576,7 +576,7 @@ button[class*="reset" i]:active:not(:disabled) {
    4. SECONDARY / GENERAL / CANCEL BUTTONS
    ---------------------------------------------------- */
 button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]) {
-  border: 1.5px solid var(--border-color-muted) !important;
+  border: 1.5px solid var(--border-color) !important;
   background: var(--surface-color) !important;
   color: var(--text-muted) !important;
   border-radius: var(--radius-sm) !important;
