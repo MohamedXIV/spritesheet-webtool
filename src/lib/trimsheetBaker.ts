@@ -57,11 +57,13 @@ export class TrimsheetBaker {
 
   /** Convert a normalized rect to integer pixel coordinates at current resolution. */
   private toPixelRect(rect: NormRect): { x: number; y: number; w: number; h: number } {
+    // Round edges (not size) so adjacent regions share an exact pixel boundary
+    // and leave no 1px fallback seam between them.
     const x = Math.round(rect.x * this.resolution);
     const y = Math.round(rect.y * this.resolution);
-    const w = Math.round(rect.w * this.resolution);
-    const h = Math.round(rect.h * this.resolution);
-    return { x, y, w, h };
+    const x2 = Math.round((rect.x + rect.w) * this.resolution);
+    const y2 = Math.round((rect.y + rect.h) * this.resolution);
+    return { x, y, w: x2 - x, h: y2 - y };
   }
 
   /** Resolve the bitmap for a channel, or null to use the solid fallback. */
@@ -108,8 +110,9 @@ export class TrimsheetBaker {
       // - One "tile" should span (rect size / scale) pixels, so scale>1 => more repeats.
       // - rotation rotates the pattern about the rect's top-left.
       // - offset shifts the pattern within the rect (fraction of rect size).
-      const tilePxW = px.w / scale;
-      const tilePxH = px.h / scale;
+      const safeScale = scale > 1e-6 ? scale : 1e-6;
+      const tilePxW = px.w / safeScale;
+      const tilePxH = px.h / safeScale;
       const sx = tilePxW / bitmap.width;
       const sy = tilePxH / bitmap.height;
 
@@ -183,11 +186,9 @@ export class TrimsheetBaker {
     files[`${safeName}.json`] = strToU8(JSON.stringify(meta, null, 2));
 
     // 3. Zip synchronously (small payloads) and wrap as a Blob.
+    // The Blob constructor copies the bytes, so no manual copy is needed.
     const zipped = zipSync(files, { level: 6 });
-    // Copy into a fresh ArrayBuffer so the Blob owns standalone memory.
-    const copy = new Uint8Array(zipped.length);
-    copy.set(zipped);
-    return new Blob([copy], { type: 'application/zip' });
+    return new Blob([zipped], { type: 'application/zip' });
   }
 
   dispose(): void {
