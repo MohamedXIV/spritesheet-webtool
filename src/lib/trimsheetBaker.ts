@@ -63,10 +63,18 @@ export class TrimsheetBaker {
     return { x, y, w, h };
   }
 
-  /** Composite one region into all five buffers (solid fallback for now). */
+  /** Resolve the bitmap for a channel, or null to use the solid fallback. */
+  private resolveMap(ch: MapChannel, material: TrimMaterial | null): ImageBitmap | null {
+    if (!material) return null;
+    return material.maps[ch];
+  }
+
+  /** Composite one region into all five buffers using tiled material maps. */
   compositeRegion(region: Region, material: TrimMaterial | null): void {
     const px = this.toPixelRect(region.rect);
     if (px.w <= 0 || px.h <= 0) return;
+
+    const { scale, offsetX, offsetY, rotation } = region.tiling;
 
     for (const ch of MAP_CHANNELS) {
       const ctx = this.ctxs[ch];
@@ -74,9 +82,46 @@ export class TrimsheetBaker {
       ctx.beginPath();
       ctx.rect(px.x, px.y, px.w, px.h);
       ctx.clip();
-      // Solid fallback fill (material/tiling added in a later task).
-      const albedoFlat = material?.flatColor;
-      ctx.fillStyle = ch === 'albedo' && albedoFlat ? albedoFlat : CHANNEL_FALLBACK[ch];
+
+      const bitmap = this.resolveMap(ch, material);
+
+      if (!bitmap) {
+        // Solid fallback (albedo honors flatColor).
+        const albedoFlat = material?.flatColor;
+        ctx.fillStyle = ch === 'albedo' && albedoFlat ? albedoFlat : CHANNEL_FALLBACK[ch];
+        ctx.fillRect(px.x, px.y, px.w, px.h);
+        ctx.restore();
+        continue;
+      }
+
+      // Build a repeating pattern from the bitmap.
+      const pattern = ctx.createPattern(bitmap, 'repeat');
+      if (!pattern) {
+        ctx.fillStyle = CHANNEL_FALLBACK[ch];
+        ctx.fillRect(px.x, px.y, px.w, px.h);
+        ctx.restore();
+        continue;
+      }
+
+      // Compute pattern transform:
+      // - One "tile" should span (rect size / scale) pixels, so scale>1 => more repeats.
+      // - rotation rotates the pattern about the rect's top-left.
+      // - offset shifts the pattern within the rect (fraction of rect size).
+      const tilePxW = px.w / scale;
+      const tilePxH = px.h / scale;
+      const sx = tilePxW / bitmap.width;
+      const sy = tilePxH / bitmap.height;
+
+      const m = new DOMMatrix();
+      // Move into the rect, apply offset (as fraction of rect size).
+      m.translateSelf(px.x + offsetX * px.w, px.y + offsetY * px.h);
+      if (rotation !== 0) {
+        m.rotateSelf(rotation); // degrees
+      }
+      m.scaleSelf(sx, sy);
+      pattern.setTransform(m);
+
+      ctx.fillStyle = pattern;
       ctx.fillRect(px.x, px.y, px.w, px.h);
       ctx.restore();
     }
