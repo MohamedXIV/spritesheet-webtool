@@ -1,0 +1,17 @@
+/* src/components/TrimsheetMenuBar.module.css */
+.menubar {
+  display: flex; align-items: center; gap: 8px;
+  height: 36px; padding: 0 10px;
+  background: var(--background-color, #1e1e1e);
+  border-bottom: 1px solid var(--border-color, #333);
+  font-size: 0.8rem;
+}
+.brand { font-weight: 700; margin-right: 12px; }
+.menuGroup { display: flex; gap: 4px; }
+.menuItem {
+  background: transparent; border: none; color: var(--text-color, #ddd);
+  padding: 4px 10px; cursor: pointer; border-radius: 4px; font: inherit;
+}
+.menuItem:hover { background: var(--border-color, #333); }
+.spacer { flex: 1; }
+.status { color: #888; font-size: 0.72rem; }
