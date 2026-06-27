@@ -10,10 +10,11 @@ export function useProjectSave(options: {
   setProjectId: (id: string) => void;
   projectName: string;
   setProjectName: (name: string) => void;
-  type: 'spritesheet' | 'pixelator' | '3d-painter';
+  type: 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet';
   frameState: FrameState | null;
   customFrames?: () => Promise<DbProjectFrame[]>; // Optional custom frames serializer
   threePainterOptions?: any; // Custom settings for 3D painter
+  trimsheetOptions?: any; // Custom settings blob for the trimsheet tool
   fps: number;
   loopMode: string;
   previewBgMode?: string;
@@ -67,6 +68,7 @@ export function useProjectSave(options: {
         pixelatorOptions: currentOpts.pixelatorOptions,
         slicerOptions: currentOpts.slicerOptions,
         threePainterOptions: currentOpts.threePainterOptions,
+        trimsheetOptions: currentOpts.trimsheetOptions,
         globalLayers: currentOpts.globalLayers,
       };
 
@@ -125,6 +127,7 @@ export function useProjectSave(options: {
         pixelatorOptions: currentOpts.pixelatorOptions,
         slicerOptions: currentOpts.slicerOptions,
         threePainterOptions: currentOpts.threePainterOptions,
+        trimsheetOptions: currentOpts.trimsheetOptions,
         globalLayers: currentOpts.globalLayers,
       };
 

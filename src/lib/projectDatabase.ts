@@ -50,6 +50,21 @@ export interface ProjectMetadata {
     opacity: number;
     blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
   }[];
+  trimsheetOptions?: {
+    resolution: number;
+    regions: any[];
+    materials: {
+      id: string;
+      name: string;
+      source: 'polyhaven' | 'upload' | 'flat';
+      flatColor?: string;
+      // Polyhaven: store asset id for re-fetch. Upload: store per-channel blobs.
+      polyhavenAssetId?: string;
+      uploadBlobs?: { channel: string; blob: Blob }[];
+      thumbnailUrl?: string;
+    }[];
+    enabledChannels: string[];
+  };
 }
 
 export interface DbProjectFrameLayer {
@@ -70,7 +85,7 @@ export interface DbProjectFrame {
 export interface DbProject {
   id: string;
   name: string;
-  type: 'spritesheet' | 'pixelator' | '3d-painter';
+  type: 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet';
   createdAt: number;
   updatedAt: number;
   metadata: ProjectMetadata;
@@ -80,7 +95,7 @@ export interface DbProject {
 export interface ProjectSummary {
   id: string;
   name: string;
-  type: 'spritesheet' | 'pixelator' | '3d-painter';
+  type: 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet';
   createdAt: number;
   updatedAt: number;
   frameCount: number;
