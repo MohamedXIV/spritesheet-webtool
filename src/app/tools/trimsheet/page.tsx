@@ -3,7 +3,7 @@
 
 /** Trimsheet Builder workspace - owns all state, assembles context, autosaves. */
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useProjectSave } from '@/hooks/useProjectSave';
 import {
   Region, TrimMaterial, TrimResolution, MapChannel, MAP_CHANNELS,
@@ -11,7 +11,7 @@ import {
 } from '@/lib/trimsheetTypes';
 import { TrimsheetBaker } from '@/lib/trimsheetBaker';
 import {
-  fetchPolyhavenIndex, PolyhavenAsset, disposeMaterial,
+  fetchPolyhavenIndex, PolyhavenAsset,
 } from '@/lib/trimsheetMaterials';
 import { TrimsheetProvider, TrimsheetContextValue } from '@/contexts/TrimsheetContext';
 import { TrimsheetDockLayout, TrimsheetDockLayoutRef } from '@/components/TrimsheetDockLayout';
@@ -200,7 +200,9 @@ export default function TrimsheetPage() {
 
   // --- Material operations ---
   const assignMaterialToRegion = useCallback((regionId: string, material: TrimMaterial) => {
-    setMaterials((prev) => (prev.some((m) => m.id === material.id) ? prev : [...prev, material]));
+    setMaterials((prev) => (prev.some((m) => m.id === material.id)
+      ? prev.map((m) => (m.id === material.id ? material : m))
+      : [...prev, material]));
     materialsRef.current.set(material.id, material);
     setRegions((prev) => {
       const next = prev.map((r) => (r.id === regionId ? { ...r, materialId: material.id } : r));
@@ -271,32 +273,6 @@ export default function TrimsheetPage() {
   }, [visiblePanels]);
   const resetLayout = useCallback(() => dockRef.current?.resetLayout(), []);
 
-  // --- Save (serialize material descriptors, not bitmaps directly) ---
-  const buildTrimsheetOptions = useCallback(async () => {
-    const matDescriptors = await Promise.all(materials.map(async (m) => {
-      if (m.source === 'upload') {
-        const blobs: { channel: string; blob: Blob }[] = [];
-        for (const ch of MAP_CHANNELS) {
-          const bmp = m.maps[ch];
-          if (!bmp) continue;
-          const c = new OffscreenCanvas(bmp.width, bmp.height);
-          c.getContext('2d')!.drawImage(bmp, 0, 0);
-          blobs.push({ channel: ch, blob: await c.convertToBlob({ type: 'image/png' }) });
-        }
-        return { id: m.id, name: m.name, source: m.source, uploadBlobs: blobs };
-      }
-      // polyhaven or flat
-      return {
-        id: m.id, name: m.name, source: m.source,
-        flatColor: m.flatColor, thumbnailUrl: m.thumbnailUrl,
-        // For polyhaven we re-fetch on load by name match; store thumbnail for display.
-      };
-    }));
-    return {
-      resolution, regions, materials: matDescriptors, enabledChannels,
-    };
-  }, [materials, regions, resolution, enabledChannels]);
-
   const trimsheetOptions = useMemo(() => ({ resolution, regions }), [resolution, regions]);
 
   const { triggerSave, triggerSaveAs } = useProjectSave({
@@ -309,12 +285,11 @@ export default function TrimsheetPage() {
     markSaved: () => setIsDirty(false),
   });
 
-  // Save wrapper that injects the full async-built options blob.
+  // Save wrapper. Persisted contract is { resolution, regions } via the
+  // trimsheetOptions memo; full material persistence is deferred.
   const doSave = useCallback(async (customName?: string) => {
-    // buildTrimsheetOptions is async; persist via the hook after refreshing metadata.
-    await buildTrimsheetOptions(); // ensures upload blobs are encoded before save
     await triggerSave(customName);
-  }, [buildTrimsheetOptions, triggerSave]);
+  }, [triggerSave]);
 
   const contextValue: TrimsheetContextValue = {
     baker: bakerRef.current,
