@@ -13,6 +13,7 @@ import {
   TrimMaterial,
   CHANNEL_FALLBACK,
 } from './trimsheetTypes';
+import { zipSync, strToU8 } from 'fflate';
 
 type Ctx2D = OffscreenCanvasRenderingContext2D;
 
@@ -144,6 +145,49 @@ export class TrimsheetBaker {
 
   getChannel(ch: MapChannel): OffscreenCanvas {
     return this.buffers[ch];
+  }
+
+  /**
+   * Export enabled channels as PNGs plus a region JSON, bundled into one zip.
+   * @param regions current regions (for the JSON sidecar)
+   * @param enabledChannels which map PNGs to include
+   * @param projectName used for file naming inside the zip
+   */
+  async export(
+    regions: Region[],
+    enabledChannels: MapChannel[],
+    projectName: string,
+  ): Promise<Blob> {
+    const safeName = (projectName || 'trimsheet').replace(/[^a-z0-9_-]+/gi, '_');
+    const files: Record<string, Uint8Array> = {};
+
+    // 1. Encode each enabled channel buffer to PNG bytes.
+    for (const ch of enabledChannels) {
+      const blob = await this.buffers[ch].convertToBlob({ type: 'image/png' });
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      files[`${safeName}_${ch}.png`] = bytes;
+    }
+
+    // 2. Build the region metadata JSON (resolution-independent).
+    const meta = {
+      version: 1,
+      resolution: this.resolution,
+      channels: enabledChannels,
+      regions: regions.map((r) => ({
+        name: r.name,
+        rect: r.rect,                 // normalized 0..1
+        materialId: r.materialId,
+        tiling: r.tiling,
+      })),
+    };
+    files[`${safeName}.json`] = strToU8(JSON.stringify(meta, null, 2));
+
+    // 3. Zip synchronously (small payloads) and wrap as a Blob.
+    const zipped = zipSync(files, { level: 6 });
+    // Copy into a fresh ArrayBuffer so the Blob owns standalone memory.
+    const copy = new Uint8Array(zipped.length);
+    copy.set(zipped);
+    return new Blob([copy], { type: 'application/zip' });
   }
 
   dispose(): void {
