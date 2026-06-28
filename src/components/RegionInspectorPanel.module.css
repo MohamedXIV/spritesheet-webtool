@@ -1,0 +1,10 @@
+/* src/components/RegionInspectorPanel.module.css */
+.panel { padding: 10px; display: flex; flex-direction: column; gap: 12px; font-size: 0.8rem; }
+.empty { opacity: 0.5; padding: 20px; text-align: center; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 0.68rem; text-transform: uppercase; opacity: 0.7; }
+.row { display: flex; align-items: center; gap: 8px; }
+.row input[type="range"] { flex: 1; }
+.val { width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+.btn { background: var(--border-color,#444); color:#fff; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font:inherit; font-size:0.74rem; }
+.select { background: var(--background-color,#1e1e1e); color: inherit; border: 1px solid var(--border-color,#444); padding: 4px; border-radius: 4px; }
