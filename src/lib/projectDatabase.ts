@@ -53,7 +53,8 @@ export interface ProjectMetadata {
   trimsheetOptions?: {
     resolution: number;
     regions: any[];
-    materials: {
+    // Material persistence is deferred; only resolution + regions are written today.
+    materials?: {
       id: string;
       name: string;
       source: 'polyhaven' | 'upload' | 'flat';
@@ -63,7 +64,7 @@ export interface ProjectMetadata {
       uploadBlobs?: { channel: string; blob: Blob }[];
       thumbnailUrl?: string;
     }[];
-    enabledChannels: string[];
+    enabledChannels?: string[];
   };
 }
 

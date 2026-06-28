@@ -305,7 +305,7 @@ export default function Home() {
                               : styles.badge3d
                         }`}
                       >
-                        {isSpritesheet ? '🎬 Spritesheet' : isPixelator ? '👾 Pixelator' : '📦 3D Painter'}
+                        {isSpritesheet ? '🎬 Spritesheet' : isPixelator ? '👾 Pixelator' : isTrimsheet ? '🧱 Trimsheet' : '📦 3D Painter'}
                       </span>
                       <div className={styles.projectActions}>
                         <button 
@@ -379,8 +379,8 @@ export default function Home() {
                         <strong>{formatDate(proj.updatedAt)}</strong>
                       </div>
                       <div className={styles.projectMetaRow}>
-                        <span>{isThreePainter ? 'Layers Count:' : 'Frames Count:'}</span>
-                        <strong>{proj.frameCount} {isThreePainter ? 'layers' : 'frames'}</strong>
+                        <span>{isThreePainter ? 'Layers Count:' : isTrimsheet ? 'Regions Count:' : 'Frames Count:'}</span>
+                        <strong>{proj.frameCount} {isThreePainter ? 'layers' : isTrimsheet ? 'regions' : 'frames'}</strong>
                       </div>
                     </div>
 
