@@ -8,11 +8,11 @@ import styles from './ChangelogDrawer.module.css';
 interface ChangelogDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  initialFilter?: 'All' | 'spritesheet' | 'pixelator' | '3d-painter';
+  initialFilter?: 'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet';
 }
 
 export default function ChangelogDrawer({ isOpen, onClose, initialFilter = 'All' }: ChangelogDrawerProps) {
-  const [activeFilter, setActiveFilter] = useState<'All' | 'spritesheet' | 'pixelator' | '3d-painter'>('All');
+  const [activeFilter, setActiveFilter] = useState<'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet'>('All');
 
   // Sync initial filter when drawer opens
   useEffect(() => {

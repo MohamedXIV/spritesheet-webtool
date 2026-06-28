@@ -6,12 +6,24 @@ export interface ChangelogItem {
 export interface ChangelogVersion {
   version: string;
   date: string;
-  toolScope: 'All' | 'spritesheet' | 'pixelator' | '3d-painter';
+  toolScope: 'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet';
   toolName: string;
   items: ChangelogItem[];
 }
 
 export const changelogData: ChangelogVersion[] = [
+  {
+    version: '0.9.0-beta',
+    date: '2026-06-28',
+    toolScope: 'trimsheet',
+    toolName: 'Trimsheet Builder',
+    items: [
+      { category: 'Added', detail: 'New Trimsheet Builder tool: grid + freeform region layout on a square canvas.' },
+      { category: 'Added', detail: 'PBR material assignment per region from Polyhaven library or custom texture upload.' },
+      { category: 'Added', detail: 'Per-region tiling controls: scale, offset, and 90-degree rotation.' },
+      { category: 'Added', detail: 'Export of albedo, normal, roughness, metalness, and AO maps plus a region JSON, bundled as a .zip.' }
+    ]
+  },
   {
     version: '0.8.2-beta',
     date: '2026-05-29',

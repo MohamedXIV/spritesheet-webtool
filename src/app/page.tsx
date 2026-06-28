@@ -16,7 +16,7 @@ export default function Home() {
   
   // Interactive Changelog Drawer States
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
-  const [changelogFilter, setChangelogFilter] = useState<'All' | 'spritesheet' | 'pixelator' | '3d-painter'>('All');
+  const [changelogFilter, setChangelogFilter] = useState<'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet'>('All');
 
   // Fetch projects from IndexedDB on mount
   const loadProjects = async () => {
@@ -73,7 +73,7 @@ export default function Home() {
     });
   };
 
-  const openChangelog = (filter: 'All' | 'spritesheet' | 'pixelator' | '3d-painter') => {
+  const openChangelog = (filter: 'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet') => {
     setChangelogFilter(filter);
     setIsChangelogOpen(true);
   };
@@ -231,6 +231,37 @@ export default function Home() {
               Launch 3D Pixel-Painter
             </Link>
           </div>
+
+          <div className={styles.toolCard}>
+            <div className={styles.toolHeader}>
+              <div className={styles.toolIcon}>🧱</div>
+              <span className={styles.toolBadge}>v0.9.0-beta</span>
+            </div>
+            <div className={styles.toolTitleRow}>
+              <h2 className={styles.toolTitle}>Trimsheet Builder</h2>
+              <button
+                onClick={() => openChangelog('trimsheet')}
+                className={styles.toolChangelogBtn}
+                title="View tool updates history"
+              >
+                <Clock size={12} />
+              </button>
+            </div>
+            <p className={styles.toolDesc}>
+              Lay out named regions on a square trimsheet, drop Polyhaven or your own PBR materials
+              onto each region with per-region tiling, and export engine-ready albedo, normal,
+              roughness, metalness, and AO maps plus a region JSON.
+            </p>
+            <ul className={styles.toolFeatures}>
+              <li>► Grid + freeform region layout</li>
+              <li>► Polyhaven library + custom texture upload</li>
+              <li>► Per-region tiling: scale, offset, rotation</li>
+              <li>► Exports 5 PBR maps + region JSON as .zip</li>
+            </ul>
+            <Link href="/tools/trimsheet" className={styles.toolCta}>
+              Launch Trimsheet Builder
+            </Link>
+          </div>
         </section>
 
         {/* Recent Local Projects Dashboard Section */}
@@ -254,11 +285,13 @@ export default function Home() {
                 const isSpritesheet = proj.type === 'spritesheet';
                 const isPixelator = proj.type === 'pixelator';
                 const isThreePainter = proj.type === '3d-painter';
+                const isTrimsheet = proj.type === 'trimsheet';
 
                 let targetLink = '';
                 if (isSpritesheet) targetLink = `/tools/video-to-spritesheet?project=${proj.id}`;
                 else if (isPixelator) targetLink = `/tools/pixelator?project=${proj.id}`;
                 else if (isThreePainter) targetLink = `/tools/3d-pixelator?project=${proj.id}`;
+                else if (isTrimsheet) targetLink = `/tools/trimsheet?project=${proj.id}`;
 
                 return (
                   <div key={proj.id} className={styles.projectCard}>
