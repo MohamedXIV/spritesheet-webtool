@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useProjectSave } from '@/hooks/useProjectSave';
+import { getProject } from '@/lib/projectDatabase';
 import {
   Region, TrimMaterial, TrimResolution, MapChannel, MAP_CHANNELS,
   NormRect, DEFAULT_TILING, makeRegionId,
@@ -51,6 +52,42 @@ export default function TrimsheetPage() {
     bakerRef.current = new TrimsheetBaker(1024);
     setBakeVersion((v) => v + 1);
     return () => { bakerRef.current?.dispose(); bakerRef.current = null; };
+  }, []);
+
+  // Load an existing project if ?project=<id> is present.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('project');
+    if (!id) return;
+    let active = true;
+    (async () => {
+      try {
+        const proj = await getProject(id);
+        if (!active || !proj) return;
+        const opts = proj.metadata?.trimsheetOptions;
+        setProjectId(proj.id);
+        setProjectName(proj.name);
+        if (opts) {
+          const res = (opts.resolution ?? 1024) as TrimResolution;
+          setResolutionState(res);
+          // Ensure the baker matches the loaded resolution before compositing.
+          if (bakerRef.current) {
+            bakerRef.current.setResolution(res, [], materialsRef.current);
+          }
+          const loadedRegions: Region[] = Array.isArray(opts.regions) ? opts.regions : [];
+          setRegions(loadedRegions);
+          // Re-composite each region (materials best-effort; empty => fallback fills).
+          loadedRegions.forEach((r) => {
+            const mat = r.materialId ? materialsRef.current.get(r.materialId) ?? null : null;
+            bakerRef.current?.compositeRegion(r, mat);
+          });
+          setBakeVersion((v) => v + 1);
+        }
+      } catch (err) {
+        console.error('Failed to load trimsheet project:', err);
+      }
+    })();
+    return () => { active = false; };
   }, []);
 
   // Fetch Polyhaven index once.
