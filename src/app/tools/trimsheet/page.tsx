@@ -20,7 +20,7 @@ import { TrimsheetMenuBar } from '@/components/TrimsheetMenuBar';
 import styles from './page.module.css';
 
 export default function TrimsheetPage() {
-  const [projectId, setProjectId] = useState<string>(`trimsheet-${Date.now()}`);
+  const [projectId, setProjectId] = useState<string>('');
   const [projectName, setProjectName] = useState<string>('Untitled Trimsheet');
   const [isDirty, setIsDirty] = useState(false);
 
@@ -89,6 +89,14 @@ export default function TrimsheetPage() {
     })();
     return () => { active = false; };
   }, []);
+
+  // Generate a fresh project id for brand-new projects (no ?project= to load).
+  useEffect(() => {
+    const hasProjectParam = new URLSearchParams(window.location.search).get('project');
+    if (!hasProjectParam && !projectId) {
+      setProjectId(`trimsheet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`);
+    }
+  }, [projectId]);
 
   // Fetch Polyhaven index once.
   useEffect(() => {
