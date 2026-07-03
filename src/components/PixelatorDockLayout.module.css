@@ -4,7 +4,7 @@
   height: 100%;
   width: 100%;
   position: relative;
-  background-color: #0d0d15;
+  background-color: var(--background-color);
 }
 
 .layoutWrapper {
@@ -21,7 +21,7 @@
   width: 100%;
   position: relative;
   overflow: hidden;
-  background-color: #12121e;
+  background-color: var(--surface-color);
 }
 
 .placeholder {
@@ -32,8 +32,8 @@
   height: 100%;
   width: 100%;
   padding: 32px;
-  background: radial-gradient(circle at center, rgba(139, 92, 246, 0.05) 0%, transparent 70%);
-  color: #64748b;
+  background: radial-gradient(circle at center, var(--primary-color-alpha) 0%, transparent 70%);
+  color: var(--text-muted);
   text-align: center;
 }
 
@@ -46,8 +46,7 @@
 }
 
 .placeholderIcon {
-  color: #475569;
-  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.1));
+  color: var(--text-muted);
 }
 
 .placeholderContent p {
@@ -61,7 +60,7 @@
   justify-content: center;
   height: 100%;
   width: 100%;
-  color: #8b5cf6;
+  color: var(--primary-color);
   font-size: 0.9rem;
-  background-color: #0d0d15;
+  background-color: var(--background-color);
 }

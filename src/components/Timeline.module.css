@@ -4,10 +4,10 @@
   height: 100%;
   gap: 12px;
   padding: 12px;
-  background: rgba(26, 26, 46, 0.2);
+  background: rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(12px);
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color-muted);
 }
 
 .header {
@@ -23,7 +23,7 @@
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--text-color, #e5e7eb);
+  color: var(--text-color);
   letter-spacing: 0.02em;
 }
 
@@ -39,16 +39,16 @@
   font-size: 0.72rem;
   font-weight: 500;
   padding: 2px 8px;
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  color: var(--primary-light, #a5b4fc);
+  background: var(--primary-color-alpha);
+  border: 1px solid var(--primary-color-alpha);
+  color: var(--primary-color);
   border-radius: 10px;
 }
 
 .mutedBadge {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
-  color: var(--text-muted, #9ca3af);
+  background: var(--border-color-muted);
+  border-color: var(--border-color-muted);
+  color: var(--text-muted);
 }
 
 .fpsControl {
@@ -60,16 +60,16 @@
 .fpsLabel {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
 }
 
 .fpsInput {
   width: 48px;
   padding: 3px 6px;
   background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--border-color, #4a5568);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
-  color: #fff;
+  color: var(--text-color);
   font-size: 0.78rem;
   text-align: center;
   outline: none;
@@ -77,12 +77,12 @@
 }
 
 .fpsInput:focus {
-  border-color: var(--primary-color, #6366f1);
+  border-color: var(--primary-color);
 }
 
 .slider {
   width: 90px;
-  accent-color: var(--primary-color, #6366f1);
+  accent-color: var(--primary-color);
   cursor: pointer;
 }
 
@@ -101,7 +101,7 @@
   width: 100%;
   height: 32px;
   background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color-muted);
   border-radius: 8px;
   overflow: visible;
   cursor: ew-resize;
@@ -131,8 +131,8 @@
     rgba(0, 0, 0, 0.2) 6px,
     rgba(255, 255, 255, 0.02) 6px,
     rgba(255, 255, 255, 0.02) 12px
-  ) !important;
-  border-bottom: 3px dashed rgba(255, 255, 255, 0.15) !important;
+  );
+  border-bottom: 3px dashed var(--border-color-muted);
   opacity: 0.5;
 }
 
@@ -167,7 +167,7 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
   font-size: 0.75rem;
   font-style: italic;
 }
@@ -212,7 +212,7 @@
 .frameInfo {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
   text-align: right;
   margin-top: 6px;
 }
@@ -222,9 +222,9 @@
   position: absolute;
   bottom: 100%;
   transform: translate(-50%, -8px);
-  background: rgba(15, 15, 27, 0.95);
+  background: var(--surface-color);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color-muted);
   border-radius: 8px;
   padding: 8px;
   display: flex;
@@ -253,7 +253,7 @@
   object-fit: contain;
   background: rgba(0, 0, 0, 0.4);
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color-muted);
   flex-shrink: 0;
 }
 
@@ -268,7 +268,7 @@
 .tooltipFolder {
   font-size: 0.75rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-color);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -288,20 +288,20 @@
 
 .tooltipFrameIndex {
   font-size: 0.74rem;
-  color: #e5e7eb;
+  color: var(--text-color);
   font-weight: 500;
 }
 
 .tooltipTimestamp {
   font-size: 0.65rem;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
 }
 
 .tooltipMutedBadge {
   font-size: 0.62rem;
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: var(--warning-color);
+  background: color-mix(in srgb, var(--warning-color) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning-color) 20%, transparent);
   padding: 1px 6px;
   border-radius: 4px;
   font-weight: 500;
@@ -328,14 +328,14 @@
 .loopLabel {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
 }
 
 .loopSelect {
   background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--border-color, #4a5568);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  color: #fff;
+  color: var(--text-color);
   font-size: 0.76rem;
   padding: 4px 10px;
   outline: none;
@@ -344,7 +344,7 @@
 }
 
 .loopSelect:hover {
-  border-color: var(--primary-color, #6366f1);
+  border-color: var(--primary-color);
   background: rgba(0, 0, 0, 0.55);
 }
 
@@ -361,7 +361,7 @@
 
 .statLabel {
   font-size: 0.68rem;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   font-weight: 600;
@@ -370,5 +370,5 @@
 .statValue {
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--text-color, #e5e7eb);
+  color: var(--text-color);
 }

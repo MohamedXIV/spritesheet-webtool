@@ -40,7 +40,7 @@
 
 .tab.active {
   background: var(--primary-color, #6366f1);
-  color: white;
+  color: var(--primary-foreground);
 }
 
 .tab:disabled {
@@ -172,7 +172,7 @@
   border: none;
   border-radius: 8px;
   background: var(--primary-color, #6366f1);
-  color: white;
+  color: var(--primary-foreground);
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;

@@ -56,46 +56,46 @@
 .controlButton {
   width: 36px;
   height: 36px;
-  border: 2px solid var(--border-color) !important;
-  border-radius: var(--radius-sm) !important;
-  background: var(--surface-color) !important;
-  color: var(--text-color) !important;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--surface-color);
+  color: var(--text-color);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.1s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 2px 2px 0px var(--button-shadow-color) !important;
-  padding: 0 !important;
-  transform: none !important;
+  box-shadow: 2px 2px 0px var(--button-shadow-color);
+  padding: 0;
+  transform: none;
 }
 
 .controlButton:hover:not(:disabled) {
-  background: var(--surface-hover) !important;
-  transform: translate(-1px, -1px) !important;
-  box-shadow: 3px 3px 0px var(--button-shadow-color) !important;
+  background: var(--surface-hover);
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--button-shadow-color);
 }
 
 .controlButton:active:not(:disabled) {
-  transform: translate(1px, 1px) !important;
-  box-shadow: 1px 1px 0px var(--button-shadow-color) !important;
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px var(--button-shadow-color);
 }
 
 .controlButton:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-  box-shadow: none !important;
-  transform: none !important;
+  box-shadow: none;
+  transform: none;
 }
 
 .playButton {
   width: 44px;
   height: 44px;
-  background: var(--primary-color) !important;
-  border-color: var(--border-color) !important;
-  color: #FFFFFF !important;
-  border-radius: var(--radius-sm) !important;
+  background: var(--primary-color);
+  border-color: var(--border-color);
+  color: var(--primary-foreground);
+  border-radius: var(--radius-sm);
   font-size: 1rem;
 }
 
@@ -116,9 +116,9 @@
   right: 8px;
   padding: 4px 8px;
   background: rgba(0, 0, 0, 0.6);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   font-size: 0.9rem;
-  color: var(--primary-color, #6366f1);
+  color: var(--primary-color);
 }
 
 .bgToggle {
@@ -144,17 +144,17 @@
   position: absolute;
   top: 44px;
   left: 8px;
-  background: rgba(15, 15, 26, 0.95);
+  background: var(--surface-color);
   backdrop-filter: blur(12px);
-  border: 1px solid var(--border-color, #4a5568);
-  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   z-index: 10;
   min-width: 220px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-md);
 }
 
 .settingsSection {
@@ -167,10 +167,10 @@
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--primary-color, #6366f1);
+  color: var(--primary-color);
   letter-spacing: 0.05em;
   margin-bottom: 2px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-color-muted);
   padding-bottom: 4px;
 }
 
@@ -186,7 +186,7 @@
 
 .toggleLabel {
   font-size: 0.82rem;
-  color: var(--text-color, #e5e7eb);
+  color: var(--text-color);
   display: flex;
   flex-direction: column;
   text-align: left;
@@ -194,7 +194,7 @@
 
 .toggleDesc {
   font-size: 0.68rem;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
   line-height: 1.25;
 }
 
@@ -219,7 +219,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #3f3f46;
+  background-color: var(--surface-color);
   transition: .2s;
   border-radius: 20px;
 }
@@ -237,7 +237,7 @@
 }
 
 .switch input:checked + .sliderRound {
-  background-color: var(--primary-color, #6366f1);
+  background-color: var(--primary-color);
 }
 
 .switch input:checked + .sliderRound:before {
@@ -252,9 +252,9 @@
 .bgOption {
   padding: 6px 10px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   background: transparent;
-  color: var(--text-color, #e5e7eb);
+  color: var(--text-color);
   font-size: 0.8rem;
   text-align: left;
   cursor: pointer;
@@ -262,12 +262,12 @@
 }
 
 .bgOption:hover {
-  background: var(--surface-hover, #252542);
+  background: var(--surface-hover);
 }
 
 .bgOption.active {
-  background: var(--primary-color, #6366f1);
-  color: white;
+  background: var(--primary-color);
+  color: var(--primary-foreground);
 }
 
 .bgColorPicker {
@@ -287,14 +287,14 @@
   padding: 4px 8px;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(4px);
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   font-size: 0.72rem;
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--text-color, #e5e7eb);
+  color: var(--text-color);
   pointer-events: none;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color-muted);
   user-select: none;
 }
 
@@ -310,11 +310,11 @@
 }
 
 .statusDot.sleep {
-  background: #f59e0b; /* amber-500 */
-  box-shadow: 0 0 8px #f59e0b;
+  background: var(--warning-color); /* amber-500 */
+  box-shadow: 0 0 8px var(--warning-color);
 }
 
 .statusDot.disabled {
-  background: #ef4444; /* red-500 */
-  box-shadow: 0 0 8px #ef4444;
+  background: var(--danger-color); /* red-500 */
+  box-shadow: 0 0 8px var(--danger-color);
 }

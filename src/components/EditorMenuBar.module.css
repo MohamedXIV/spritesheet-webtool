@@ -3,8 +3,8 @@
   align-items: center;
   height: 44px;
   padding: 0 16px;
-  background-color: var(--background-color, #0B0B0F);
-  border-bottom: 2px solid var(--border-color, #2E2E38);
+  background-color: var(--background-color);
+  border-bottom: 2px solid var(--border-color);
   gap: 8px;
   user-select: none;
   font-family: var(--font-family);
@@ -24,7 +24,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-color, #F4F4F9);
+  color: var(--text-color);
   transition: all 0.2s ease;
 }
 
@@ -33,14 +33,14 @@
   gap: 8px;
   padding-left: 0;
   padding-right: 16px;
-  color: var(--primary-color, #CCFF00);
+  color: var(--primary-color);
   letter-spacing: 0.08em;
 }
 
 .menuTrigger:hover,
 .menuTriggerActive {
-  background-color: var(--surface-hover, #21212B);
-  color: var(--primary-color, #CCFF00);
+  background-color: var(--surface-hover);
+  color: var(--primary-color);
 }
 
 .dropdown {
@@ -48,10 +48,10 @@
   top: 100%;
   left: 0;
   min-width: 230px;
-  background-color: var(--surface-color, #16161E);
-  border: 2px solid var(--border-color, #2E2E38);
-  border-radius: var(--radius-md, 12px);
-  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.5);
+  background-color: var(--surface-color);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
   padding: 6px;
   z-index: 1000;
   margin-top: 6px;
@@ -68,7 +68,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--text-color, #F4F4F9);
+  color: var(--text-color);
   transition: all 0.15s ease;
   border: none;
   background: transparent;
@@ -79,8 +79,8 @@
 }
 
 .item:hover {
-  background-color: var(--primary-color, #CCFF00);
-  color: #0B0B0F !important;
+  background-color: var(--primary-color);
+  color: var(--background-color);
 }
 
 .itemDisabled {
@@ -90,7 +90,7 @@
 
 .separator {
   height: 2px;
-  background-color: var(--border-color, #2E2E38);
+  background-color: var(--border-color);
   margin: 6px 0;
 }
 
@@ -118,7 +118,7 @@
 }
 
 .dirtyDot {
-  color: var(--warning-color, #FED639);
+  color: var(--warning-color);
   font-size: 0.65rem;
   margin-left: 6px;
   filter: drop-shadow(0 0 4px rgba(254, 214, 57, 0.6));
@@ -133,6 +133,6 @@
 .item:disabled {
   opacity: 0.35;
   cursor: not-allowed;
-  background-color: transparent !important;
-  color: var(--text-muted, #A0A0B0) !important;
+  background-color: transparent;
+  color: var(--text-muted);
 }

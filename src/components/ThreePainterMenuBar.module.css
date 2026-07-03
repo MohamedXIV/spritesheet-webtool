@@ -40,14 +40,14 @@
 
 .badge {
   background: var(--primary-color, #CCFF00);
-  color: #0B0B0F;
+  color: var(--background-color);
   font-size: 0.65rem;
   font-weight: 700;
   text-transform: uppercase;
   padding: 3px 8px;
   border-radius: var(--radius-sm, 6px);
   letter-spacing: 0.5px;
-  border: 1.5px solid #0B0B0F;
+  border: 1.5px solid var(--background-color);
   box-shadow: 2px 2px 0px var(--accent-color, #00F0FF);
 }
 

@@ -3,7 +3,7 @@
   flex-direction: column;
   gap: 16px;
   padding: 16px;
-  background: var(--surface-color, #1a1a2e);
+  background: var(--surface-color);
   border-radius: 12px;
 }
 
@@ -11,7 +11,7 @@
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--text-color, #e5e7eb);
+  color: var(--text-color);
 }
 
 /* Preview Section */
@@ -20,7 +20,7 @@
   align-items: center;
   justify-content: center;
   min-height: 120px;
-  background: var(--background-color, #0f0f1a);
+  background: var(--background-color);
   border-radius: 8px;
   overflow: hidden;
   position: relative;
@@ -33,7 +33,7 @@
 }
 
 .noPreview {
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
   font-size: 0.85rem;
   text-align: center;
 }
@@ -53,7 +53,7 @@
 
 .label {
   font-size: 0.85rem;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
 }
 
 .slider {
@@ -61,7 +61,7 @@
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: var(--border-color, #4a5568);
+  background: var(--border-color);
   border-radius: 3px;
   outline: none;
   cursor: pointer;
@@ -72,7 +72,7 @@
   appearance: none;
   width: 16px;
   height: 16px;
-  background: var(--primary-color, #6366f1);
+  background: var(--primary-color);
   border-radius: 50%;
   cursor: pointer;
 }
@@ -86,24 +86,24 @@
   width: 60px;
   height: 36px;
   padding: 0;
-  border: 2px solid var(--border-color, #4a5568);
+  border: 2px solid var(--border-color);
   border-radius: 6px;
   cursor: pointer;
 }
 
 .select {
   padding: 8px 12px;
-  border: 1px solid var(--border-color, #4a5568);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  background: var(--background-color, #0f0f1a);
-  color: var(--text-color, #e5e7eb);
+  background: var(--background-color);
+  color: var(--text-color);
   font-size: 0.85rem;
   cursor: pointer;
 }
 
 .select:focus {
   outline: none;
-  border-color: var(--primary-color, #6366f1);
+  border-color: var(--primary-color);
 }
 
 .select:disabled {
@@ -117,13 +117,13 @@
   align-items: center;
   gap: 8px;
   font-size: 0.85rem;
-  color: var(--text-color, #e5e7eb);
+  color: var(--text-color);
 }
 
 .checkboxRow input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: var(--primary-color, #6366f1);
+  accent-color: var(--primary-color);
   cursor: pointer;
 }
 
@@ -136,8 +136,8 @@
   padding: 12px 16px;
   border: none;
   border-radius: 8px;
-  background: var(--primary-color, #6366f1);
-  color: white;
+  background: var(--primary-color);
+  color: var(--primary-foreground);
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
@@ -145,7 +145,7 @@
 }
 
 .applyButton:hover:not(:disabled) {
-  background: var(--primary-hover, #4f46e5);
+  background: var(--primary-hover);
 }
 
 .applyButton:disabled {
@@ -155,6 +155,6 @@
 
 .hint {
   font-size: 0.75rem;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
   text-align: center;
 }

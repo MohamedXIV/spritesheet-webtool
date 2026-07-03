@@ -6,8 +6,23 @@
 .row { display: flex; align-items: center; gap: 8px; }
 .row input[type="range"] { flex: 1; }
 .val { width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
-.btn { background: var(--border-color,#444); color:#fff; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font:inherit; font-size:0.74rem; }
-.select { background: var(--background-color,#1e1e1e); color: inherit; border: 1px solid var(--border-color,#444); padding: 4px; border-radius: 4px; }
+.btn {
+  background: var(--border-color);
+  color: var(--primary-foreground);
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.74rem;
+}
+.select {
+  background: var(--background-color);
+  color: inherit;
+  border: 1px solid var(--border-color);
+  padding: 4px;
+  border-radius: 4px;
+}
 
 .mapChannelsList {
   display: flex;
@@ -20,19 +35,19 @@
   font-weight: 700;
   padding: 1px 4px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.03);
+  background: var(--surface-hover);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color-muted);
   text-transform: uppercase;
 }
 .channelBadgeActive {
-  background: rgba(124, 58, 237, 0.12);
-  color: #c084fc;
-  border-color: rgba(168, 85, 247, 0.35);
+  background: var(--primary-color-alpha);
+  color: var(--primary-color);
+  border-color: var(--primary-color-alpha);
 }
 .seamlessInfo {
   font-size: 0.68rem;
-  color: #a1a1aa;
+  color: var(--text-muted);
   margin-top: 4px;
   font-weight: 500;
 }

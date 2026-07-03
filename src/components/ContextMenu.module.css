@@ -82,7 +82,7 @@
 
 .dangerItem:hover:not(:disabled) {
   background: var(--danger-color) !important;
-  color: #FFFFFF !important;
+  color: var(--primary-foreground) !important;
   text-shadow: none !important;
 }
 

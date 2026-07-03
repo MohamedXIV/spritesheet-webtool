@@ -2,8 +2,8 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--bg-deep, #0c0c10);
-  color: var(--fg-primary, #e4e4e7);
+  background: var(--background-color);
+  color: var(--text-color);
   font-family: var(--font-sans, sans-serif);
   padding: 12px;
   overflow: hidden;
@@ -15,7 +15,7 @@
   align-items: center;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-color-muted);
 }
 
 .title {
@@ -23,15 +23,15 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--fg-secondary, #a1a1aa);
+  color: var(--text-muted);
 }
 
 .addButton {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: linear-gradient(135deg, #8b5cf6, #6366f1);
-  color: white;
+  background: var(--primary-color);
+  color: var(--primary-foreground);
   border: none;
   padding: 5px 10px;
   border-radius: 4px;
@@ -47,8 +47,8 @@
 }
 
 .addButton:disabled {
-  background: #27272a;
-  color: #71717a;
+  background: var(--surface-hover);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
@@ -65,7 +65,7 @@
   justify-content: center;
   align-items: center;
   height: 100px;
-  color: #71717a;
+  color: var(--text-muted);
   font-size: 11px;
   text-align: center;
 }
@@ -73,8 +73,8 @@
 .layerRow {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: var(--surface-hover);
+  border: 1px solid var(--border-color-muted);
   border-radius: 6px;
   padding: 6px 8px;
   gap: 8px;
@@ -83,19 +83,19 @@
 }
 
 .layerRow:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: var(--surface-hover);
+  border-color: var(--border-color);
 }
 
 .activeRow {
-  background: rgba(139, 92, 246, 0.08);
-  border-color: rgba(139, 92, 246, 0.3);
+  background: var(--primary-color-alpha);
+  border-color: var(--primary-color);
 }
 
 .iconButton {
   background: transparent;
   border: none;
-  color: #a1a1aa;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
@@ -106,8 +106,8 @@
 }
 
 .iconButton:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: white;
+  background: var(--border-color-muted);
+  color: var(--primary-foreground);
 }
 
 .visibleIcon {
@@ -115,7 +115,7 @@
 }
 
 .hiddenIcon {
-  color: #ef4444;
+  color: var(--danger-color);
 }
 
 .nameContainer {
@@ -141,7 +141,7 @@
   opacity: 0;
   background: transparent;
   border: none;
-  color: #71717a;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 2px;
   border-radius: 2px;
@@ -152,7 +152,7 @@
 }
 
 .renameButton:hover {
-  color: white;
+  color: var(--primary-foreground);
 }
 
 .renameInputRow {
@@ -163,10 +163,10 @@
 }
 
 .renameInput {
-  background: #18181b;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
   border-radius: 3px;
-  color: white;
+  color: var(--primary-foreground);
   font-size: 11px;
   padding: 2px 4px;
   width: 100%;
@@ -174,13 +174,13 @@
 }
 
 .renameInput:focus {
-  border-color: #8b5cf6;
+  border-color: var(--primary-color);
 }
 
 .saveRenameButton {
-  background: #8b5cf6;
+  background: var(--primary-color);
   border: none;
-  color: white;
+  color: var(--primary-foreground);
   border-radius: 3px;
   cursor: pointer;
   display: flex;
@@ -196,10 +196,10 @@
 }
 
 .blendSelect {
-  background: #18181b;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color-muted);
   border-radius: 4px;
-  color: #d4d4d8;
+  color: var(--text-color);
   font-size: 11px;
   padding: 2px 4px;
   outline: none;
@@ -207,7 +207,7 @@
 }
 
 .blendSelect:focus {
-  border-color: #8b5cf6;
+  border-color: var(--primary-color);
 }
 
 .opacityContainer {
@@ -221,7 +221,7 @@
   appearance: none;
   width: 50px;
   height: 3px;
-  background: #27272a;
+  background: var(--surface-hover);
   border-radius: 2px;
   outline: none;
 }
@@ -232,13 +232,13 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #8b5cf6;
+  background: var(--primary-color);
   cursor: pointer;
 }
 
 .opacityLabel {
   font-size: 10px;
-  color: #71717a;
+  color: var(--text-muted);
   min-width: 26px;
   text-align: right;
 }
@@ -258,7 +258,7 @@
 .reorderButton {
   background: transparent;
   border: none;
-  color: #52525b;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 1px;
   display: flex;
@@ -268,19 +268,19 @@
 }
 
 .reorderButton:hover:not(:disabled) {
-  color: white;
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--primary-foreground);
+  background: var(--border-color-muted);
 }
 
 .reorderButton:disabled {
-  color: #27272a;
+  color: var(--surface-hover);
   cursor: not-allowed;
 }
 
 .deleteButton {
   background: transparent;
   border: none;
-  color: #71717a;
+  color: var(--text-muted);
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
@@ -291,6 +291,6 @@
 }
 
 .deleteButton:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  background: var(--surface-hover);
+  color: var(--danger-color);
 }

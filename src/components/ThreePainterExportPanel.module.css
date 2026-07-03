@@ -66,7 +66,7 @@
 .btnPrimary {
   background: var(--primary-color) !important;
   border: 2px solid var(--border-color) !important;
-  color: #ffffff !important;
+  color: var(--primary-foreground) !important;
   box-shadow: var(--shadow-sm);
   font-weight: 750;
   text-transform: uppercase;

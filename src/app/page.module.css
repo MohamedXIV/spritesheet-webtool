@@ -88,9 +88,9 @@
 }
 
 .navItemActive {
-  background: var(--primary-color-alpha) !important;
-  border-color: var(--border-color) !important;
-  color: var(--primary-color) !important;
+  background: var(--primary-color-alpha);
+  border-color: var(--border-color);
+  color: var(--primary-color);
   box-shadow: 2px 2px 0px var(--border-color);
 }
 
@@ -233,17 +233,17 @@
 }
 
 .toolChangelogBtn {
-  background: transparent !important;
-  border: none !important;
-  color: var(--text-muted) !important;
-  cursor: pointer !important;
-  padding: 2px !important;
-  box-shadow: none !important;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  box-shadow: none;
 }
 
 .toolChangelogBtn:hover {
-  color: var(--primary-color) !important;
-  background: transparent !important;
+  color: var(--primary-color);
+  background: transparent;
 }
 
 .toolDesc {
@@ -276,7 +276,7 @@
   padding: 10px 16px;
   background: var(--primary-color);
   border: 2px solid var(--border-color);
-  color: #FFFFFF;
+  color: var(--primary-foreground);
   font-weight: 700;
   font-size: 0.82rem;
   text-transform: uppercase;
@@ -382,27 +382,26 @@
 }
 
 .actionButton {
-  background: transparent !important;
-  border: 1.5px solid var(--border-color-muted) !important;
-  color: var(--text-muted) !important;
+  background: transparent;
+  border: 1.5px solid var(--border-color-muted);
+  color: var(--text-muted);
   cursor: pointer;
-  padding: 4px !important;
-  border-radius: var(--radius-sm) !important;
+  padding: 4px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: none !important;
-  transform: none !important;
+  box-shadow: none;
 }
 
 .actionButton:hover {
-  border-color: var(--border-color) !important;
-  color: var(--text-color) !important;
+  border-color: var(--border-color);
+  color: var(--text-color);
 }
 
 .deleteButton:hover {
-  border-color: var(--danger-color) !important;
-  color: var(--danger-color) !important;
+  border-color: var(--danger-color);
+  color: var(--danger-color);
 }
 
 .projectName {

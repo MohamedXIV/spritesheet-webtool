@@ -5,14 +5,14 @@
   width: 100%;
   padding: 16px;
   overflow-y: auto;
-  color: #e2e8f0;
+  color: var(--text-color);
 }
 
 .title {
   font-size: 1.15rem;
   font-weight: 700;
   margin-bottom: 6px;
-  background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -0.02em;
@@ -21,7 +21,7 @@
 .description {
   font-size: 0.8rem;
   line-height: 1.4;
-  color: #94a3b8;
+  color: var(--text-muted);
   margin-bottom: 16px;
 }
 
@@ -30,12 +30,12 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  background: rgba(30, 30, 45, 0.4);
+  background: var(--surface-color);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(139, 92, 246, 0.15);
+  border: 1px solid var(--primary-color-alpha);
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .introHeader {
@@ -49,24 +49,24 @@
   justify-content: center;
   width: 100%;
   min-height: 160px;
-  border: 2px dashed rgba(139, 92, 246, 0.3);
+  border: 2px dashed var(--primary-color-alpha);
   border-radius: 8px;
   cursor: pointer;
   padding: 24px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: rgba(15, 15, 25, 0.3);
+  background: var(--background-color);
 }
 
 .dropzone:hover {
-  border-color: #8b5cf6;
-  background: rgba(139, 92, 246, 0.05);
-  box-shadow: 0 0 15px rgba(139, 92, 246, 0.15);
+  border-color: var(--primary-color);
+  background: var(--primary-color-alpha);
+  box-shadow: var(--shadow-sm);
 }
 
 .uploadIcon {
-  color: #8b5cf6;
+  color: var(--primary-color);
   margin-bottom: 12px;
-  filter: drop-shadow(0 0 4px rgba(139, 92, 246, 0.4));
+  filter: drop-shadow(0 0 4px var(--primary-color-alpha));
   transition: transform 0.3s ease;
 }
 
@@ -76,7 +76,7 @@
 
 .dropzoneText {
   font-size: 0.85rem;
-  color: #a0aec0;
+  color: var(--text-muted);
   text-align: center;
   font-weight: 500;
 }
@@ -93,9 +93,9 @@
   max-height: 200px;
   overflow: hidden;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color-muted);
   margin-bottom: 16px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--background-color);
 }
 
 .imagePreview {
@@ -115,17 +115,17 @@
 .tabsRow {
   display: flex;
   width: 100%;
-  background: rgba(15, 15, 25, 0.5);
+  background: var(--background-color);
   border-radius: 6px;
   padding: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color-muted);
 }
 
 .tabBtn {
   flex: 1;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--text-muted);
   padding: 6px 12px;
   border-radius: 4px;
   border: none;
@@ -135,10 +135,10 @@
 }
 
 .tabBtnActive {
-  color: #ffffff;
-  background: rgba(139, 92, 246, 0.25);
-  border: 1px solid rgba(139, 92, 246, 0.2);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  color: var(--primary-foreground);
+  background: var(--primary-color-alpha);
+  border: 1px solid var(--primary-color-alpha);
+  box-shadow: var(--shadow-sm);
 }
 
 .inputsRow {
@@ -156,15 +156,15 @@
 .inputLabel {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #a0aec0;
+  color: var(--text-muted);
 }
 
 .inputControl {
-  background: rgba(15, 15, 25, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--background-color);
+  border: 1px solid var(--border-color-muted);
   border-radius: 6px;
   padding: 8px 12px;
-  color: #ffffff;
+  color: var(--text-color);
   font-size: 0.85rem;
   transition: all 0.2s ease;
   width: 100%;
@@ -172,8 +172,8 @@
 
 .inputControl:focus {
   outline: none;
-  border-color: #8b5cf6;
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-color-alpha);
 }
 
 .actionsRow {
@@ -184,10 +184,10 @@
 
 .cancelBtn, .changeFileBtn {
   flex: 1;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-hover);
+  border: 1px solid var(--border-color-muted);
   border-radius: 6px;
-  color: #e2e8f0;
+  color: var(--text-color);
   font-size: 0.8rem;
   font-weight: 600;
   padding: 10px 16px;
@@ -196,27 +196,27 @@
 }
 
 .cancelBtn:hover, .changeFileBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background: var(--surface-hover);
+  color: var(--text-color);
 }
 
 .sliceBtn {
   flex: 2;
-  background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
   border: none;
   border-radius: 6px;
-  color: #ffffff;
+  color: var(--primary-foreground);
   font-size: 0.8rem;
   font-weight: 700;
   padding: 10px 16px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .sliceBtn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45);
+  box-shadow: var(--shadow-md);
   filter: brightness(1.1);
 }
 
@@ -235,8 +235,8 @@
 .spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-top-color: #ffffff;
+  border: 2px solid var(--border-color-muted);
+  border-top-color: var(--text-color);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -256,7 +256,7 @@
 .metaTitle {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--text-color);
 }
 
 .changeFileBtn {
@@ -270,10 +270,10 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: rgba(15, 15, 25, 0.4);
+  background: var(--background-color);
   border-radius: 8px;
   padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color-muted);
   margin-bottom: 16px;
 }
 
@@ -285,12 +285,12 @@
 }
 
 .detailLabel {
-  color: #94a3b8;
+  color: var(--text-muted);
   font-weight: 500;
 }
 
 .detailVal {
-  color: #f1f5f9;
+  color: var(--text-color);
   font-weight: 600;
 }
 
@@ -303,7 +303,7 @@
 .miniPreviewLabel {
   font-size: 0.7rem;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .miniImageWrapper {
@@ -311,8 +311,8 @@
   max-height: 120px;
   overflow: hidden;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color-muted);
+  background: var(--background-color);
 }
 
 .miniImg {
@@ -329,7 +329,7 @@
   justify-content: center;
   height: 100%;
   padding: 20px;
-  color: #ef4444;
+  color: var(--danger-color);
   font-size: 0.85rem;
   text-align: center;
 }

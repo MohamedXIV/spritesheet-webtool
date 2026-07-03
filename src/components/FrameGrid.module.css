@@ -12,17 +12,16 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  background: rgba(26, 26, 46, 0.45);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color-muted);
+  border-radius: var(--radius-md);
   flex-shrink: 0;
   gap: 12px;
 }
 
 .count {
   font-size: 0.8rem;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -35,10 +34,10 @@
 
 .button {
   padding: 6px 12px;
-  border: 1px solid var(--border-color, #4a5568);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.02);
-  color: var(--text-color, #e5e7eb);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--surface-color);
+  color: var(--text-color);
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
@@ -50,10 +49,10 @@
 }
 
 .button:hover:not(:disabled) {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: var(--primary-color, #6366f1);
-  color: #fff;
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.15);
+  background: var(--surface-hover);
+  border-color: var(--primary-color);
+  color: var(--text-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .button:disabled {
@@ -62,36 +61,36 @@
 }
 
 .deleteButton {
-  border-color: rgba(239, 68, 68, 0.5);
-  color: var(--danger-color, #ef4444);
+  border-color: var(--border-color-muted);
+  color: var(--danger-color);
 }
 
 .deleteButton:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: var(--danger-color, #ef4444);
-  color: #fff;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+  background: var(--surface-hover);
+  border-color: var(--danger-color);
+  color: var(--danger-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .revertButton {
-  border-color: rgba(245, 158, 11, 0.5);
-  color: #f59e0b;
+  border-color: var(--border-color-muted);
+  color: var(--warning-color);
 }
 
 .revertButton:hover:not(:disabled) {
-  background: rgba(245, 158, 11, 0.15);
-  border-color: #f59e0b;
-  color: #fff;
-  box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+  background: var(--surface-hover);
+  border-color: var(--warning-color);
+  color: var(--warning-color);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Folder Creation Inline Form */
 .createFolderForm {
   display: flex;
   align-items: center;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
+  background: var(--background-color);
+  border: 1px solid var(--border-color-muted);
+  border-radius: var(--radius-sm);
   padding: 2px 4px;
   gap: 4px;
 }
@@ -99,7 +98,7 @@
 .folderInput {
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--text-color);
   font-size: 0.75rem;
   padding: 4px 8px;
   outline: none;
@@ -109,9 +108,9 @@
 .iconButton {
   background: transparent;
   border: none;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
   padding: 4px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -120,14 +119,14 @@
 }
 
 .iconButton:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: var(--surface-hover);
+  color: var(--text-color);
 }
 
 .createFolderBtn {
-  background: rgba(99, 102, 241, 0.1);
-  border-color: rgba(99, 102, 241, 0.3);
-  color: var(--primary-light, #a5b4fc);
+  background: var(--primary-color-alpha);
+  border-color: var(--border-color-muted);
+  color: var(--primary-color);
 }
 
 /* Folder List Layout */
@@ -142,32 +141,31 @@
 
 /* Individual Folder Panels */
 .folderSection {
-  background: rgba(255, 255, 255, 0.015);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 10px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color-muted);
+  border-radius: var(--radius-md);
   overflow: hidden;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .folderSection:hover {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-color);
 }
 
 /* Muted state when a folder is toggled off (invisible) */
 .folderHidden {
   opacity: 0.55;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--background-color);
   border-style: dashed;
 }
 
 .folderHidden .folderHeader {
   background: repeating-linear-gradient(
     45deg,
-    rgba(0, 0, 0, 0.1),
-    rgba(0, 0, 0, 0.1) 10px,
-    rgba(0, 0, 0, 0.15) 10px,
-    rgba(0, 0, 0, 0.15) 20px
+    var(--surface-color),
+    var(--surface-color) 10px,
+    var(--surface-hover) 10px,
+    var(--surface-hover) 20px
   );
 }
 
@@ -177,15 +175,15 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.025);
-  border-left: 4px solid var(--folder-theme-color, #3b82f6);
+  background: var(--surface-hover);
+  border-left: 4px solid var(--folder-theme-color, var(--primary-color));
   cursor: pointer;
   user-select: none;
   transition: background-color 0.15s ease;
 }
 
 .folderHeader:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-hover);
 }
 
 .folderHeaderLeft {
@@ -198,19 +196,19 @@
 
 .dragHandle {
   cursor: grab;
-  color: var(--text-muted, #6b7280);
+  color: var(--text-muted);
   background: transparent;
   border: none;
   padding: 4px;
   display: flex;
   align-items: center;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   transition: all 0.15s ease;
 }
 
 .dragHandle:hover {
-  color: var(--text-color, #e5e7eb);
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-color);
+  background: var(--surface-hover);
 }
 
 .dragHandle:active {
@@ -218,19 +216,19 @@
 }
 
 .chevronToggle {
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
   background: transparent;
   border: none;
   padding: 4px;
   display: flex;
   align-items: center;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   transition: all 0.15s ease;
 }
 
 .chevronToggle:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-color);
+  background: var(--surface-hover);
 }
 
 .folderIconWrapper {
@@ -242,7 +240,7 @@
 .folderName {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-color, #e5e7eb);
+  color: var(--text-color);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -251,14 +249,14 @@
 }
 
 .folderName:hover {
-  border-color: var(--text-muted, #9ca3af);
+  border-color: var(--text-muted);
 }
 
 .renameInput {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--primary-color, #6366f1);
-  border-radius: 4px;
-  color: #fff;
+  background: var(--background-color);
+  border: 1px solid var(--primary-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-color);
   font-size: 0.85rem;
   font-weight: 600;
   padding: 2px 6px;
@@ -268,10 +266,10 @@
 
 .folderCount {
   font-size: 0.72rem;
-  color: var(--text-muted, #9ca3af);
-  background: rgba(0, 0, 0, 0.35);
+  color: var(--text-muted);
+  background: var(--background-color);
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: var(--radius-full);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -286,9 +284,9 @@
 .headerButton {
   background: transparent;
   border: none;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
   padding: 6px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -297,18 +295,18 @@
 }
 
 .headerButton:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-color);
+  background: var(--surface-hover);
 }
 
 .activeHide {
-  color: var(--primary-light, #a5b4fc) !important;
-  background: rgba(99, 102, 241, 0.1);
+  color: var(--primary-color);
+  background: var(--primary-color-alpha);
 }
 
 .deleteFolderButton:hover {
-  color: var(--danger-color, #ef4444) !important;
-  background: rgba(239, 68, 68, 0.12) !important;
+  color: var(--danger-color);
+  background: var(--surface-hover);
 }
 
 /* Accordion folder content wrapper */
@@ -319,10 +317,10 @@
 .folderEmpty {
   padding: 20px;
   text-align: center;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
   font-size: 0.78rem;
   font-style: italic;
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--surface-color);
 }
 
 /* Frame Grid */
@@ -331,13 +329,13 @@
   grid-template-columns: repeat(auto-fill, minmax(90px, 90px));
   gap: 12px;
   padding: 12px 14px 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.02);
-  background: rgba(0, 0, 0, 0.08);
+  border-top: 1px solid var(--border-color-muted);
+  background: var(--background-color);
   justify-content: start;
   max-height: 320px;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: var(--border-color-muted) transparent;
 }
 
 .grid::-webkit-scrollbar {
@@ -349,35 +347,34 @@
 }
 
 .grid::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  background: var(--border-color-muted);
+  border-radius: var(--radius-sm);
 }
 
 .grid::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--text-muted);
 }
-
 
 .frame {
   position: relative;
   width: 90px;
   height: 90px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   cursor: grab;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--background-color);
   border: 2px solid transparent;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .frame:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--border-color-muted);
   transform: scale(1.03);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-md);
 }
 
 .frame:active {
@@ -385,9 +382,9 @@
 }
 
 .selected {
-  border-color: var(--primary-color, #6366f1);
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.45);
-  background: rgba(99, 102, 241, 0.05);
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-sm);
+  background: var(--primary-color-alpha);
 }
 
 .thumbnail {
@@ -402,13 +399,12 @@
   bottom: 4px;
   left: 4px;
   padding: 1px 5px;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
+  background: var(--background-color);
+  border: 1px solid var(--border-color-muted);
+  border-radius: var(--radius-sm);
   font-size: 0.65rem;
   font-weight: 500;
-  color: #fff;
+  color: var(--text-muted);
   z-index: 5;
 }
 
@@ -418,7 +414,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  border-radius: 4px 4px 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   z-index: 5;
 }
 
@@ -428,15 +424,15 @@
   right: 4px;
   width: 16px;
   height: 16px;
-  background: var(--primary-color, #6366f1);
+  background: var(--primary-color);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.65rem;
-  color: white;
+  color: var(--primary-foreground);
   z-index: 5;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Individual Frame Move-to-Folder Overlays */
@@ -454,13 +450,12 @@
 }
 
 .moveButton {
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--text-muted, #9ca3af);
+  background: var(--background-color);
+  border: 1px solid var(--border-color-muted);
+  color: var(--text-muted);
   width: 22px;
   height: 22px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -469,55 +464,55 @@
 }
 
 .moveButton:hover {
-  background: var(--primary-color, #6366f1);
-  border-color: var(--primary-color, #6366f1);
-  color: #fff;
-  box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--primary-foreground);
+  box-shadow: var(--shadow-sm);
 }
 
-/* Custom Dropdown Styling to look premium and high-fidelity */
+/* Dropdown Menu Styling */
 .dropdownContent {
-  background: rgba(22, 22, 38, 0.9) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 8px !important;
-  padding: 4px !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
-  min-width: 160px !important;
-  z-index: 1000 !important;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  box-shadow: var(--shadow-md);
+  min-width: 160px;
+  z-index: 1000;
 }
 
 .dropdownLabel {
-  font-size: 0.72rem !important;
-  color: #6b7280 !important;
-  padding: 6px 8px !important;
-  font-weight: 600 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  padding: 6px 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .dropdownSeparator {
-  height: 1px !important;
-  background: rgba(255, 255, 255, 0.06) !important;
-  margin: 4px 0 !important;
+  height: 1px;
+  background: var(--border-color-muted);
+  margin: 4px 0;
 }
 
 .dropdownItem {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  padding: 6px 12px !important;
-  font-size: 0.8rem !important;
-  color: #d1d5db !important;
-  cursor: pointer !important;
-  border-radius: 6px !important;
-  transition: all 0.15s ease !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  color: var(--text-color);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
 }
 
-.dropdownItem:hover, .dropdownItem:focus {
-  background: rgba(99, 102, 241, 0.15) !important;
-  color: #fff !important;
-  outline: none !important;
+.dropdownItem:hover,
+.dropdownItem:focus {
+  background: var(--primary-color-alpha);
+  color: var(--primary-color);
+  outline: none;
 }
 
 .colorIndicator {
@@ -525,7 +520,6 @@
   height: 8px;
   border-radius: 50%;
   display: inline-block;
-  box-shadow: 0 0 4px rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
 }
 
@@ -537,7 +531,7 @@
   justify-content: center;
   flex: 1;
   height: 100%;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
   text-align: center;
   padding: 40px;
 }
@@ -560,19 +554,20 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--background-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   z-index: 10;
+  opacity: 0.85;
 }
 
 .spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-top-color: var(--primary-color, #6366f1);
+  border: 2px solid var(--border-color-muted);
+  border-top-color: var(--primary-color);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

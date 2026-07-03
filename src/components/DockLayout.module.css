@@ -10,16 +10,16 @@
   display: flex;
   justify-content: flex-end;
   padding: 10px 16px;
-  background: var(--background-color, #0B0B0F);
-  border-bottom: 2px solid var(--border-color, #2E2E38);
+  background: var(--background-color);
+  border-bottom: 2px solid var(--border-color);
 }
 
 .resetBtn {
-  background: var(--surface-color, #16161E);
-  border: 2px solid var(--border-color, #2E2E38);
-  color: var(--text-color, #F4F4F9);
+  background: var(--surface-color);
+  border: 2px solid var(--border-color);
+  color: var(--text-color);
   padding: 6px 14px;
-  border-radius: var(--radius-sm, 8px);
+  border-radius: var(--radius-sm);
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
@@ -29,10 +29,10 @@
 }
 
 .resetBtn:hover {
-  background: var(--primary-color, #CCFF00);
-  color: #0B0B0F;
-  border-color: #0B0B0F;
-  box-shadow: 2px 2px 0px var(--accent-color, #00F0FF);
+  background: var(--primary-color);
+  color: var(--background-color);
+  border-color: var(--background-color);
+  box-shadow: 2px 2px 0px var(--accent-color);
   transform: translateY(-1px);
 }
 
@@ -45,7 +45,7 @@
 .panelContent {
   height: 100%;
   overflow: auto;
-  background: var(--surface-color, #16161E);
+  background: var(--surface-color);
 }
 
 .placeholder {
@@ -53,7 +53,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--text-muted, #A0A0B0);
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
@@ -62,14 +62,14 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--text-muted, #A0A0B0);
+  color: var(--text-muted);
 }
 
 /* Extraction Progress Overlay */
 .extractionOverlay {
   position: absolute;
   inset: 0;
-  background: rgba(11, 11, 15, 0.95);
+  background: var(--background-color);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -82,14 +82,14 @@
   align-items: center;
   gap: 20px;
   padding: 32px;
-  background: var(--surface-color, #16161E);
-  border: 2.5px solid var(--primary-color, #CCFF00);
-  border-radius: var(--radius-lg, 16px);
-  box-shadow: 5px 5px 0px rgba(0, 0, 0, 0.5);
+  background: var(--surface-color);
+  border: 2.5px solid var(--primary-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .extractionText {
-  color: var(--text-color, #F4F4F9);
+  color: var(--text-color);
   font-size: 0.95rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -99,8 +99,8 @@
 .spinner {
   width: 44px;
   height: 44px;
-  border: 3.5px solid var(--border-color, #2E2E38);
-  border-top-color: var(--primary-color, #CCFF00);
+  border: 3.5px solid var(--border-color);
+  border-top-color: var(--primary-color);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -112,15 +112,15 @@
 .progressBar {
   width: 220px;
   height: 8px;
-  background: var(--border-color, #2E2E38);
+  background: var(--border-color);
   border-radius: 4px;
   overflow: hidden;
-  border: 1.5px solid #0B0B0F;
+  border: 1.5px solid var(--background-color);
 }
 
 .progressFill {
   height: 100%;
-  background: var(--primary-color, #CCFF00);
+  background: var(--primary-color);
   transition: width 0.1s ease;
 }
 

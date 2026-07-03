@@ -18,28 +18,28 @@
   text-transform: uppercase;
   font-size: 0.66rem;
   letter-spacing: 0.05em;
-  color: var(--text-muted, #A0A0B0);
+  color: var(--text-muted);
 }
 
 .row { display: flex; gap: 6px; align-items: center; }
-.row label { font-size: 0.74rem; color: var(--text-muted, #888); }
+.row label { font-size: 0.74rem; color: var(--text-muted); }
 .row input[type="number"] {
   width: 52px;
-  background: var(--surface-color, #1e1e1e);
-  border: 1px solid var(--border-color, #444);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
   color: inherit;
   padding: 3px 6px;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-sm);
   font: inherit;
   font-size: 0.74rem;
 }
 
 .btn {
-  background: var(--primary-color, #7C3AED);
-  color: #fff;
+  background: var(--primary-color);
+  color: var(--primary-foreground);
   border: 2px solid transparent;
   padding: 5px 10px;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font: inherit;
   font-size: 0.72rem;
@@ -50,16 +50,16 @@
 }
 .btn:hover {
   background: transparent;
-  border-color: var(--primary-color, #7C3AED);
-  color: var(--primary-color, #7C3AED);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
 }
 
 .select {
-  background: var(--surface-color, #1e1e1e);
+  background: var(--surface-color);
   color: inherit;
-  border: 1px solid var(--border-color, #444);
+  border: 1px solid var(--border-color);
   padding: 4px 6px;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-sm);
   font: inherit;
   font-size: 0.76rem;
   width: 100%;
@@ -77,11 +77,11 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background: var(--primary-color, #7C3AED);
-  color: #fff;
+  background: var(--primary-color);
+  color: var(--primary-foreground);
   border: none;
   padding: 3px 8px;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-sm);
   font: inherit;
   font-size: 0.68rem;
   font-weight: 700;
@@ -92,9 +92,9 @@
   animation: popIn 0.15s ease-out;
 }
 .mergeBtn:hover {
-  background: var(--primary-hover, #6D28D9);
+  background: var(--primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(124, 58, 237, 0.4);
+  box-shadow: var(--shadow-sm);
 }
 @keyframes popIn {
   from { opacity: 0; transform: scale(0.85); }
@@ -103,11 +103,11 @@
 
 .multiHint {
   font-size: 0.65rem;
-  color: var(--primary-color, #7C3AED);
-  background: rgba(124, 58, 237, 0.08);
-  border: 1px solid rgba(124, 58, 237, 0.2);
+  color: var(--primary-color);
+  background: var(--primary-color-alpha);
+  border: 1px solid var(--primary-color-alpha);
   padding: 4px 8px;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-sm);
   text-align: center;
 }
 
@@ -125,23 +125,23 @@
   align-items: center;
   gap: 4px;
   padding: 4px 6px;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.12s ease;
   min-height: 28px;
 }
 .item:hover {
-  background: var(--surface-hover, rgba(255,255,255,0.04));
-  border-color: var(--border-color-muted, rgba(255,255,255,0.1));
+  background: var(--surface-hover);
+  border-color: var(--border-color-muted);
 }
 .item.active {
-  border-color: var(--primary-color, #7C3AED);
-  background: rgba(124, 58, 237, 0.1);
+  border-color: var(--primary-color);
+  background: var(--primary-color-alpha);
 }
 .item.multiActive {
-  border-color: rgba(124, 58, 237, 0.4);
-  background: rgba(124, 58, 237, 0.06);
+  border-color: var(--primary-color-alpha);
+  background: var(--primary-color-alpha);
 }
 
 /* Region name */
@@ -157,9 +157,9 @@
 
 .itemInput {
   flex: 1;
-  background: var(--surface-color, #1e1e1e);
-  border: 1px solid var(--primary-color, #7C3AED);
-  border-radius: 3px;
+  background: var(--surface-color);
+  border: 1px solid var(--primary-color);
+  border-radius: var(--radius-sm);
   color: inherit;
   font: inherit;
   font-size: 0.76rem;
@@ -191,17 +191,17 @@
   height: 22px;
   background: transparent;
   border: none;
-  color: var(--text-muted, #888);
+  color: var(--text-muted);
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
   transition: all 0.1s ease;
   padding: 0;
 }
 .iconBtn:hover {
-  background: var(--surface-hover, rgba(255,255,255,0.08));
-  color: var(--text-color, #F4F4F9);
+  background: var(--surface-hover);
+  color: var(--text-color);
 }
 .iconBtnDanger:hover {
-  background: rgba(239, 68, 68, 0.15);
-  color: var(--danger-color, #EF4444);
+  background: var(--primary-color-alpha);
+  color: var(--danger-color);
 }
