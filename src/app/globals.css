@@ -2,257 +2,98 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
-  /* Colors - Neo-Brutalist Beige & Navy Theme */
-  --background-color: #FAF8F5; /* Warm light cream */
-  --surface-color: #FFFFFF;
-  --surface-hover: #F3EFE7;
-  --border-color: #0B0B0F; /* Solid navy/black border */
-  --border-color-muted: #E2DDD3;
+/* ==========================================================================
+   DESIGN TOKENS — Single source of truth
+   Semantic tokens (--primary-color etc.) are derived from Shadcn tokens
+   (--primary etc.) so there is only one value to change per colour.
+   ========================================================================== */
 
-  /* Primary: Violet/Indigo */
-  --primary-color: #7C3AED;
-  --primary-hover: #6D28D9;
-  --primary-color-alpha: rgba(124, 58, 237, 0.12);
+:root {
+  /* --- Shadcn / Tailwind tokens (used by @theme inline below) --- */
+  --background:            #FAF8F5; /* Warm light cream */
+  --foreground:            #0B0B0F;
+  --card:                  #FFFFFF;
+  --card-foreground:       #0B0B0F;
+  --popover:               #FFFFFF;
+  --popover-foreground:    #0B0B0F;
+  --primary:               #7C3AED; /* Violet/Indigo */
+  --primary-foreground:    #FFFFFF;
+  --secondary:             #FAF8F5;
+  --secondary-foreground:  #0B0B0F;
+  --muted:                 #F3EFE7;
+  --muted-foreground:      #4B5563;
+  --accent:                #F3EFE7;
+  --accent-foreground:     #0B0B0F;
+  --destructive:           #EF4444;
+  --destructive-foreground:#FFFFFF;
+  --border:                #0B0B0F;
+  --input:                 #0B0B0F;
+  --ring:                  #7C3AED;
+
+  /* --- Semantic aliases (used by component module CSS) --- */
+  --background-color:      var(--background);
+  --surface-color:         var(--card);
+  --surface-hover:         var(--muted);
+  --border-color:          var(--border);
+  --border-color-muted:    #E2DDD3;
+  --text-color:            var(--foreground);
+  --text-muted:            var(--muted-foreground);
+
+  /* Primary helpers */
+  --primary-color:         var(--primary);
+  --primary-hover:         #6D28D9;
+  --primary-color-alpha:   rgba(124, 58, 237, 0.12);
 
   /* Accent: Amber/Yellow */
-  --accent-color: #FBBF24;
-  --accent-hover: #F59E0B;
+  --accent-color:          #FBBF24;
+  --accent-hover:          #F59E0B;
 
-  /* Danger / Highlight: Bright Red */
-  --danger-color: #EF4444;
-  
-  /* Warning: Orange/Amber */
-  --warning-color: #F59E0B;
+  /* Danger */
+  --danger-color:          var(--destructive);
 
-  /* Text */
-  --text-color: #0B0B0F;
-  --text-muted: #4B5563;
+  /* Warning */
+  --warning-color:         #F59E0B;
 
-  /* Shadows (Neo-Brutalist flat offset shadows) */
-  --shadow-sm: 2px 2px 0px #0B0B0F;
-  --shadow-md: 4px 4px 0px #0B0B0F;
-  --shadow-lg: 6px 6px 0px #0B0B0F;
-  --shadow-glow: 0 0 0px transparent;
-
-  /* Button Offset Shadow Color */
-  --button-shadow-color: #0B0B0F;
+  /* Neo-Brutalist flat offset shadows */
+  --shadow-sm:             2px 2px 0px var(--border);
+  --shadow-md:             4px 4px 0px var(--border);
+  --shadow-lg:             6px 6px 0px var(--border);
+  --button-shadow-color:   var(--border);
 
   /* Typography */
-  --font-geist: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-inter: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-family: var(--font-geist, sans-serif), var(--font-inter, sans-serif), sans-serif;
+  --font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
-  /* Spacing */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-
-  /* Border Radius - Neo-Brutalist Sharp/Clean Corners */
+  /* Border Radius — Neo-Brutalist sharp/clean corners */
+  --radius:    6px;
   --radius-sm: 3px;
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-full: 9999px;
-  --radius: 6px;
-  
-  /* Shadcn CSS Variables - Light Theme Mapping */
-  --background: #FAF8F5;
-  --foreground: #0B0B0F;
-  --card: #FFFFFF;
-  --card-foreground: #0B0B0F;
-  --popover: #FFFFFF;
-  --popover-foreground: #0B0B0F;
-  --primary: #7C3AED;
-  --primary-foreground: #FFFFFF;
-  --secondary: #FAF8F5;
-  --secondary-foreground: #0B0B0F;
-  --muted: #F3EFE7;
-  --muted-foreground: #4B5563;
-  --accent: #F3EFE7;
-  --accent-foreground: #0B0B0F;
-  --destructive: #EF4444;
-  --destructive-foreground: #FFFFFF;
-  --border: #0B0B0F;
-  --input: #0B0B0F;
-  --ring: #7C3AED;
 }
 
 .dark {
-  --background-color: #0B0B0F; /* Classic deep slate/navy */
-  --surface-color: #16161E;
-  --surface-hover: #21212B;
-  --border-color: #0B0B0F; /* Keep dark border */
-  --border-color-muted: #1E1E26;
+  /* --- Shadcn / Tailwind tokens --- */
+  --background:            #0B0B0F;
+  --foreground:            #F4F4F9;
+  --card:                  #16161E;
+  --card-foreground:       #F4F4F9;
+  --popover:               #16161E;
+  --popover-foreground:    #F4F4F9;
+  --primary:               #A78BFA; /* Violet in dark — consistent with light */
+  --primary-foreground:    #0B0B0F;
+  --secondary:             #21212B;
+  --secondary-foreground:  #F4F4F9;
+  --muted:                 #1E1E26;
+  --muted-foreground:      #A0A0B0;
+  --accent:                #21212B;
+  --accent-foreground:     #F4F4F9;
+  --destructive:           #F87171;
+  --destructive-foreground:#0B0B0F;
+  --border:                #2E2E38;
+  --input:                 #2E2E38;
+  --ring:                  #A78BFA;
 
-  /* Primary: Violet/Indigo */
-  --primary-color: #A78BFA;
-  --primary-hover: #C084FC;
-  --primary-color-alpha: rgba(167, 139, 250, 0.15);
-
-  /* Accent: Gold/Yellow */
-  --accent-color: #FBBF24;
-  --accent-hover: #F59E0B;
-
-  /* Danger / Highlight: Coral Red */
-  --danger-color: #F87171;
-  
-  /* Warning */
-  --warning-color: #FBBF24;
-
-  /* Text */
-  --text-color: #FAF8F5;
-  --text-muted: #9CA3AF;
-
-  /* Shadows (Neo-Brutalist flat offset shadows remain dark) */
-  --shadow-sm: 2px 2px 0px #000000;
-  --shadow-md: 4px 4px 0px #000000;
-  --shadow-lg: 6px 6px 0px #000000;
-  --shadow-glow: 0 0 0px transparent;
-
-  /* Button Offset Shadow Color */
-  --button-shadow-color: #000000;
-
-  /* Radius (remains consistent) */
-  --radius-sm: 3px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius: 6px;
-
-  /* Shadcn CSS Variables - Dark Theme Mapping */
-  --background: #0B0B0F;
-  --foreground: #FAF8F5;
-  --card: #16161E;
-  --card-foreground: #FAF8F5;
-  --popover: #16161E;
-  --popover-foreground: #FAF8F5;
-  --primary: #A78BFA;
-  --primary-foreground: #0B0B0F;
-  --secondary: #21212B;
-  --secondary-foreground: #FAF8F5;
-  --muted: #1E1E26;
-  --muted-foreground: #9CA3AF;
-  --accent: #21212B;
-  --accent-foreground: #FAF8F5;
-  --destructive: #F87171;
-  --destructive-foreground: #0B0B0F;
-  --border: #0B0B0F;
-  --input: #0B0B0F;
-  --ring: #A78BFA;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-  font-family: var(--font-family);
-  background: var(--background-color);
-  color: var(--text-color);
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-button {
-  font-family: inherit;
-}
-
-/* Scrollbar Styling - ZZZ custom rounded scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #0B0B0F;
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #2E2E38;
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #CCFF00;
-}
-
-/* Selection */
-::selection {
-  background: rgba(204, 255, 0, 0.25);
-  color: #CCFF00;
-}
-
-@theme inline {
-  --radius-sm: calc(var(--radius) - 6px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 4px);
-  --radius-xl: calc(var(--radius) + 8px);
-  --radius-2xl: calc(var(--radius) + 12px);
-  --radius-3xl: calc(var(--radius) + 16px);
-  --radius-4xl: calc(var(--radius) + 20px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-}
-
-.dark {
-  --background: #0B0B0F;
-  --foreground: #F4F4F9;
-  --card: #16161E;
-  --card-foreground: #F4F4F9;
-  --popover: #16161E;
-  --popover-foreground: #F4F4F9;
-  --primary: #CCFF00;
-  --primary-foreground: #0B0B0F;
-  --secondary: #21212B;
-  --secondary-foreground: #F4F4F9;
-  --muted: #1E1E26;
-  --muted-foreground: #A0A0B0;
-  --accent: #21212B;
-  --accent-foreground: #F4F4F9;
-  --destructive: #FF007F;
-  --destructive-foreground: #FFFFFF;
-  --border: #2E2E38;
-  --input: #2E2E38;
-  --ring: #CCFF00;
+  /* Chart / Sidebar tokens (kept for completeness) */
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -266,6 +107,91 @@ button {
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+
+  /* --- Semantic aliases (derived from tokens above) --- */
+  --background-color:      var(--background);
+  --surface-color:         var(--card);
+  --surface-hover:         #21212B;
+  --border-color:          var(--border);
+  --border-color-muted:    #1E1E26;
+  --text-color:            var(--foreground);
+  --text-muted:            var(--muted-foreground);
+
+  /* Primary helpers */
+  --primary-color:         var(--primary);
+  --primary-hover:         #C084FC;
+  --primary-color-alpha:   rgba(167, 139, 250, 0.15);
+
+  /* Accent */
+  --accent-color:          #FBBF24;
+  --accent-hover:          #F59E0B;
+
+  /* Danger */
+  --danger-color:          var(--destructive);
+
+  /* Warning */
+  --warning-color:         #FBBF24;
+
+  /* Neo-Brutalist flat offset shadows */
+  --shadow-sm:             2px 2px 0px #000000;
+  --shadow-md:             4px 4px 0px #000000;
+  --shadow-lg:             6px 6px 0px #000000;
+  --button-shadow-color:   #000000;
+}
+
+/* ==========================================================================
+   TAILWIND v4 @theme INLINE — Maps CSS vars to Tailwind utility classes
+   ========================================================================== */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 3px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 10px);
+  --radius-3xl: calc(var(--radius) + 14px);
+  --radius-4xl: calc(var(--radius) + 18px);
+  --color-background:                  var(--background);
+  --color-foreground:                  var(--foreground);
+  --color-card:                        var(--card);
+  --color-card-foreground:             var(--card-foreground);
+  --color-popover:                     var(--popover);
+  --color-popover-foreground:          var(--popover-foreground);
+  --color-primary:                     var(--primary);
+  --color-primary-foreground:          var(--primary-foreground);
+  --color-secondary:                   var(--secondary);
+  --color-secondary-foreground:        var(--secondary-foreground);
+  --color-muted:                       var(--muted);
+  --color-muted-foreground:            var(--muted-foreground);
+  --color-accent:                      var(--accent);
+  --color-accent-foreground:           var(--accent-foreground);
+  --color-destructive:                 var(--destructive);
+  --color-border:                      var(--border);
+  --color-input:                       var(--input);
+  --color-ring:                        var(--ring);
+  --color-chart-1:                     var(--chart-1);
+  --color-chart-2:                     var(--chart-2);
+  --color-chart-3:                     var(--chart-3);
+  --color-chart-4:                     var(--chart-4);
+  --color-chart-5:                     var(--chart-5);
+  --color-sidebar:                     var(--sidebar);
+  --color-sidebar-foreground:          var(--sidebar-foreground);
+  --color-sidebar-primary:             var(--sidebar-primary);
+  --color-sidebar-primary-foreground:  var(--sidebar-primary-foreground);
+  --color-sidebar-accent:              var(--sidebar-accent);
+  --color-sidebar-accent-foreground:   var(--sidebar-accent-foreground);
+  --color-sidebar-border:              var(--sidebar-border);
+  --color-sidebar-ring:                var(--sidebar-ring);
+}
+
+/* ==========================================================================
+   GLOBAL BASE STYLES
+   ========================================================================== */
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
 @layer base {
@@ -277,18 +203,61 @@ button {
   }
 }
 
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: var(--font-family);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* --- Scrollbars --- */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-color);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color-muted);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* --- Text selection --- */
+::selection {
+  background: var(--primary-color-alpha);
+  color: var(--primary-color);
+}
+
 /* ==========================================================================
-   UNIFIED DOCKABLE WINDOWS (FLEXLAYOUT-REACT) THEME - CYAN ACCENT (#00f0ff)
+   FLEXLAYOUT-REACT THEME OVERRIDES
+   All !important here are required — flexlayout injects its own inline styles.
    ========================================================================== */
 
 /* Main layout background */
 body .flexlayout__layout {
-  background-color: var(--background-color) !important;
+  background-color: var(--background-color) !important; /* flexlayout override — required */
 }
 
-/* Individual tabsets (dockable windows) */
+/* Individual tabsets */
 body .flexlayout__tabset {
-  background-color: var(--surface-color) !important;
+  background-color: var(--surface-color) !important; /* flexlayout override — required */
   border-radius: var(--radius-md) !important;
   overflow: hidden !important;
   border: 2px solid var(--border-color) !important;
@@ -296,34 +265,34 @@ body .flexlayout__tabset {
   outline: none !important;
 }
 
-/* Header of tabsets */
+/* Tabset header / tab bar */
 body .flexlayout__tabset_header,
 body .flexlayout__tabset_tabbar_outer,
 body .flexlayout__tabset_tabbar_inner,
 body .flexlayout__tabset_header_outer,
 body .flexlayout__tabset_tabbar {
-  background-color: var(--surface-hover) !important;
+  background-color: var(--surface-hover) !important; /* flexlayout override — required */
   background: var(--surface-hover) !important;
   border-bottom: none !important;
 }
 
-/* Splitter bars between windows */
+/* Splitter bars */
 body .flexlayout__splitter {
-  background-color: var(--background-color) !important;
+  background-color: var(--background-color) !important; /* flexlayout override — required */
   transition: background-color 0.2s ease !important;
 }
 
-body .flexlayout__splitter:hover, 
+body .flexlayout__splitter:hover,
 body .flexlayout__splitter_drag {
-  background-color: var(--primary-color) !important;
+  background-color: var(--primary-color) !important; /* flexlayout override — required */
 }
 
-/* Individual tab contents */
+/* Tab content area */
 body .flexlayout__tab {
-  background-color: var(--surface-color) !important;
+  background-color: var(--surface-color) !important; /* flexlayout override — required */
 }
 
-/* Tab buttons in headers */
+/* Tab button */
 body .flexlayout__tab_button {
   font-size: 0.75rem !important;
   font-weight: 600 !important;
@@ -337,9 +306,9 @@ body .flexlayout__tab_button {
   border-bottom: 2px solid transparent !important;
 }
 
-/* Selected active tab button */
+/* Selected tab */
 body .flexlayout__tab_button--selected {
-  background-color: var(--surface-color) !important;
+  background-color: var(--surface-color) !important; /* flexlayout override — required */
   color: var(--primary-color) !important;
   font-weight: 700 !important;
   border-bottom: 2px solid var(--primary-color) !important;
@@ -351,7 +320,7 @@ body .flexlayout__tab_button--selected {
   background-color: var(--surface-hover) !important;
 }
 
-/* Dragging preview boxes */
+/* Drag / drop preview */
 .flexlayout__drag_rect {
   background: var(--primary-color) !important;
   opacity: 0.25 !important;
@@ -363,7 +332,7 @@ body .flexlayout__tab_button--selected {
   border-radius: var(--radius-md) !important;
 }
 
-/* Toolbar buttons in headers (like Maximize/Close) */
+/* Toolbar buttons (Maximize, Close) */
 .flexlayout__tab_toolbar_button {
   color: var(--text-muted) !important;
 }
@@ -373,7 +342,7 @@ body .flexlayout__tab_button--selected {
   background: var(--surface-hover) !important;
 }
 
-/* Tab trailing close button */
+/* Tab close button */
 .flexlayout__tab_button_trailing {
   margin-left: 8px !important;
   color: var(--text-muted) !important;
@@ -384,10 +353,12 @@ body .flexlayout__tab_button--selected {
 }
 
 /* ==========================================================================
-   UNIFIED NEO-BRUTALIST BUTTON THEME
+   NEO-BRUTALIST BUTTON SYSTEM
+   NOTE: Phase 2 will replace this entire section with CVA variants.
+   Kept intact here so Phase 1 (token consolidation only) is a safe commit.
    ========================================================================== */
 
-/* Base transitions for buttons & labels acting as buttons */
+/* Base transitions */
 button:not([class*="flexlayout" i]),
 label[class*="button" i],
 label[class*="btn" i],
@@ -396,9 +367,7 @@ label[class*="btn" i],
   transition: all 0.15s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
 }
 
-/* ----------------------------------------------------
-   1. PRIMARY / ACTIVE / CONFIRM BUTTONS
-   ---------------------------------------------------- */
+/* --- 1. PRIMARY / ACTIVE / CONFIRM --- */
 button:not([class*="flexlayout" i])[class*="save" i],
 button:not([class*="flexlayout" i])[class*="generate" i],
 button:not([class*="flexlayout" i])[class*="primary" i],
@@ -413,13 +382,12 @@ button:not([class*="flexlayout" i])[class*="ctaBtn" i],
 button:not([class*="flexlayout" i])[class*="actionBtn" i] {
   background: var(--primary-color) !important;
   border: 2px solid var(--border-color) !important;
-  color: #FFFFFF !important;
+  color: var(--primary-foreground) !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.05em !important;
   border-radius: var(--radius-sm) !important;
   box-shadow: 2.5px 2.5px 0px var(--button-shadow-color) !important;
-  text-shadow: none !important;
   transform: none !important;
 }
 
@@ -458,9 +426,7 @@ button:not([class*="flexlayout" i])[class*="actionBtn" i]:active:not(:disabled) 
   transform: translate(1px, 1px) !important;
 }
 
-/* ----------------------------------------------------
-   2. ACCENT / LOAD / IMPORT BUTTONS
-   ---------------------------------------------------- */
+/* --- 2. ACCENT / LOAD / IMPORT --- */
 button:not([class*="flexlayout" i])[class*="load" i],
 button:not([class*="flexlayout" i])[class*="import" i],
 button:not([class*="flexlayout" i])[class*="upload" i],
@@ -483,7 +449,6 @@ label[class*="open" i] {
   letter-spacing: 0.05em !important;
   border-radius: var(--radius-sm) !important;
   box-shadow: 2.5px 2.5px 0px var(--button-shadow-color) !important;
-  text-shadow: none !important;
   transform: none !important;
   cursor: pointer !important;
 }
@@ -527,9 +492,7 @@ label[class*="open" i]:active {
   transform: translate(1px, 1px) !important;
 }
 
-/* ----------------------------------------------------
-   3. DESTRUCTIVE / DANGER BUTTONS
-   ---------------------------------------------------- */
+/* --- 3. DESTRUCTIVE / DANGER --- */
 button:not([class*="flexlayout" i])[class*="delete" i]:not([class*="menu" i]):not([class*="Menu" i]),
 button:not([class*="flexlayout" i])[class*="remove" i]:not([class*="menu" i]):not([class*="Menu" i]),
 button:not([class*="flexlayout" i])[class*="clear" i]:not([class*="menu" i]):not([class*="Menu" i]),
@@ -539,13 +502,12 @@ button:not([class*="flexlayout" i])[class*="trash" i]:not([class*="menu" i]):not
 button:not([class*="flexlayout" i])[class*="reset" i]:not([class*="menu" i]):not([class*="Menu" i]) {
   background: var(--danger-color) !important;
   border: 2px solid var(--border-color) !important;
-  color: #ffffff !important;
+  color: var(--destructive-foreground) !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
   letter-spacing: 0.05em !important;
   border-radius: var(--radius-sm) !important;
   box-shadow: 2.5px 2.5px 0px var(--button-shadow-color) !important;
-  text-shadow: none !important;
   transform: none !important;
 }
 
@@ -574,9 +536,7 @@ button:not([class*="flexlayout" i])[class*="reset" i]:not([class*="menu" i]):not
   transform: translate(1px, 1px) !important;
 }
 
-/* ----------------------------------------------------
-   4. SECONDARY / GENERAL / CANCEL BUTTONS
-   ---------------------------------------------------- */
+/* --- 4. SECONDARY / GENERAL --- */
 button:not([class*="flexlayout" i]):not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]):not([class*="menu" i]):not([class*="Menu" i]) {
   position: relative !important;
   overflow: visible !important;
@@ -623,9 +583,7 @@ button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i
   transform: translate(1px, 1px) !important;
 }
 
-/* ----------------------------------------------------
-   5. DISABLED BUTTON RECOVERY
-   ---------------------------------------------------- */
+/* --- 5. DISABLED STATE --- */
 button:disabled,
 label:disabled {
   opacity: 0.45 !important;
@@ -635,240 +593,237 @@ label:disabled {
 }
 
 /* ==========================================================================
-   DOCK LAYOUT PANELS - NEO-BRUTALIST UNIFICATION
+   PANEL CONTENT — Global fallback styles
+   NOTE: Phase 5 will replace these attribute selectors with explicit classes.
    ========================================================================== */
 
-/* 1. Panel Container backgrounds & scrollbars */
 body [class*="panelContent" i],
 body [class*="container" i]:not(html):not(body):not([class*="dock" i]):not([class*="layout" i]) {
-  color: var(--text-color) !important;
-  background-color: var(--surface-color) !important;
-  background: var(--surface-color) !important;
+  color: var(--text-color);
+  background-color: var(--surface-color);
+  background: var(--surface-color);
 }
 
-body *::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
-}
-body *::-webkit-scrollbar-track {
-  background: var(--surface-color) !important;
-}
-body *::-webkit-scrollbar-thumb {
-  background: var(--border-color-muted) !important;
-  border-radius: var(--radius-sm) !important;
-}
-body *::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted) !important;
-}
-
-/* 2. Section Headers and Dividers */
+/* Section headers */
 body [class*="sectionHeader" i] {
-  color: var(--text-color) !important;
-  font-weight: 700 !important;
-  font-size: 10px !important;
-  background: var(--surface-hover) !important;
-  border-bottom: 1.5px solid var(--border-color-muted) !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  padding: 6px 10px !important;
+  color: var(--text-color);
+  font-weight: 700;
+  font-size: 10px;
+  background: var(--surface-hover);
+  border-bottom: 1.5px solid var(--border-color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 6px 10px;
 }
+
 body [class*="sectionHeader" i]:hover {
-  color: var(--primary-color) !important;
-  background: var(--surface-hover) !important;
+  color: var(--primary-color);
+  background: var(--surface-hover);
 }
+
 body [class*="section" i] {
-  border-bottom: 1.5px solid var(--border-color-muted) !important;
-  background: transparent !important;
+  border-bottom: 1.5px solid var(--border-color-muted);
+  background: transparent;
 }
+
 body [class*="divider" i],
 body [class*="menuDivider" i] {
-  height: 1.5px !important;
-  background: var(--border-color-muted) !important;
+  height: 1.5px;
+  background: var(--border-color-muted);
 }
 
-/* 3. Form Labels and Values */
+/* Form labels */
 body [class*="label" i],
 body [class*="sliderLabel" i],
 body [class*="selectLabel" i],
 body [class*="toggleLabel" i] {
-  color: var(--text-color) !important;
-  font-weight: 600 !important;
+  color: var(--text-color);
+  font-weight: 600;
 }
+
 body [class*="sliderValue" i],
 body [class*="hexVal" i],
 body [class*="value" i] {
-  color: var(--text-muted) !important;
+  color: var(--text-muted);
 }
 
-/* 4. Dropdowns (Select fields) */
-body select,
-body [class*="select" i]:not([class*="flexlayout" i]):not([class*="label" i]):not([class*="row" i]):not([class*="wrapper" i]):not([class*="container" i]) {
-  background: var(--surface-color) !important;
-  border: 1.5px solid var(--border-color) !important;
-  color: var(--text-color) !important;
-  border-radius: var(--radius-sm) !important;
-  padding: 2px 6px !important;
-  font-size: 11px !important;
-  outline: none !important;
-  cursor: pointer !important;
-  transition: all 0.12s ease !important;
+/* Dropdowns (native select) */
+body select {
+  background: var(--surface-color);
+  border: 1.5px solid var(--border-color);
+  color: var(--text-color);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.12s ease;
 }
-body select:hover:not(:disabled),
-body [class*="select" i]:not([class*="flexlayout" i]):not([class*="label" i]):not([class*="row" i]):not([class*="wrapper" i]):not([class*="container" i]):hover:not(:disabled) {
-  background: var(--surface-hover) !important;
-  border-color: var(--border-color) !important;
+
+body select:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--border-color);
 }
-body select:focus,
-body [class*="select" i]:not([class*="flexlayout" i]):not([class*="label" i]):not([class*="row" i]):not([class*="wrapper" i]):not([class*="container" i]):focus {
-  border-color: var(--primary-color) !important;
+
+body select:focus {
+  border-color: var(--primary-color);
 }
+
 body select option {
-  background: var(--surface-color) !important;
-  color: var(--text-color) !important;
+  background: var(--surface-color);
+  color: var(--text-color);
 }
 
-/* 5. Inputs (Text, Numbers) */
+/* Text / number inputs */
 body input[type="text"],
 body input[type="number"],
 body [class*="hexInput" i],
-body [class*="newPaletteInput" i],
-body [class*="input" i]:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]) {
-  background: var(--surface-color) !important;
-  border: 1.5px solid var(--border-color) !important;
-  color: var(--text-color) !important;
-  border-radius: var(--radius-sm) !important;
-  padding: 3px 6px !important;
-  font-size: 11px !important;
-  outline: none !important;
-  transition: all 0.12s ease !important;
+body [class*="newPaletteInput" i] {
+  background: var(--surface-color);
+  border: 1.5px solid var(--border-color);
+  color: var(--text-color);
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+  font-size: 11px;
+  outline: none;
+  transition: all 0.12s ease;
 }
+
 body input[type="text"]:focus,
 body input[type="number"]:focus,
-body [class*="hexInput" i]:focus,
-body [class*="input" i]:focus {
-  border-color: var(--primary-color) !important;
+body [class*="hexInput" i]:focus {
+  border-color: var(--primary-color);
 }
 
-/* 6. Range Sliders */
-body input[type="range"],
-body [class*="sliderTrack" i] {
-  -webkit-appearance: none !important;
-  appearance: none !important;
-  width: 100% !important;
-  height: 4px !important;
-  background: var(--border-color-muted) !important;
-  border-radius: var(--radius-full) !important;
-  outline: none !important;
-  cursor: pointer !important;
-  border: none !important;
-}
-body input[type="range"]::-webkit-slider-thumb,
-body [class*="sliderTrack" i]::-webkit-slider-thumb {
-  -webkit-appearance: none !important;
-  width: 12px !important;
-  height: 12px !important;
-  border-radius: 50% !important;
-  background: var(--primary-color) !important;
-  border: 1.5px solid var(--border-color) !important;
-  cursor: pointer !important;
-  margin-top: -4px !important;
-  transition: transform 0.1s !important;
-}
-body input[type="range"]::-webkit-slider-thumb:hover,
-body [class*="sliderTrack" i]::-webkit-slider-thumb:hover {
-  transform: scale(1.2) !important;
-}
-body input[type="range"]::-moz-range-thumb,
-body [class*="sliderTrack" i]::-moz-range-thumb {
-  width: 12px !important;
-  height: 12px !important;
-  border-radius: 50% !important;
-  background: var(--primary-color) !important;
-  border: 1.5px solid var(--border-color) !important;
+/* Range sliders */
+body input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--border-color-muted);
+  border-radius: var(--radius-full);
+  outline: none;
+  cursor: pointer;
+  border: none;
 }
 
-/* 7. Switch Toggles */
+body input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  border: 1.5px solid var(--border-color);
+  cursor: pointer;
+  margin-top: -4px;
+  transition: transform 0.1s;
+}
+
+body input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+body input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  border: 1.5px solid var(--border-color);
+}
+
+/* Switch toggles */
 body [class*="switchSlider" i] {
-  background: var(--border-color-muted) !important;
-  border: 1.5px solid var(--border-color) !important;
-  border-radius: 16px !important;
+  background: var(--border-color-muted);
+  border: 1.5px solid var(--border-color);
+  border-radius: 16px;
 }
+
 body [class*="switchSlider" i]:before {
-  background: var(--border-color) !important;
+  background: var(--border-color);
 }
+
 body input:checked + [class*="switchSlider" i] {
-  background: var(--primary-color-alpha) !important;
-  border-color: var(--primary-color) !important;
+  background: var(--primary-color-alpha);
+  border-color: var(--primary-color);
 }
+
 body input:checked + [class*="switchSlider" i]:before {
-  background: var(--primary-color) !important;
+  background: var(--primary-color);
 }
 
-/* 8. Grid Tool and Swatch buttons */
+/* Tool / swatch buttons */
 body [class*="toolBtn" i] {
-  background: var(--surface-color) !important;
-  border: 1.5px solid var(--border-color-muted) !important;
-  border-radius: var(--radius-sm) !important;
-  color: var(--text-muted) !important;
-  transition: all 0.12s ease !important;
-}
-body [class*="toolBtn" i]:hover {
-  background: var(--surface-hover) !important;
-  border-color: var(--border-color) !important;
-  color: var(--text-color) !important;
-}
-body [class*="toolBtnActive" i] {
-  background: var(--primary-color-alpha) !important;
-  border-color: var(--primary-color) !important;
-  color: var(--primary-color) !important;
-  box-shadow: 1.5px 1.5px 0px var(--border-color) !important;
-  transform: translate(-1px, -1px) !important;
+  background: var(--surface-color);
+  border: 1.5px solid var(--border-color-muted);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  transition: all 0.12s ease;
 }
 
+body [class*="toolBtn" i]:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-color);
+  color: var(--text-color);
+}
+
+body [class*="toolBtnActive" i] {
+  background: var(--primary-color-alpha);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  box-shadow: 1.5px 1.5px 0px var(--border-color);
+  transform: translate(-1px, -1px);
+}
+
+/* Palette menus */
 body [class*="paletteMenu" i] {
-  background: var(--surface-color) !important;
-  border: 1.5px solid var(--border-color) !important;
-  border-radius: var(--radius-sm) !important;
-  box-shadow: var(--shadow-sm) !important;
+  background: var(--surface-color);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
 }
+
 body [class*="paletteMenuName" i] {
-  color: var(--text-muted) !important;
+  color: var(--text-muted);
 }
+
 body [class*="paletteMenuName" i]:hover {
-  background: var(--surface-hover) !important;
-  color: var(--text-color) !important;
+  background: var(--surface-hover);
+  color: var(--text-color);
 }
+
 body [class*="paletteMenuActive" i] {
-  color: var(--primary-color) !important;
-  background: var(--primary-color-alpha) !important;
+  color: var(--primary-color);
+  background: var(--primary-color-alpha);
 }
 
 body [class*="colorSwatch" i]::-webkit-color-swatch {
-  border: 1.5px solid var(--border-color) !important;
+  border: 1.5px solid var(--border-color);
 }
 
-/* 9. Layer items selection */
+/* Layer row items */
 body [class*="layerRow" i] {
-  background: var(--surface-color) !important;
-  border: 1.5px solid var(--border-color-muted) !important;
-  border-radius: var(--radius-md) !important;
-  transition: all 0.15s ease !important;
+  background: var(--surface-color);
+  border: 1.5px solid var(--border-color-muted);
+  border-radius: var(--radius-md);
+  transition: all 0.15s ease;
 }
+
 body [class*="layerRow" i]:hover {
-  background: var(--surface-hover) !important;
-  border-color: var(--border-color) !important;
+  background: var(--surface-hover);
+  border-color: var(--border-color);
 }
+
 body [class*="activeRow" i] {
-  background: var(--primary-color-alpha) !important;
-  border-color: var(--primary-color) !important;
-  box-shadow: 2px 2px 0px var(--border-color) !important;
-  transform: translate(-1.5px, -1.5px) !important;
+  background: var(--primary-color-alpha);
+  border-color: var(--primary-color);
+  box-shadow: 2px 2px 0px var(--border-color);
+  transform: translate(-1.5px, -1.5px);
 }
+
 body [class*="currentBadge" i] {
-  background: var(--surface-hover) !important;
-  border: 1px solid var(--border-color) !important;
-  color: var(--text-muted) !important;
-  font-weight: 700 !important;
+  background: var(--surface-hover);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-weight: 700;
 }
-
-
