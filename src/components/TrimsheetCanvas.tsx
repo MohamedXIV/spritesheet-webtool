@@ -7,7 +7,7 @@ import { NormRect, Region } from '@/lib/trimsheetTypes';
 import { loadPolyhavenMaterial } from '@/lib/trimsheetMaterials';
 import styles from './TrimsheetCanvas.module.css';
 
-const VIEW = 512;        // CSS px square
+const VIEW = 768;        // CSS px square
 const SNAP = 1 / 16;
 const HANDLE_PX = 8;    // handle square size
 const HIT_PX = 12;      // hit detection radius in px
@@ -112,6 +112,35 @@ export function TrimsheetCanvas() {
   const panStartRef = useRef({ x: 0, y: 0 });
   const stageRef = useRef<HTMLDivElement>(null);
   const animFrameRef = useRef<number | null>(null);
+
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  const initializedPanRef = useRef(false);
+
+  // Measure container and center canvas initially
+  useEffect(() => {
+    if (!stageRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setStageSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+    observer.observe(stageRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // Center canvas when stage dimensions are first available
+  useEffect(() => {
+    if (stageSize.width > 0 && stageSize.height > 0 && !initializedPanRef.current) {
+      setPan({
+        x: (stageSize.width - VIEW) / 2,
+        y: (stageSize.height - VIEW) / 2,
+      });
+      initializedPanRef.current = true;
+    }
+  }, [stageSize]);
 
   // Paint baker preview whenever bake version changes
   useEffect(() => {
@@ -538,7 +567,6 @@ export function TrimsheetCanvas() {
       <div
         ref={stageRef}
         className={styles.stage}
-        style={{ width: VIEW, height: VIEW }}
         onWheel={onWheel}
         onContextMenu={(e) => e.preventDefault()}
       >
@@ -571,11 +599,19 @@ export function TrimsheetCanvas() {
         </div>
 
         {/* Floating Zoom Controls */}
-        <div className={styles.zoomControls}>
-          <button onClick={() => setZoom(z => Math.min(5, z * 1.2))} title="Zoom In">+</button>
+        <div className={`${styles.zoomControls} ${Math.abs(zoom - 1) > 1e-4 ? styles.not100 : ''}`}>
           <span className={styles.zoomVal}>{Math.round(zoom * 100)}%</span>
-          <button onClick={() => setZoom(z => Math.max(0.2, z / 1.2))} title="Zoom Out">-</button>
-          <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} title="Reset View">Reset</button>
+          <div className={styles.zoomButtons}>
+            <button onClick={() => setZoom(z => Math.min(5, z * 1.2))} title="Zoom In">+</button>
+            <button onClick={() => setZoom(z => Math.max(0.2, z / 1.2))} title="Zoom Out">-</button>
+            <button onClick={() => {
+              setZoom(1);
+              setPan({
+                x: (stageSize.width - VIEW) / 2,
+                y: (stageSize.height - VIEW) / 2
+              });
+            }} title="Reset View">Reset</button>
+          </div>
         </div>
       </div>
       <div className={styles.hint}>
