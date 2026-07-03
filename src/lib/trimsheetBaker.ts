@@ -122,6 +122,18 @@ export class TrimsheetBaker {
         tilePxH = tilePx * (bitmap.height / bitmap.width);
       }
 
+      console.log('compositeRegion Debug:', {
+        regionName: region.name,
+        keepAspect: region.keepAspect,
+        keepAspectEvaluated: region.keepAspect !== false,
+        pxW: px.w,
+        pxH: px.h,
+        tilePxW,
+        tilePxH,
+        bitmapW: bitmap.width,
+        bitmapH: bitmap.height
+      });
+
       const sx = tilePxW / bitmap.width;
       const sy = tilePxH / bitmap.height;
 
