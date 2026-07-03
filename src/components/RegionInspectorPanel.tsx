@@ -25,13 +25,34 @@ export function RegionInspectorPanel() {
       <div className={styles.field}>
         <label>Material</label>
         <div className={styles.row}>
-          <span style={{ flex: 1 }}>
-            {material ? `${material.name} (${countMaps(material)}/5 maps)` : 'None'}
+          <span style={{ flex: 1, fontWeight: 500 }}>
+            {material ? material.name : 'None'}
           </span>
           {material && (
             <button className={styles.btn} onClick={() => ctx.clearRegionMaterial(region.id)}>Clear</button>
           )}
         </div>
+        {material && material.source !== 'flat' && (
+          <>
+            <div className={styles.mapChannelsList}>
+              {(['albedo', 'normal', 'roughness', 'metalness', 'ao'] as const).map((ch) => {
+                const hasMap = !!material.maps[ch];
+                return (
+                  <span
+                    key={ch}
+                    className={`${styles.channelBadge} ${hasMap ? styles.channelBadgeActive : ''}`}
+                    title={hasMap ? `${ch} map present` : `${ch} map using fallback`}
+                  >
+                    {ch === 'ao' ? 'AO' : ch.substring(0, 3).toUpperCase()}
+                  </span>
+                );
+              })}
+            </div>
+            <div className={styles.seamlessInfo}>
+              Seamless: {material.source === 'polyhaven' ? 'X & Y (standard)' : 'X & Y (tiled)'}
+            </div>
+          </>
+        )}
       </div>
 
       <div className={styles.field}>
