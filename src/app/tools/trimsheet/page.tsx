@@ -27,10 +27,12 @@ export default function TrimsheetPage() {
   const [resolution, setResolutionState] = useState<TrimResolution>(1024);
   const [regions, setRegions] = useState<Region[]>([]);
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
+  const [selectedRegionIds, setSelectedRegionIds] = useState<Set<string>>(new Set());
   const [materials, setMaterials] = useState<TrimMaterial[]>([]);
   const [enabledChannels, setEnabledChannels] = useState<MapChannel[]>([...MAP_CHANNELS]);
   const [bakeVersion, setBakeVersion] = useState(0);
   const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set());
+  const [loadingRegionIds, setLoadingRegionIds] = useState<Set<string>>(new Set());
 
   const [polyhavenAssets, setPolyhavenAssets] = useState<PolyhavenAsset[]>([]);
   const [polyhavenError, setPolyhavenError] = useState<string | null>(null);
@@ -74,7 +76,9 @@ export default function TrimsheetPage() {
           if (bakerRef.current) {
             bakerRef.current.setResolution(res, [], materialsRef.current);
           }
-          const loadedRegions: Region[] = Array.isArray(opts.regions) ? opts.regions : [];
+          const loadedRegions: Region[] = Array.isArray(opts.regions)
+            ? opts.regions.map((r) => ({ ...r, keepAspect: r.keepAspect ?? true }))
+            : [];
           setRegions(loadedRegions);
           // Re-composite each region (materials best-effort; empty => fallback fills).
           loadedRegions.forEach((r) => {
@@ -129,6 +133,7 @@ export default function TrimsheetPage() {
       rect,
       materialId: null,
       tiling: { ...DEFAULT_TILING },
+      keepAspect: true,
     };
     setRegions((prev) => [...prev, region]);
     setSelectedRegionId(region.id);
@@ -221,6 +226,53 @@ export default function TrimsheetPage() {
     markDirty();
   }, [recomposite, markDirty]);
 
+  const mergeSelectedRegions = useCallback(() => {
+    const ids = [...selectedRegionIds];
+    if (ids.length < 2) return;
+    setRegions((prev) => {
+      const toMerge = ids.map((id) => prev.find((r) => r.id === id)).filter(Boolean) as Region[];
+      if (toMerge.length < 2) return prev;
+      for (const r of toMerge) bakerRef.current?.clearRegion(r.rect);
+      const x1 = Math.min(...toMerge.map((r) => r.rect.x));
+      const y1 = Math.min(...toMerge.map((r) => r.rect.y));
+      const x2 = Math.max(...toMerge.map((r) => r.rect.x + r.rect.w));
+      const y2 = Math.max(...toMerge.map((r) => r.rect.y + r.rect.h));
+      const merged: Region = {
+        ...toMerge[0],
+        id: makeRegionId(),
+        name: toMerge.map((r) => r.name).join('+'),
+        rect: { x: x1, y: y1, w: x2 - x1, h: y2 - y1 },
+      };
+      const idSet = new Set(ids);
+      const next = prev.filter((r) => !idSet.has(r.id));
+      next.push(merged);
+      recomposite(merged);
+      setSelectedRegionId(merged.id);
+      return next;
+    });
+    setSelectedRegionIds(new Set());
+    markDirty();
+  }, [selectedRegionIds, recomposite, markDirty]);
+
+  const stretchRegion = useCallback((id: string, axis: 'horizontal' | 'vertical') => {
+    setRegions((prev) => {
+      const r = prev.find((x) => x.id === id);
+      if (!r) return prev;
+      bakerRef.current?.clearRegion(r.rect);
+      const stretched: Region = {
+        ...r,
+        rect: axis === 'horizontal'
+          ? { ...r.rect, x: 0, w: 1 }
+          : { ...r.rect, y: 0, h: 1 },
+      };
+      const next = prev.map((x) => (x.id === id ? stretched : x));
+      recomposite(stretched);
+      return next;
+    });
+    setBakeVersion((v) => v + 1);
+    markDirty();
+  }, [recomposite, markDirty]);
+
   const generateGrid = useCallback((rows: number, cols: number) => {
     // Replace existing regions with a fresh grid.
     setRegions((prev) => {
@@ -234,6 +286,7 @@ export default function TrimsheetPage() {
             id: makeRegionId(), name: `Region ${n++}`,
             rect: { x: cx * w, y: ry * h, w, h },
             materialId: null, tiling: { ...DEFAULT_TILING },
+            keepAspect: true,
           });
         }
       }
@@ -242,6 +295,25 @@ export default function TrimsheetPage() {
     });
     markDirty();
   }, [recomposite, markDirty]);
+
+  const updateRegionKeepAspect = useCallback((id: string, keepAspect: boolean) => {
+    setRegions((prev) => {
+      const next = prev.map((r) => (r.id === id ? { ...r, keepAspect } : r));
+      const updated = next.find((r) => r.id === id);
+      if (updated) recomposite(updated);
+      return next;
+    });
+    markDirty();
+  }, [recomposite, markDirty]);
+
+  const setLoadingRegionId = useCallback((id: string, isLoading: boolean) => {
+    setLoadingRegionIds((prev) => {
+      const next = new Set(prev);
+      if (isLoading) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
 
   // --- Material operations ---
   const assignMaterialToRegion = useCallback((regionId: string, material: TrimMaterial) => {
@@ -341,9 +413,11 @@ export default function TrimsheetPage() {
     bakeVersion,
     resolution, setResolution,
     regions, selectedRegionId, selectRegion: setSelectedRegionId,
-    addRegion, updateRegionRect, updateRegionTiling, renameRegion, deleteRegion,
-    splitRegion, mergeRegions, generateGrid,
+    selectedRegionIds, setSelectedRegionIds,
+    addRegion, updateRegionRect, updateRegionTiling, updateRegionKeepAspect, renameRegion, deleteRegion,
+    splitRegion, mergeRegions, mergeSelectedRegions, stretchRegion, generateGrid,
     materials, assignMaterialToRegion, setRegionFlatColor, clearRegionMaterial,
+    loadingRegionIds, setLoadingRegionId,
     polyhavenAssets, polyhavenError, polyhavenLoading,
     enabledChannels, toggleChannel, exportZip,
     isDirty, triggerSave: doSave, triggerSaveAs,

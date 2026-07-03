@@ -50,6 +50,7 @@ export interface Region {
   rect: NormRect;       // NORMALIZED 0..1
   materialId: string | null;
   tiling: RegionTiling;
+  keepAspect?: boolean;
 }
 
 export interface TrimsheetProject {

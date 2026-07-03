@@ -18,15 +18,24 @@ export interface TrimsheetContextValue {
 
   // Regions
   regions: Region[];
+  /** Primary selected region ID (drives the gizmo). */
   selectedRegionId: string | null;
   selectRegion: (id: string | null) => void;
+  /** Full multi-selection set (includes selectedRegionId when non-null). */
+  selectedRegionIds: Set<string>;
+  setSelectedRegionIds: (ids: Set<string>) => void;
   addRegion: (rect: Region['rect']) => void;
   updateRegionRect: (id: string, rect: Region['rect']) => void;
   updateRegionTiling: (id: string, tiling: Partial<Region['tiling']>) => void;
+  updateRegionKeepAspect: (id: string, keepAspect: boolean) => void;
   renameRegion: (id: string, name: string) => void;
   deleteRegion: (id: string) => void;
   splitRegion: (id: string, axis: 'horizontal' | 'vertical') => void;
   mergeRegions: (idA: string, idB: string) => void;
+  /** Merge all regions currently in selectedRegionIds into one bounding rect. */
+  mergeSelectedRegions: () => void;
+  /** Stretch a region to fill the full width (horizontal) or height (vertical). */
+  stretchRegion: (id: string, axis: 'horizontal' | 'vertical') => void;
   generateGrid: (rows: number, cols: number) => void;
 
   // Materials
@@ -34,6 +43,8 @@ export interface TrimsheetContextValue {
   assignMaterialToRegion: (regionId: string, material: TrimMaterial) => void;
   setRegionFlatColor: (regionId: string, color: string) => void;
   clearRegionMaterial: (regionId: string) => void;
+  loadingRegionIds: Set<string>;
+  setLoadingRegionId: (id: string, isLoading: boolean) => void;
 
   // Polyhaven index (shared across panels)
   polyhavenAssets: PolyhavenAsset[];

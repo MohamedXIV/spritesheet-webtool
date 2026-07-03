@@ -111,8 +111,17 @@ export class TrimsheetBaker {
       // - rotation rotates the pattern about the rect's top-left.
       // - offset shifts the pattern within the rect (fraction of rect size).
       const safeScale = scale > 1e-6 ? scale : 1e-6;
-      const tilePxW = px.w / safeScale;
-      const tilePxH = px.h / safeScale;
+      let tilePxW = px.w / safeScale;
+      let tilePxH = px.h / safeScale;
+
+      if (region.keepAspect !== false) {
+        // Keep aspect ratio (clip instead of stretch):
+        // Base tiling size on the resolution of the sheet uniformly, keeping bitmap aspect ratio.
+        const tilePx = this.resolution / safeScale;
+        tilePxW = tilePx;
+        tilePxH = tilePx * (bitmap.height / bitmap.width);
+      }
+
       const sx = tilePxW / bitmap.width;
       const sy = tilePxH / bitmap.height;
 

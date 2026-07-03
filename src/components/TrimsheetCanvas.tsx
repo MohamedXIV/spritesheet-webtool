@@ -105,6 +105,14 @@ export function TrimsheetCanvas() {
   const [draft, setDraft] = useState<NormRect | null>(null);
   const [hover, setHover] = useState<HoverTarget>(null);
 
+  // Viewport transformation states
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef({ x: 0, y: 0 });
+  const stageRef = useRef<HTMLDivElement>(null);
+  const animFrameRef = useRef<number | null>(null);
+
   // Paint baker preview whenever bake version changes
   useEffect(() => {
     const baker = ctx.baker;
@@ -216,6 +224,34 @@ export function TrimsheetCanvas() {
           c.fillText(`${r.tiling.rotation}°`, rhx + 10, rhy + 4);
         }
       }
+
+      // ── Loading spinner inside region ──
+      if (ctx.loadingRegionIds.has(r.id)) {
+        const cx = px + pw / 2;
+        const cy = py + ph / 2;
+        const radius = Math.min(pw, ph, 32) / 3;
+
+        if (radius > 4) {
+          c.save();
+          // Draw dark translucent background circle for the spinner
+          c.fillStyle = 'rgba(0, 0, 0, 0.45)';
+          c.beginPath();
+          c.arc(cx, cy, radius + 6, 0, Math.PI * 2);
+          c.fill();
+
+          // Draw spinning arc
+          c.translate(cx, cy);
+          const angle = (Date.now() / 150) % (Math.PI * 2);
+          c.rotate(angle);
+          c.beginPath();
+          c.arc(0, 0, radius, 0, Math.PI * 1.5); // 3/4 circle
+          c.strokeStyle = PRIMARY;
+          c.lineWidth = Math.max(1.5, radius / 4);
+          c.lineCap = 'round';
+          c.stroke();
+          c.restore();
+        }
+      }
     }
 
     // Draft (new region being drawn)
@@ -226,9 +262,31 @@ export function TrimsheetCanvas() {
       c.strokeRect(draft.x * VIEW + 0.5, draft.y * VIEW + 0.5, draft.w * VIEW, draft.h * VIEW);
       c.setLineDash([]);
     }
-  }, [ctx.regions, ctx.selectedRegionId, ctx.selectedRegionIds, draft, PRIMARY, PRIMARY_DIM, PRIMARY_FILL, MULTI_STROKE]);
+  }, [ctx.regions, ctx.selectedRegionId, ctx.selectedRegionIds, ctx.loadingRegionIds, draft, PRIMARY, PRIMARY_DIM, PRIMARY_FILL, MULTI_STROKE]);
 
-  useEffect(() => { drawOverlay(); }, [drawOverlay]);
+  // Render loop to animate spinners inside loading regions
+  useEffect(() => {
+    if (ctx.loadingRegionIds.size === 0) {
+      drawOverlay();
+      if (animFrameRef.current !== null) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+      return;
+    }
+
+    const tick = () => {
+      drawOverlay();
+      animFrameRef.current = requestAnimationFrame(tick);
+    };
+    tick();
+
+    return () => {
+      if (animFrameRef.current !== null) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
+    };
+  }, [ctx.loadingRegionIds, drawOverlay]);
 
   // Convert pointer/drag event to [0,1] normalized coords
   const toNorm = (e: { clientX: number; clientY: number }): [number, number] => {
@@ -284,6 +342,14 @@ export function TrimsheetCanvas() {
 
   const onPointerDown = (e: React.PointerEvent) => {
     overlayRef.current!.setPointerCapture(e.pointerId);
+
+    // 0) Right-click (2) or Middle-click (1) triggers panning
+    if (e.button === 1 || e.button === 2) {
+      setIsPanning(true);
+      panStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+      return;
+    }
+
     const [nx, ny] = toNorm(e);
     const sel = ctx.regions.find((r) => r.id === ctx.selectedRegionId) ?? null;
 
@@ -342,6 +408,14 @@ export function TrimsheetCanvas() {
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
+    if (isPanning) {
+      setPan({
+        x: e.clientX - panStartRef.current.x,
+        y: e.clientY - panStartRef.current.y,
+      });
+      return;
+    }
+
     const [nx, ny] = toNorm(e);
     const free = e.altKey;
 
@@ -384,6 +458,11 @@ export function TrimsheetCanvas() {
   };
 
   const onPointerUp = () => {
+    if (isPanning) {
+      setIsPanning(false);
+      return;
+    }
+
     if (drag?.kind === 'draw' && draft && draft.w > 0.02 && draft.h > 0.02) {
       ctx.addRegion(draft);
     }
@@ -395,46 +474,112 @@ export function TrimsheetCanvas() {
     e.preventDefault();
     const assetJson = e.dataTransfer.getData('application/json');
     if (!assetJson) return;
+    let targetRegionId: string | null = null;
     try {
       const asset = JSON.parse(assetJson);
       const [nx, ny] = toNorm(e);
       const hit = hitRegion(nx, ny);
       if (!hit) return;
 
+      targetRegionId = hit.id;
       // Select region
       ctx.selectRegion(hit.id);
       ctx.setSelectedRegionIds(new Set([hit.id]));
 
       // Load and assign Polyhaven material
+      ctx.setLoadingRegionId(hit.id, true);
       const mat = await loadPolyhavenMaterial(asset);
       ctx.assignMaterialToRegion(hit.id, mat);
     } catch (err) {
       console.error('Failed to assign dropped material:', err);
+    } finally {
+      if (targetRegionId) {
+        ctx.setLoadingRegionId(targetRegionId, false);
+      }
+    }
+  };
+
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (!stageRef.current) return;
+
+    const zoomFactor = 1.15;
+    let nextZoom = zoom;
+    if (e.deltaY < 0) {
+      nextZoom = Math.min(5, zoom * zoomFactor);
+    } else {
+      nextZoom = Math.max(0.2, zoom / zoomFactor);
+    }
+
+    // Zoom centered on the cursor position
+    const rect = stageRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const canvasX = (mouseX - pan.x) / zoom;
+    const canvasY = (mouseY - pan.y) / zoom;
+
+    const newPanX = mouseX - canvasX * nextZoom;
+    const newPanY = mouseY - canvasY * nextZoom;
+
+    setZoom(nextZoom);
+    setPan({ x: newPanX, y: newPanY });
+  };
+
+  const onWrapPointerDown = (e: React.PointerEvent) => {
+    if (e.target === e.currentTarget) {
+      ctx.selectRegion(null);
+      ctx.setSelectedRegionIds(new Set());
     }
   };
 
   return (
-    <div className={styles.wrap}>
-      <div className={styles.stage} style={{ width: VIEW, height: VIEW }}>
-        <canvas ref={previewRef} className={styles.canvas} width={VIEW} height={VIEW} />
-        <canvas
-          ref={overlayRef}
-          className={styles.overlay}
-          style={{ cursor: getCursor() }}
-          width={VIEW}
-          height={VIEW}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onDragOver={(e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'copy';
+    <div className={styles.wrap} onPointerDown={onWrapPointerDown}>
+      <div
+        ref={stageRef}
+        className={styles.stage}
+        style={{ width: VIEW, height: VIEW }}
+        onWheel={onWheel}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <div
+          className={styles.canvasContainer}
+          style={{
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: '0 0',
+            width: VIEW,
+            height: VIEW,
+            position: 'absolute',
           }}
-          onDrop={onDrop}
-        />
+        >
+          <canvas ref={previewRef} className={styles.canvas} width={VIEW} height={VIEW} />
+          <canvas
+            ref={overlayRef}
+            className={styles.overlay}
+            style={{ cursor: isPanning ? 'grabbing' : getCursor() }}
+            width={VIEW}
+            height={VIEW}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+            }}
+            onDrop={onDrop}
+          />
+        </div>
+
+        {/* Floating Zoom Controls */}
+        <div className={styles.zoomControls}>
+          <button onClick={() => setZoom(z => Math.min(5, z * 1.2))} title="Zoom In">+</button>
+          <span className={styles.zoomVal}>{Math.round(zoom * 100)}%</span>
+          <button onClick={() => setZoom(z => Math.max(0.2, z / 1.2))} title="Zoom Out">-</button>
+          <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} title="Reset View">Reset</button>
+        </div>
       </div>
       <div className={styles.hint}>
-        Alt = free move · Shift+click = multi-select · Click ↻ = rotate UV 90°
+        Alt = free move · Shift+click = multi-select · Click ↻ = rotate UV 90° · Drag middle/right click = pan
       </div>
     </div>
   );

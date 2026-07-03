@@ -14,15 +14,18 @@ export function TrimMaterialPanel() {
   const noRegion = !ctx.selectedRegionId;
 
   const applyPolyhaven = async (asset: PolyhavenAsset) => {
-    if (!ctx.selectedRegionId) { alert('Select a region first, then click a material.'); return; }
+    const regionId = ctx.selectedRegionId;
+    if (!regionId) { alert('Select a region first, then click a material.'); return; }
     setApplyingId(asset.id);
+    ctx.setLoadingRegionId(regionId, true);
     try {
       const mat = await loadPolyhavenMaterial(asset);
-      ctx.assignMaterialToRegion(ctx.selectedRegionId, mat);
+      ctx.assignMaterialToRegion(regionId, mat);
     } catch (err) {
       console.error(err);
       alert('Failed to load this Polyhaven material. Try another or upload your own.');
     } finally {
+      ctx.setLoadingRegionId(regionId, false);
       setApplyingId(null);
     }
   };
@@ -44,7 +47,7 @@ export function TrimMaterialPanel() {
 
   const filtered = ctx.polyhavenAssets.filter(
     (a) => a.name.toLowerCase().includes(query.toLowerCase()) || a.id.toLowerCase().includes(query.toLowerCase()),
-  ).slice(0, 60); // cap render for performance
+  ).slice(0, 30); // cap render for performance
 
   return (
     <div className={styles.panel}>

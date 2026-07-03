@@ -40,6 +40,16 @@ export function RegionInspectorPanel() {
           onChange={(e) => ctx.setRegionFlatColor(region.id, e.target.value)} />
       </div>
 
+      <div className={styles.field} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <input
+          type="checkbox"
+          id="keepAspectCheckbox"
+          checked={region.keepAspect !== false}
+          onChange={(e) => ctx.updateRegionKeepAspect(region.id, e.target.checked)}
+        />
+        <label htmlFor="keepAspectCheckbox" style={{ cursor: 'pointer', margin: 0, fontSize: '0.74rem' }}>Keep Aspect Ratio (Clip instead of stretch)</label>
+      </div>
+
       <div className={styles.field}>
         <label>Tiling Scale ({region.tiling.scale.toFixed(2)}×)</label>
         <div className={styles.row}>
