@@ -46,13 +46,8 @@
   gap: 6px;
 }
 .btn {
-  background: var(--primary-color);
-  color: var(--primary-foreground);
-  border: none;
+  composes: neo-btn-primary from global;
   padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font: inherit;
   font-size: 0.74rem;
 }
 .loading { text-align: center; opacity: 0.6; padding: 20px; }

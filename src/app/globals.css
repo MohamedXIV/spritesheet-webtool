@@ -353,243 +353,154 @@ body .flexlayout__tab_button--selected {
 }
 
 /* ==========================================================================
-   NEO-BRUTALIST BUTTON SYSTEM
-   NOTE: Phase 2 will replace this entire section with CVA variants.
-   Kept intact here so Phase 1 (token consolidation only) is a safe commit.
+   EXPLICIT NEO-BRUTALIST BUTTON CLASSES (For CSS Module Composition)
    ========================================================================== */
 
-/* Base transitions */
-button:not([class*="flexlayout" i]),
-label[class*="button" i],
-label[class*="btn" i],
-.btn,
-.button {
-  transition: all 0.15s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+/* Base reset & transitions */
+.neo-btn-base {
+  transition: all 0.15s cubic-bezier(0.2, 0.8, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-family);
+  cursor: pointer;
+  outline: none;
 }
 
-/* --- 1. PRIMARY / ACTIVE / CONFIRM --- */
-button:not([class*="flexlayout" i])[class*="save" i],
-button:not([class*="flexlayout" i])[class*="generate" i],
-button:not([class*="flexlayout" i])[class*="primary" i],
-button:not([class*="flexlayout" i])[class*="Primary" i],
-button:not([class*="flexlayout" i])[class*="cta" i],
-button:not([class*="flexlayout" i])[class*="confirm" i],
-button:not([class*="flexlayout" i])[class*="active" i],
-button:not([class*="flexlayout" i])[class*="activate" i],
-button:not([class*="flexlayout" i])[class*="add" i],
-button:not([class*="flexlayout" i])[class*="confirmBtn" i],
-button:not([class*="flexlayout" i])[class*="ctaBtn" i],
-button:not([class*="flexlayout" i])[class*="actionBtn" i] {
-  background: var(--primary-color) !important;
-  border: 2px solid var(--border-color) !important;
-  color: var(--primary-foreground) !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  border-radius: var(--radius-sm) !important;
-  box-shadow: 2.5px 2.5px 0px var(--button-shadow-color) !important;
-  transform: none !important;
+.neo-btn-base:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-button:not([class*="flexlayout" i])[class*="save" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="generate" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="primary" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="Primary" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="cta" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="confirm" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="active" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="activate" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="add" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="confirmBtn" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="ctaBtn" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="actionBtn" i]:hover:not(:disabled) {
-  background: var(--surface-color) !important;
-  color: var(--text-color) !important;
-  border-color: var(--border-color) !important;
-  box-shadow: 3.5px 3.5px 0px var(--button-shadow-color) !important;
-  transform: translate(-1px, -1px) !important;
+/* 1. Primary Button */
+.neo-btn-primary {
+  composes: neo-btn-base from global;
+  background: var(--primary-color);
+  border: 2px solid var(--border-color);
+  color: var(--primary-foreground);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-sm);
+  box-shadow: 2.5px 2.5px 0px var(--button-shadow-color);
+  transform: none;
 }
 
-button:not([class*="flexlayout" i])[class*="save" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="generate" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="primary" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="Primary" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="cta" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="confirm" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="active" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="activate" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="add" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="confirmBtn" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="ctaBtn" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="actionBtn" i]:active:not(:disabled) {
-  box-shadow: 1px 1px 0px var(--button-shadow-color) !important;
-  transform: translate(1px, 1px) !important;
+.neo-btn-primary:hover:not(:disabled) {
+  background: var(--surface-color);
+  color: var(--text-color);
+  border-color: var(--border-color);
+  box-shadow: 3.5px 3.5px 0px var(--button-shadow-color);
+  transform: translate(-1px, -1px);
 }
 
-/* --- 2. ACCENT / LOAD / IMPORT --- */
-button:not([class*="flexlayout" i])[class*="load" i],
-button:not([class*="flexlayout" i])[class*="import" i],
-button:not([class*="flexlayout" i])[class*="upload" i],
-button:not([class*="flexlayout" i])[class*="open" i],
-button:not([class*="flexlayout" i])[class*="preset" i],
-button:not([class*="flexlayout" i])[class*="chip" i],
-button:not([class*="flexlayout" i])[class*="badge" i],
-button:not([class*="flexlayout" i])[class*="accent" i],
-button:not([class*="flexlayout" i])[class*="Accent" i],
-label[class*="toolbarButton" i],
-label[class*="load" i],
-label[class*="import" i],
-label[class*="upload" i],
-label[class*="open" i] {
-  background: var(--accent-color) !important;
-  border: 2px solid var(--border-color) !important;
-  color: #0B0B0F !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  border-radius: var(--radius-sm) !important;
-  box-shadow: 2.5px 2.5px 0px var(--button-shadow-color) !important;
-  transform: none !important;
-  cursor: pointer !important;
+.neo-btn-primary:active:not(:disabled) {
+  box-shadow: 1px 1px 0px var(--button-shadow-color);
+  transform: translate(1px, 1px);
 }
 
-button:not([class*="flexlayout" i])[class*="load" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="import" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="upload" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="open" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="preset" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="chip" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="badge" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="accent" i]:hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="Accent" i]:hover:not(:disabled),
-label[class*="toolbarButton" i]:hover,
-label[class*="load" i]:hover,
-label[class*="import" i]:hover,
-label[class*="upload" i]:hover,
-label[class*="open" i]:hover {
-  background: var(--surface-color) !important;
-  color: var(--text-color) !important;
-  border-color: var(--border-color) !important;
-  box-shadow: 3.5px 3.5px 0px var(--button-shadow-color) !important;
-  transform: translate(-1px, -1px) !important;
+/* 2. Accent Button */
+.neo-btn-accent {
+  composes: neo-btn-base from global;
+  background: var(--accent-color);
+  border: 2px solid var(--border-color);
+  color: #0B0B0F;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-sm);
+  box-shadow: 2.5px 2.5px 0px var(--button-shadow-color);
+  transform: none;
 }
 
-button:not([class*="flexlayout" i])[class*="load" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="import" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="upload" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="open" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="preset" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="chip" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="badge" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="accent" i]:active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="Accent" i]:active:not(:disabled),
-label[class*="toolbarButton" i]:active,
-label[class*="load" i]:active,
-label[class*="import" i]:active,
-label[class*="upload" i]:active,
-label[class*="open" i]:active {
-  box-shadow: 1px 1px 0px var(--button-shadow-color) !important;
-  transform: translate(1px, 1px) !important;
+.neo-btn-accent:hover:not(:disabled) {
+  background: var(--surface-color);
+  color: var(--text-color);
+  border-color: var(--border-color);
+  box-shadow: 3.5px 3.5px 0px var(--button-shadow-color);
+  transform: translate(-1px, -1px);
 }
 
-/* --- 3. DESTRUCTIVE / DANGER --- */
-button:not([class*="flexlayout" i])[class*="delete" i]:not([class*="menu" i]):not([class*="Menu" i]),
-button:not([class*="flexlayout" i])[class*="remove" i]:not([class*="menu" i]):not([class*="Menu" i]),
-button:not([class*="flexlayout" i])[class*="clear" i]:not([class*="menu" i]):not([class*="Menu" i]),
-button:not([class*="flexlayout" i])[class*="danger" i]:not([class*="menu" i]):not([class*="Menu" i]),
-button:not([class*="flexlayout" i])[class*="destructive" i]:not([class*="menu" i]):not([class*="Menu" i]),
-button:not([class*="flexlayout" i])[class*="trash" i]:not([class*="menu" i]):not([class*="Menu" i]),
-button:not([class*="flexlayout" i])[class*="reset" i]:not([class*="menu" i]):not([class*="Menu" i]) {
-  background: var(--danger-color) !important;
-  border: 2px solid var(--border-color) !important;
-  color: var(--destructive-foreground) !important;
-  font-weight: 700 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  border-radius: var(--radius-sm) !important;
-  box-shadow: 2.5px 2.5px 0px var(--button-shadow-color) !important;
-  transform: none !important;
+.neo-btn-accent:active:not(:disabled) {
+  box-shadow: 1px 1px 0px var(--button-shadow-color);
+  transform: translate(1px, 1px);
 }
 
-button:not([class*="flexlayout" i])[class*="delete" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="remove" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="clear" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="danger" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="destructive" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="trash" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled),
-button:not([class*="flexlayout" i])[class*="reset" i]:not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled) {
-  background: var(--surface-color) !important;
-  color: var(--text-color) !important;
-  border-color: var(--border-color) !important;
-  box-shadow: 3.5px 3.5px 0px var(--button-shadow-color) !important;
-  transform: translate(-1px, -1px) !important;
+/* 3. Danger Button */
+.neo-btn-danger {
+  composes: neo-btn-base from global;
+  background: var(--danger-color);
+  border: 2px solid var(--border-color);
+  color: var(--destructive-foreground);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-sm);
+  box-shadow: 2.5px 2.5px 0px var(--button-shadow-color);
+  transform: none;
 }
 
-button:not([class*="flexlayout" i])[class*="delete" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="remove" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="clear" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="danger" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="destructive" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="trash" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled),
-button:not([class*="flexlayout" i])[class*="reset" i]:not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled) {
-  box-shadow: 1px 1px 0px var(--button-shadow-color) !important;
-  transform: translate(1px, 1px) !important;
+.neo-btn-danger:hover:not(:disabled) {
+  background: var(--surface-color);
+  color: var(--text-color);
+  border-color: var(--border-color);
+  box-shadow: 3.5px 3.5px 0px var(--button-shadow-color);
+  transform: translate(-1px, -1px);
 }
 
-/* --- 4. SECONDARY / GENERAL --- */
-button:not([class*="flexlayout" i]):not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]):not([class*="menu" i]):not([class*="Menu" i]) {
-  position: relative !important;
-  overflow: visible !important;
-  transform-style: preserve-3d !important;
-  border: 1.5px solid var(--border-color) !important;
-  background: var(--surface-color) !important;
-  color: var(--text-muted) !important;
-  border-radius: var(--radius-sm) !important;
-  font-weight: 550 !important;
-  box-shadow: none !important;
-  transform: translate(-1px, -1px) !important;
+.neo-btn-danger:active:not(:disabled) {
+  box-shadow: 1px 1px 0px var(--button-shadow-color);
+  transform: translate(1px, 1px);
 }
 
-button:not([class*="flexlayout" i]):not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]):not([class*="menu" i]):not([class*="Menu" i])::after {
-  content: '' !important;
-  position: absolute !important;
-  top: -1.5px !important;
-  left: -1.5px !important;
-  right: -2.5px !important;
-  bottom: -2.5px !important;
-  background-image: radial-gradient(var(--border-color) 25%, transparent 25%) !important;
-  background-size: 3px 3px !important;
-  z-index: -1 !important;
-  border-radius: var(--radius-sm) !important;
-  pointer-events: none !important;
-  transition: opacity 0.15s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
-  transform: translate3d(0, 0, -1px) !important;
+/* 4. Secondary Button */
+.neo-btn-secondary {
+  composes: neo-btn-base from global;
+  position: relative;
+  overflow: visible;
+  transform-style: preserve-3d;
+  border: 1.5px solid var(--border-color);
+  background: var(--surface-color);
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  font-weight: 550;
+  box-shadow: none;
+  transform: translate(-1px, -1px);
 }
 
-button:not([class*="flexlayout" i]):not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]):not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled) {
-  border-color: var(--border-color) !important;
-  color: var(--text-color) !important;
-  box-shadow: 2px 2px 0px var(--button-shadow-color) !important;
-  background: var(--surface-hover) !important;
-  transform: translate(-2px, -2px) !important;
+.neo-btn-secondary::after {
+  content: '';
+  position: absolute;
+  top: -1.5px;
+  left: -1.5px;
+  right: -2.5px;
+  bottom: -2.5px;
+  background-image: radial-gradient(var(--border-color) 25%, transparent 25%);
+  background-size: 3px 3px;
+  z-index: -1;
+  border-radius: var(--radius-sm);
+  pointer-events: none;
+  transition: opacity 0.15s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform: translate3d(0, 0, -1px);
 }
 
-button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]):not([class*="menu" i]):not([class*="Menu" i]):hover:not(:disabled)::after {
-  opacity: 0 !important;
+.neo-btn-secondary:hover:not(:disabled) {
+  border-color: var(--border-color);
+  color: var(--text-color);
+  box-shadow: 2px 2px 0px var(--button-shadow-color);
+  background: var(--surface-hover);
+  transform: translate(-2px, -2px);
 }
 
-button:not([class*="save" i]):not([class*="generate" i]):not([class*="primary" i]):not([class*="Primary" i]):not([class*="cta" i]):not([class*="confirm" i]):not([class*="active" i]):not([class*="activate" i]):not([class*="add" i]):not([class*="confirmBtn" i]):not([class*="ctaBtn" i]):not([class*="actionBtn" i]):not([class*="load" i]):not([class*="import" i]):not([class*="upload" i]):not([class*="open" i]):not([class*="preset" i]):not([class*="chip" i]):not([class*="badge" i]):not([class*="delete" i]):not([class*="remove" i]):not([class*="clear" i]):not([class*="danger" i]):not([class*="destructive" i]):not([class*="trash" i]):not([class*="reset" i]):not([class*="accent" i]):not([class*="Accent" i]):not([class*="menu" i]):not([class*="Menu" i]):active:not(:disabled) {
-  box-shadow: 1px 1px 0px var(--button-shadow-color) !important;
-  transform: translate(1px, 1px) !important;
+.neo-btn-secondary:hover:not(:disabled)::after {
+  opacity: 0;
 }
 
-/* --- 5. DISABLED STATE --- */
-button:disabled,
-label:disabled {
-  opacity: 0.45 !important;
-  cursor: not-allowed !important;
-  transform: none !important;
-  box-shadow: none !important;
+.neo-btn-secondary:active:not(:disabled) {
+  box-shadow: 1px 1px 0px var(--button-shadow-color);
+  transform: translate(1px, 1px);
 }
 
 /* ==========================================================================

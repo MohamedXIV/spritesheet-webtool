@@ -7,13 +7,8 @@
 .row input[type="range"] { flex: 1; }
 .val { width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
 .btn {
-  background: var(--border-color);
-  color: var(--primary-foreground);
-  border: none;
+  composes: neo-btn-secondary from global;
   padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font: inherit;
   font-size: 0.74rem;
 }
 .select {

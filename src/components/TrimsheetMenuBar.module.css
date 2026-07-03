@@ -23,23 +23,10 @@
 }
 
 .backButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  composes: neo-btn-secondary from global;
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-color);
-  border: 2px solid var(--border-color);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
   text-decoration: none;
-}
-.backButton:hover {
-  background: var(--surface-hover);
-  color: var(--primary-color);
-  border-color: var(--primary-color);
 }
 
 .brand { display: flex; align-items: center; gap: 8px; }
@@ -276,17 +263,7 @@
 }
 
 .saveButton {
-  background: var(--primary-color);
-  border-color: var(--border-color);
-  color: var(--primary-foreground);
-  box-shadow: var(--shadow-sm);
-}
-.saveButton:hover:not(:disabled) {
-  background: var(--surface-hover);
-  color: var(--primary-color);
-  border-color: var(--primary-color);
-  box-shadow: 3px 3px 0px var(--primary-color);
-  transform: translate(-1px, -1px);
+  composes: neo-btn-primary from global;
 }
 
 .divider {

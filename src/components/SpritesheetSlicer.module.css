@@ -183,41 +183,17 @@
 }
 
 .cancelBtn, .changeFileBtn {
+  composes: neo-btn-secondary from global;
   flex: 1;
-  background: var(--surface-hover);
-  border: 1px solid var(--border-color-muted);
-  border-radius: 6px;
-  color: var(--text-color);
   font-size: 0.8rem;
-  font-weight: 600;
   padding: 10px 16px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.cancelBtn:hover, .changeFileBtn:hover {
-  background: var(--surface-hover);
-  color: var(--text-color);
 }
 
 .sliceBtn {
+  composes: neo-btn-primary from global;
   flex: 2;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
-  border: none;
-  border-radius: 6px;
-  color: var(--primary-foreground);
   font-size: 0.8rem;
-  font-weight: 700;
   padding: 10px 16px;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: var(--shadow-md);
-}
-
-.sliceBtn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-  filter: brightness(1.1);
 }
 
 .sliceBtn:disabled {

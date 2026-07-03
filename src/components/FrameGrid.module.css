@@ -33,54 +33,31 @@
 }
 
 .button {
+  composes: neo-btn-secondary from global;
   padding: 6px 12px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  background: var(--surface-color);
-  color: var(--text-color);
   font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.button:hover:not(:disabled) {
-  background: var(--surface-hover);
-  border-color: var(--primary-color);
-  color: var(--text-color);
-  box-shadow: var(--shadow-sm);
-}
-
-.button:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
 }
 
 .deleteButton {
-  border-color: var(--border-color-muted);
-  color: var(--danger-color);
-}
-
-.deleteButton:hover:not(:disabled) {
-  background: var(--surface-hover);
-  border-color: var(--danger-color);
-  color: var(--danger-color);
-  box-shadow: var(--shadow-sm);
+  composes: neo-btn-danger from global;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  white-space: nowrap;
 }
 
 .revertButton {
-  border-color: var(--border-color-muted);
+  composes: neo-btn-secondary from global;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  white-space: nowrap;
   color: var(--warning-color);
 }
 
 .revertButton:hover:not(:disabled) {
-  background: var(--surface-hover);
-  border-color: var(--warning-color);
   color: var(--warning-color);
+  border-color: var(--warning-color);
+  background: var(--surface-hover);
   box-shadow: var(--shadow-sm);
 }
 

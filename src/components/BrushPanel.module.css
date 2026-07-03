@@ -573,20 +573,12 @@
 }
 
 .activatePaintBtn {
+  composes: neo-btn-primary from global;
   margin-top: 4px;
-  background: var(--primary-color-alpha);
-  border: 1px solid var(--primary-color);
-  border-radius: 4px;
-  color: var(--primary-color);
   padding: 6px 10px;
   font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
   width: 100%;
-  transition: background 0.15s;
 }
-
-.activatePaintBtn:hover { background: var(--primary-color-alpha); }
 
 /* ── Blocked Fill Layer Overlay ── */
 .blockedOverlay {

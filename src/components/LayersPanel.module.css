@@ -28,38 +28,22 @@
 }
 
 .addBtn {
+  composes: neo-btn-primary from global;
   display: flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--primary-color);
-  border: none;
-  border-radius: 6px;
-  color: var(--primary-foreground);
   padding: 5px 10px;
   font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.addBtn:hover:not(:disabled) {
-  background: var(--primary-hover);
 }
 
 .addFillBtn {
-  background: var(--primary-color-alpha);
-  border: 1px solid var(--primary-color);
+  composes: neo-btn-secondary from global;
   color: var(--primary-color);
+  border-color: var(--primary-color);
 }
 
 .addFillBtn:hover:not(:disabled) {
   background: var(--primary-color-alpha);
   border-color: var(--primary-color);
-}
-
-.addBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  color: var(--primary-color);
 }
 
 .layerList {

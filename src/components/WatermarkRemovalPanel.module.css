@@ -66,34 +66,15 @@
 }
 
 .cancelButton {
+  composes: neo-btn-secondary from global;
   flex: 1;
   padding: 12px 20px;
-  border: 1px solid var(--border-color, #4a5568);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-color, #e5e7eb);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.cancelButton:hover {
-  background: var(--surface-hover, #252542);
 }
 
 .acceptButton {
+  composes: neo-btn-accent from global;
   flex: 1;
   padding: 12px 20px;
-  border: none;
-  border-radius: 8px;
-  background: var(--warning-color);
-  color: var(--background-color);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.acceptButton:hover {
-  background: var(--accent-hover);
 }
 
 /* Locked State */
@@ -113,21 +94,12 @@
 .lockedMessage p {
   margin: 0;
   font-size: 0.9rem;
-  color: var(--text-muted, #9ca3af);
+  color: var(--text-muted);
 }
 
 .unlockButton {
+  composes: neo-btn-accent from global;
   padding: 10px 20px;
-  border: 1px solid var(--warning-color);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--warning-color);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.unlockButton:hover {
-  background: var(--primary-color-alpha);
 }
 
 /* Settings */
@@ -255,24 +227,9 @@
 }
 
 .processButton {
+  composes: neo-btn-primary from global;
   padding: 12px 16px;
-  border: none;
-  border-radius: 8px;
-  background: var(--warning-color);
-  color: var(--background-color);
   font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.processButton:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
-.processButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .hint {
