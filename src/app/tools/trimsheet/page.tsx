@@ -41,6 +41,7 @@ export default function TrimsheetPage() {
   const bakerRef = useRef<TrimsheetBaker | null>(null);
   const dockRef = useRef<TrimsheetDockLayoutRef>(null);
   const materialsRef = useRef<Map<string, TrimMaterial>>(new Map());
+  const regionsRef = useRef<Region[]>([]);
 
   // Keep a fast id->material map in sync for the baker.
   useEffect(() => {
@@ -48,6 +49,11 @@ export default function TrimsheetPage() {
     for (const m of materials) map.set(m.id, m);
     materialsRef.current = map;
   }, [materials]);
+
+  // Keep regionsRef in sync for synchronous baker updates
+  useEffect(() => {
+    regionsRef.current = regions;
+  }, [regions]);
 
   // Initialize the baker once (client-only; OffscreenCanvas needs the browser).
   useEffect(() => {
@@ -129,7 +135,7 @@ export default function TrimsheetPage() {
   const addRegion = useCallback((rect: NormRect) => {
     const region: Region = {
       id: makeRegionId(),
-      name: `Region ${regions.length + 1}`,
+      name: `Region ${regionsRef.current.length + 1}`,
       rect,
       materialId: null,
       tiling: { ...DEFAULT_TILING },
@@ -139,27 +145,24 @@ export default function TrimsheetPage() {
     setSelectedRegionId(region.id);
     recomposite(region);
     markDirty();
-  }, [regions.length, recomposite, markDirty]);
+  }, [recomposite, markDirty]);
 
   const updateRegionRect = useCallback((id: string, rect: NormRect) => {
-    setRegions((prev) => {
-      const old = prev.find((r) => r.id === id);
-      if (old) bakerRef.current?.clearRegion(old.rect); // erase previous footprint
-      const next = prev.map((r) => (r.id === id ? { ...r, rect } : r));
-      const updated = next.find((r) => r.id === id);
-      if (updated) recomposite(updated);
-      return next;
-    });
+    const old = regionsRef.current.find((r) => r.id === id);
+    if (!old) return;
+    bakerRef.current?.clearRegion(old.rect);
+    const updated = { ...old, rect };
+    recomposite(updated);
+    setRegions((prev) => prev.map((r) => (r.id === id ? updated : r)));
     markDirty();
   }, [recomposite, markDirty]);
 
   const updateRegionTiling = useCallback((id: string, tiling: Partial<Region['tiling']>) => {
-    setRegions((prev) => {
-      const next = prev.map((r) => (r.id === id ? { ...r, tiling: { ...r.tiling, ...tiling } } : r));
-      const updated = next.find((r) => r.id === id);
-      if (updated) recomposite(updated);
-      return next;
-    });
+    const old = regionsRef.current.find((r) => r.id === id);
+    if (!old) return;
+    const updated = { ...old, tiling: { ...old.tiling, ...tiling } };
+    recomposite(updated);
+    setRegions((prev) => prev.map((r) => (r.id === id ? updated : r)));
     markDirty();
   }, [recomposite, markDirty]);
 
@@ -169,140 +172,129 @@ export default function TrimsheetPage() {
   }, [markDirty]);
 
   const deleteRegion = useCallback((id: string) => {
-    setRegions((prev) => {
-      const old = prev.find((r) => r.id === id);
-      if (old) bakerRef.current?.clearRegion(old.rect);
-      return prev.filter((r) => r.id !== id);
-    });
+    const old = regionsRef.current.find((r) => r.id === id);
+    if (old) bakerRef.current?.clearRegion(old.rect);
+    setRegions((prev) => prev.filter((r) => r.id !== id));
     setSelectedRegionId((cur) => (cur === id ? null : cur));
     setBakeVersion((v) => v + 1);
     markDirty();
   }, [markDirty]);
 
   const splitRegion = useCallback((id: string, axis: 'horizontal' | 'vertical') => {
-    setRegions((prev) => {
-      const r = prev.find((x) => x.id === id);
-      if (!r) return prev;
-      bakerRef.current?.clearRegion(r.rect);
-      const a: Region = { ...r, id: makeRegionId(), tiling: { ...r.tiling } };
-      const b: Region = { ...r, id: makeRegionId(), name: `${r.name} B`, tiling: { ...r.tiling } };
-      if (axis === 'vertical') {
-        a.rect = { ...r.rect, w: r.rect.w / 2 };
-        b.rect = { ...r.rect, x: r.rect.x + r.rect.w / 2, w: r.rect.w / 2 };
-      } else {
-        a.rect = { ...r.rect, h: r.rect.h / 2 };
-        b.rect = { ...r.rect, y: r.rect.y + r.rect.h / 2, h: r.rect.h / 2 };
-      }
-      a.name = `${r.name} A`;
-      const next = prev.flatMap((x) => (x.id === id ? [a, b] : [x]));
-      recomposite(a); recomposite(b);
-      setSelectedRegionId(a.id);
-      return next;
-    });
+    const r = regionsRef.current.find((x) => x.id === id);
+    if (!r) return;
+    bakerRef.current?.clearRegion(r.rect);
+    const a: Region = { ...r, id: makeRegionId(), tiling: { ...r.tiling } };
+    const b: Region = { ...r, id: makeRegionId(), name: `${r.name} B`, tiling: { ...r.tiling } };
+    if (axis === 'vertical') {
+      a.rect = { ...r.rect, w: r.rect.w / 2 };
+      b.rect = { ...r.rect, x: r.rect.x + r.rect.w / 2, w: r.rect.w / 2 };
+    } else {
+      a.rect = { ...r.rect, h: r.rect.h / 2 };
+      b.rect = { ...r.rect, y: r.rect.y + r.rect.h / 2, h: r.rect.h / 2 };
+    }
+    a.name = `${r.name} A`;
+    recomposite(a);
+    recomposite(b);
+    setRegions((prev) => prev.flatMap((x) => (x.id === id ? [a, b] : [x])));
+    setSelectedRegionId(a.id);
     markDirty();
   }, [recomposite, markDirty]);
 
   const mergeRegions = useCallback((idA: string, idB: string) => {
+    const a = regionsRef.current.find((r) => r.id === idA);
+    const b = regionsRef.current.find((r) => r.id === idB);
+    if (!a || !b) return;
+    bakerRef.current?.clearRegion(a.rect);
+    bakerRef.current?.clearRegion(b.rect);
+    const x1 = Math.min(a.rect.x, b.rect.x);
+    const y1 = Math.min(a.rect.y, b.rect.y);
+    const x2 = Math.max(a.rect.x + a.rect.w, b.rect.x + b.rect.w);
+    const y2 = Math.max(a.rect.y + a.rect.h, b.rect.y + b.rect.h);
+    const merged: Region = {
+      ...a, id: makeRegionId(), name: `${a.name}+${b.name}`,
+      rect: { x: x1, y: y1, w: x2 - x1, h: y2 - y1 },
+    };
+    recomposite(merged);
     setRegions((prev) => {
-      const a = prev.find((r) => r.id === idA);
-      const b = prev.find((r) => r.id === idB);
-      if (!a || !b) return prev;
-      bakerRef.current?.clearRegion(a.rect);
-      bakerRef.current?.clearRegion(b.rect);
-      const x1 = Math.min(a.rect.x, b.rect.x);
-      const y1 = Math.min(a.rect.y, b.rect.y);
-      const x2 = Math.max(a.rect.x + a.rect.w, b.rect.x + b.rect.w);
-      const y2 = Math.max(a.rect.y + a.rect.h, b.rect.y + b.rect.h);
-      const merged: Region = {
-        ...a, id: makeRegionId(), name: `${a.name}+${b.name}`,
-        rect: { x: x1, y: y1, w: x2 - x1, h: y2 - y1 },
-      };
       const next = prev.filter((r) => r.id !== idA && r.id !== idB);
       next.push(merged);
-      recomposite(merged);
-      setSelectedRegionId(merged.id);
       return next;
     });
+    setSelectedRegionId(merged.id);
     markDirty();
   }, [recomposite, markDirty]);
 
   const mergeSelectedRegions = useCallback(() => {
     const ids = [...selectedRegionIds];
     if (ids.length < 2) return;
+    const toMerge = ids.map((id) => regionsRef.current.find((r) => r.id === id)).filter(Boolean) as Region[];
+    if (toMerge.length < 2) return;
+    for (const r of toMerge) bakerRef.current?.clearRegion(r.rect);
+    const x1 = Math.min(...toMerge.map((r) => r.rect.x));
+    const y1 = Math.min(...toMerge.map((r) => r.rect.y));
+    const x2 = Math.max(...toMerge.map((r) => r.rect.x + r.rect.w));
+    const y2 = Math.max(...toMerge.map((r) => r.rect.y + r.rect.h));
+    const merged: Region = {
+      ...toMerge[0],
+      id: makeRegionId(),
+      name: toMerge.map((r) => r.name).join('+'),
+      rect: { x: x1, y: y1, w: x2 - x1, h: y2 - y1 },
+    };
+    recomposite(merged);
     setRegions((prev) => {
-      const toMerge = ids.map((id) => prev.find((r) => r.id === id)).filter(Boolean) as Region[];
-      if (toMerge.length < 2) return prev;
-      for (const r of toMerge) bakerRef.current?.clearRegion(r.rect);
-      const x1 = Math.min(...toMerge.map((r) => r.rect.x));
-      const y1 = Math.min(...toMerge.map((r) => r.rect.y));
-      const x2 = Math.max(...toMerge.map((r) => r.rect.x + r.rect.w));
-      const y2 = Math.max(...toMerge.map((r) => r.rect.y + r.rect.h));
-      const merged: Region = {
-        ...toMerge[0],
-        id: makeRegionId(),
-        name: toMerge.map((r) => r.name).join('+'),
-        rect: { x: x1, y: y1, w: x2 - x1, h: y2 - y1 },
-      };
       const idSet = new Set(ids);
       const next = prev.filter((r) => !idSet.has(r.id));
       next.push(merged);
-      recomposite(merged);
-      setSelectedRegionId(merged.id);
       return next;
     });
+    setSelectedRegionId(merged.id);
     setSelectedRegionIds(new Set());
     markDirty();
   }, [selectedRegionIds, recomposite, markDirty]);
 
   const stretchRegion = useCallback((id: string, axis: 'horizontal' | 'vertical') => {
-    setRegions((prev) => {
-      const r = prev.find((x) => x.id === id);
-      if (!r) return prev;
-      bakerRef.current?.clearRegion(r.rect);
-      const stretched: Region = {
-        ...r,
-        rect: axis === 'horizontal'
-          ? { ...r.rect, x: 0, w: 1 }
-          : { ...r.rect, y: 0, h: 1 },
-      };
-      const next = prev.map((x) => (x.id === id ? stretched : x));
-      recomposite(stretched);
-      return next;
-    });
+    const r = regionsRef.current.find((x) => x.id === id);
+    if (!r) return;
+    bakerRef.current?.clearRegion(r.rect);
+    const stretched: Region = {
+      ...r,
+      rect: axis === 'horizontal'
+        ? { ...r.rect, x: 0, w: 1 }
+        : { ...r.rect, y: 0, h: 1 },
+    };
+    recomposite(stretched);
+    setRegions((prev) => prev.map((x) => (x.id === id ? stretched : x)));
     setBakeVersion((v) => v + 1);
     markDirty();
   }, [recomposite, markDirty]);
 
   const generateGrid = useCallback((rows: number, cols: number) => {
-    // Replace existing regions with a fresh grid.
-    setRegions((prev) => {
-      for (const r of prev) bakerRef.current?.clearRegion(r.rect);
-      const next: Region[] = [];
-      const w = 1 / cols, h = 1 / rows;
-      let n = 1;
-      for (let ry = 0; ry < rows; ry++) {
-        for (let cx = 0; cx < cols; cx++) {
-          next.push({
-            id: makeRegionId(), name: `Region ${n++}`,
-            rect: { x: cx * w, y: ry * h, w, h },
-            materialId: null, tiling: { ...DEFAULT_TILING },
-            keepAspect: true,
-          });
-        }
+    for (const r of regionsRef.current) bakerRef.current?.clearRegion(r.rect);
+    const next: Region[] = [];
+    const w = 1 / cols, h = 1 / rows;
+    let n = 1;
+    for (let ry = 0; ry < rows; ry++) {
+      for (let cx = 0; cx < cols; cx++) {
+        next.push({
+          id: makeRegionId(), name: `Region ${n++}`,
+          rect: { x: cx * w, y: ry * h, w, h },
+          materialId: null, tiling: { ...DEFAULT_TILING },
+          keepAspect: true,
+        });
       }
-      next.forEach((r) => recomposite(r));
-      return next;
-    });
+    }
+    next.forEach((r) => recomposite(r));
+    setRegions(next);
     markDirty();
   }, [recomposite, markDirty]);
 
   const updateRegionKeepAspect = useCallback((id: string, keepAspect: boolean) => {
-    setRegions((prev) => {
-      const next = prev.map((r) => (r.id === id ? { ...r, keepAspect } : r));
-      const updated = next.find((r) => r.id === id);
-      if (updated) recomposite(updated);
-      return next;
-    });
+    const old = regionsRef.current.find((r) => r.id === id);
+    if (!old) return;
+    const updated = { ...old, keepAspect };
+    recomposite(updated);
+    setRegions((prev) => prev.map((r) => (r.id === id ? updated : r)));
     markDirty();
   }, [recomposite, markDirty]);
 
@@ -321,12 +313,13 @@ export default function TrimsheetPage() {
       ? prev.map((m) => (m.id === material.id ? material : m))
       : [...prev, material]));
     materialsRef.current.set(material.id, material);
-    setRegions((prev) => {
-      const next = prev.map((r) => (r.id === regionId ? { ...r, materialId: material.id } : r));
-      const updated = next.find((r) => r.id === regionId);
-      if (updated) recomposite(updated);
-      return next;
-    });
+    
+    const old = regionsRef.current.find((r) => r.id === regionId);
+    if (old) {
+      const updated = { ...old, materialId: material.id };
+      recomposite(updated);
+      setRegions((prev) => prev.map((r) => (r.id === regionId ? updated : r)));
+    }
     markDirty();
   }, [recomposite, markDirty]);
 
@@ -341,12 +334,11 @@ export default function TrimsheetPage() {
   }, [assignMaterialToRegion]);
 
   const clearRegionMaterial = useCallback((regionId: string) => {
-    setRegions((prev) => {
-      const next = prev.map((r) => (r.id === regionId ? { ...r, materialId: null } : r));
-      const updated = next.find((r) => r.id === regionId);
-      if (updated) recomposite(updated);
-      return next;
-    });
+    const old = regionsRef.current.find((r) => r.id === regionId);
+    if (!old) return;
+    const updated = { ...old, materialId: null };
+    recomposite(updated);
+    setRegions((prev) => prev.map((r) => (r.id === regionId ? updated : r)));
     markDirty();
   }, [recomposite, markDirty]);
 
