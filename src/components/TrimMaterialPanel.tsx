@@ -69,7 +69,17 @@ export function TrimMaterialPanel() {
       ) : (
         <div className={styles.grid}>
           {filtered.map((a) => (
-            <div key={a.id} className={styles.card} onClick={() => applyPolyhaven(a)} title={a.name}>
+            <div
+              key={a.id}
+              className={styles.card}
+              onClick={() => applyPolyhaven(a)}
+              title={a.name}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('application/json', JSON.stringify(a));
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+            >
               <img src={a.thumbnail} alt={a.name} loading="lazy" />
               {applyingId === a.id && <span className={styles.badge}>…</span>}
               <div className={styles.name}>{a.name}</div>

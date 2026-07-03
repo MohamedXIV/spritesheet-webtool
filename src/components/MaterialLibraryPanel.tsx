@@ -221,6 +221,11 @@ export function MaterialLibraryPanel() {
       if (!res.ok) throw new Error('Failed to fetch asset file data');
       const data = await res.json();
 
+      const lowercaseKeys: Record<string, any> = {};
+      for (const key of Object.keys(data)) {
+        lowercaseKeys[key.toLowerCase()] = data[key];
+      }
+
       const getMapUrl = (mapObject: any) => {
         if (!mapObject) return null;
         const resObj = mapObject["1k"] || mapObject["2k"] || Object.values(mapObject)[0];
@@ -229,9 +234,9 @@ export function MaterialLibraryPanel() {
         return formatObj?.url || null;
       };
 
-      const diffuseUrl = getMapUrl(data.diffuse || data.diff || data.col || data.albedo);
-      const normalUrl = getMapUrl(data.nor || data.normal || data.nor_gl || data.nor_dx);
-      const roughnessUrl = getMapUrl(data.rough || data.roughness);
+      const diffuseUrl = getMapUrl(lowercaseKeys.diffuse || lowercaseKeys.diff || lowercaseKeys.col || lowercaseKeys.albedo);
+      const normalUrl = getMapUrl(lowercaseKeys.nor || lowercaseKeys.normal || lowercaseKeys.nor_gl || lowercaseKeys.nor_dx);
+      const roughnessUrl = getMapUrl(lowercaseKeys.rough || lowercaseKeys.roughness);
 
       if (!diffuseUrl) {
         alert('Could not find a valid diffuse map for this asset.');

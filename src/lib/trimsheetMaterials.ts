@@ -63,12 +63,17 @@ export async function loadPolyhavenMaterial(asset: PolyhavenAsset): Promise<Trim
   if (!res.ok) throw new Error('Failed to fetch Polyhaven asset files');
   const data = await res.json();
 
+  const lowercaseKeys: Record<string, any> = {};
+  for (const key of Object.keys(data)) {
+    lowercaseKeys[key.toLowerCase()] = data[key];
+  }
+
   const urls: Record<MapChannel, string | null> = {
-    albedo: getMapUrl(data.diffuse || data.diff || data.col || data.albedo),
-    normal: getMapUrl(data.nor_gl || data.nor || data.normal || data.nor_dx),
-    roughness: getMapUrl(data.rough || data.roughness),
-    metalness: getMapUrl(data.metal || data.metalness),
-    ao: getMapUrl(data.ao || data.AO),
+    albedo: getMapUrl(lowercaseKeys.diffuse || lowercaseKeys.diff || lowercaseKeys.col || lowercaseKeys.albedo),
+    normal: getMapUrl(lowercaseKeys.nor_gl || lowercaseKeys.nor || lowercaseKeys.normal || lowercaseKeys.nor_dx),
+    roughness: getMapUrl(lowercaseKeys.rough || lowercaseKeys.roughness),
+    metalness: getMapUrl(lowercaseKeys.metal || lowercaseKeys.metalness),
+    ao: getMapUrl(lowercaseKeys.ao),
   };
 
   const maps: TrimMaterialMaps = {
