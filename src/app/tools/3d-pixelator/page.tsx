@@ -65,60 +65,7 @@ export default function ThreePainterPage() {
   const [textureTiling, setTextureTilingState] = useState<number>(1.0);
   const [materialResolution, setMaterialResolution] = useState<'1k' | '2k' | '4k'>('2k');
 
-  const setTextureTiling = useCallback((tiling: number) => {
-    setTextureTilingState(tiling);
-  }, []);
 
-  useEffect(() => {
-    if (painter) {
-      painter.setTextureTiling(textureTiling);
-    }
-  }, [painter, textureTiling]);
-
-  const setCanvasResolution = useCallback((newRes: number) => {
-    setCanvasResolutionState(newRes);
-    setLayers(prev => {
-      const updatedLayers = prev.map(layer => {
-        if (!layer.canvas) return layer;
-        
-        // Copy old content
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = layer.canvas.width;
-        tempCanvas.height = layer.canvas.height;
-        const tempCtx = tempCanvas.getContext('2d')!;
-        tempCtx.drawImage(layer.canvas, 0, 0);
-
-        // Resize
-        layer.canvas.width = newRes;
-        layer.canvas.height = newRes;
-        const ctx = layer.canvas.getContext('2d')!;
-        ctx.drawImage(tempCanvas, 0, 0, newRes, newRes);
-
-        // Repeat for mask
-        if (layer.maskCanvas) {
-          const tempMask = document.createElement('canvas');
-          tempMask.width = layer.maskCanvas.width;
-          tempMask.height = layer.maskCanvas.height;
-          const tempMaskCtx = tempMask.getContext('2d')!;
-          tempMaskCtx.drawImage(layer.maskCanvas, 0, 0);
-
-          layer.maskCanvas.width = newRes;
-          layer.maskCanvas.height = newRes;
-          const maskCtx = layer.maskCanvas.getContext('2d')!;
-          maskCtx.drawImage(tempMask, 0, 0, newRes, newRes);
-        }
-
-        return layer;
-      });
-
-      // Delay compositing slightly so DOM canvas updates are processed
-      setTimeout(() => {
-        compositeAndPixelate();
-      }, 50);
-
-      return updatedLayers;
-    });
-  }, [compositeAndPixelate]);
 
   const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set([
     '3d-preview', '2d-preview', 'brush-panel', 'layers-panel', 'lighting-panel',
@@ -318,6 +265,104 @@ export default function ThreePainterPage() {
     }
     if (painter) painter.updateTexture();
   }, [layers, pixelatorOptions, painter, smartMaps]);
+
+  const compositeAndPixelateRef = useRef(compositeAndPixelate);
+  useEffect(() => {
+    compositeAndPixelateRef.current = compositeAndPixelate;
+  }, [compositeAndPixelate]);
+
+  const layersRef = useRef(layers);
+  useEffect(() => {
+    layersRef.current = layers;
+  }, [layers]);
+
+  const setTextureTiling = useCallback((tiling: number) => {
+    setTextureTilingState(tiling);
+  }, []);
+
+  useEffect(() => {
+    if (painter) {
+      painter.setTextureTiling(textureTiling);
+    }
+  }, [painter, textureTiling]);
+
+  // Redraw all fill layers when textureTiling changes without triggering React re-renders
+  useEffect(() => {
+    layersRef.current.forEach(l => {
+      if (l.type !== 'fill' || !l.fillTextureUrl) return;
+      const canvas = document.getElementById(`layer-canvas-${l.id}`) as HTMLCanvasElement;
+      const ctx = canvas?.getContext('2d');
+      if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const img = new Image();
+        img.src = l.fillTextureUrl;
+        img.onload = () => {
+          if (textureTiling > 1.0) {
+            const pattern = ctx.createPattern(img, 'repeat');
+            if (pattern) {
+              const matrix = new DOMMatrix();
+              const scaleX = (canvas.width / textureTiling) / img.width;
+              const scaleY = (canvas.height / textureTiling) / img.height;
+              matrix.scaleSelf(scaleX, scaleY);
+              pattern.setTransform(matrix);
+              ctx.fillStyle = pattern;
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            }
+          } else {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          }
+          compositeAndPixelateRef.current();
+        };
+      }
+    });
+  }, [textureTiling]);
+
+  const setCanvasResolution = useCallback((newRes: number) => {
+    setCanvasResolutionState(newRes);
+    setLayers(prev => {
+      const updatedLayers = prev.map(layer => {
+        if (!layer.canvas) return layer;
+        
+        // Copy old content
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = layer.canvas.width;
+        tempCanvas.height = layer.canvas.height;
+        const tempCtx = tempCanvas.getContext('2d')!;
+        tempCtx.drawImage(layer.canvas, 0, 0);
+
+        // Resize
+        layer.canvas.width = newRes;
+        layer.canvas.height = newRes;
+        const ctx = layer.canvas.getContext('2d')!;
+        ctx.drawImage(tempCanvas, 0, 0, newRes, newRes);
+
+        // Repeat for mask
+        if (layer.maskCanvas) {
+          const tempMask = document.createElement('canvas');
+          tempMask.width = layer.maskCanvas.width;
+          tempMask.height = layer.maskCanvas.height;
+          const tempMaskCtx = tempMask.getContext('2d')!;
+          tempMaskCtx.drawImage(layer.maskCanvas, 0, 0);
+
+          layer.maskCanvas.width = newRes;
+          layer.maskCanvas.height = newRes;
+          const maskCtx = layer.maskCanvas.getContext('2d')!;
+          maskCtx.drawImage(tempMask, 0, 0, newRes, newRes);
+        }
+
+        return layer;
+      });
+
+      // Delay compositing slightly so DOM canvas updates are processed
+      setTimeout(() => {
+        compositeAndPixelate();
+      }, 50);
+
+      return updatedLayers;
+    });
+  }, [compositeAndPixelate]);
 
   useEffect(() => { if (layers.length > 0) compositeAndPixelate(); }, [layers, pixelatorOptions, compositeAndPixelate]);
 
@@ -919,39 +964,7 @@ export default function ThreePainterPage() {
     compositeAndPixelate();
   }, [compositeAndPixelate, textureTiling]);
 
-  // Redraw all fill layers when textureTiling changes
-  useEffect(() => {
-    setLayers(prev => prev.map(l => {
-      if (l.type !== 'fill' || !l.fillTextureUrl) return l;
-      const canvas = document.getElementById(`layer-canvas-${l.id}`) as HTMLCanvasElement;
-      const ctx = canvas?.getContext('2d');
-      if (canvas && ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const img = new Image();
-        img.src = l.fillTextureUrl;
-        img.onload = () => {
-          if (textureTiling > 1.0) {
-            const pattern = ctx.createPattern(img, 'repeat');
-            if (pattern) {
-              const matrix = new DOMMatrix();
-              const scaleX = (canvas.width / textureTiling) / img.width;
-              const scaleY = (canvas.height / textureTiling) / img.height;
-              matrix.scaleSelf(scaleX, scaleY);
-              pattern.setTransform(matrix);
-              ctx.fillStyle = pattern;
-              ctx.fillRect(0, 0, canvas.width, canvas.height);
-            } else {
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            }
-          } else {
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          }
-          compositeAndPixelate();
-        };
-      }
-      return l;
-    }));
-  }, [textureTiling, compositeAndPixelate]);
+
 
   const updateLayerFilters = useCallback((layerId: string, filterOpts: Partial<NonNullable<PaintingLayer['filters']>>) => {
     setLayers(prev => prev.map(l => {
