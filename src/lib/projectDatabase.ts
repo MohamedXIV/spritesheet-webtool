@@ -2,6 +2,8 @@
  * projectDatabase - Asynchronous IndexedDB storage engine for local offline saving
  */
 
+import type { StylizerOptions } from '@/lib/stylizer';
+
 export interface ProjectMetadata {
   folders: any[];
   selectedIds: string[];
@@ -66,6 +68,8 @@ export interface ProjectMetadata {
     }[];
     enabledChannels?: string[];
   };
+  stylizerOptions?: StylizerOptions;
+  stylizerMapSlots?: string[]; // ordered MapSlot names matching the saved frame blobs
 }
 
 export interface DbProjectFrameLayer {
@@ -86,7 +90,7 @@ export interface DbProjectFrame {
 export interface DbProject {
   id: string;
   name: string;
-  type: 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet';
+  type: 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet' | 'stylizer';
   createdAt: number;
   updatedAt: number;
   metadata: ProjectMetadata;
@@ -96,7 +100,7 @@ export interface DbProject {
 export interface ProjectSummary {
   id: string;
   name: string;
-  type: 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet';
+  type: 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet' | 'stylizer';
   createdAt: number;
   updatedAt: number;
   frameCount: number;
