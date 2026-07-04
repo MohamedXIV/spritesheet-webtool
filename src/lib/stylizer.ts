@@ -133,3 +133,79 @@ export function applyToneAdjust(
     data[i] = r; data[i + 1] = g; data[i + 2] = bl;
   }
 }
+
+// --- Shared pre-stage: Kuwahara (generalized mean) edge-preserving smooth ---
+
+function kuwahara(src: ImageData, radius: number): ImageData {
+  if (radius <= 0) return src;
+  const { width: w, height: h, data } = src;
+  const out = new ImageData(w, h);
+  const od = out.data;
+  const r = Math.min(8, Math.floor(radius));
+  // Four overlapping quadrant windows; pick the one with lowest luma variance.
+  const quads = [
+    [-r, 0, -r, 0], [0, r, -r, 0], [-r, 0, 0, r], [0, r, 0, r],
+  ];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let bestVar = Infinity, bR = 0, bG = 0, bB = 0;
+      for (const [x0, x1, y0, y1] of quads) {
+        let sum = 0, sumSq = 0, sr = 0, sg = 0, sb = 0, n = 0;
+        for (let dy = y0; dy <= y1; dy++) {
+          const yy = y + dy; if (yy < 0 || yy >= h) continue;
+          for (let dx = x0; dx <= x1; dx++) {
+            const xx = x + dx; if (xx < 0 || xx >= w) continue;
+            const idx = (yy * w + xx) * 4;
+            const rr = data[idx], gg = data[idx + 1], bb = data[idx + 2];
+            const luma = 0.299 * rr + 0.587 * gg + 0.114 * bb;
+            sum += luma; sumSq += luma * luma;
+            sr += rr; sg += gg; sb += bb; n++;
+          }
+        }
+        if (n === 0) continue;
+        const variance = sumSq / n - (sum / n) * (sum / n);
+        if (variance < bestVar) {
+          bestVar = variance; bR = sr / n; bG = sg / n; bB = sb / n;
+        }
+      }
+      const o = (y * w + x) * 4;
+      od[o] = bR; od[o + 1] = bG; od[o + 2] = bB;
+      od[o + 3] = data[o + 3];
+    }
+  }
+  return out;
+}
+
+function posterize(data: Uint8ClampedArray, levels: number): void {
+  const step = 255 / Math.max(1, levels - 1);
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = Math.round(Math.round(data[i] / step) * step);
+    data[i + 1] = Math.round(Math.round(data[i + 1] / step) * step);
+    data[i + 2] = Math.round(Math.round(data[i + 2] / step) * step);
+  }
+}
+
+export async function stylize(
+  albedo: ImageBitmap,
+  opts: StylizerOptions,
+): Promise<ImageBitmap> {
+  // Pre-stage
+  let img = toImageData(albedo);
+  if (opts.smoothRadius > 0) img = kuwahara(img, opts.smoothRadius);
+  applyToneAdjust(img.data, opts.contrast, opts.saturation, opts.brightness);
+
+  // Style stage
+  switch (opts.style) {
+    case 'cel':
+      if (opts.celSmoothing > 0) {
+        img = kuwahara(img, Math.round((opts.celSmoothing / 100) * 4));
+      }
+      posterize(img.data, opts.levels);
+      break;
+    // painterly / watercolor / sketch added in later tasks
+    default:
+      break;
+  }
+
+  return fromImageData(img);
+}
