@@ -185,6 +185,52 @@ function posterize(data: Uint8ClampedArray, levels: number): void {
   }
 }
 
+function boxBlur(src: ImageData, radius: number): ImageData {
+  if (radius <= 0) return src;
+  const { width: w, height: h, data } = src;
+  const tmp = new ImageData(w, h);
+  const td = tmp.data;
+  const r = Math.floor(radius);
+  // horizontal then vertical
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let sr = 0, sg = 0, sb = 0, sa = 0, n = 0;
+      for (let dx = -r; dx <= r; dx++) {
+        const xx = x + dx; if (xx < 0 || xx >= w) continue;
+        const idx = (y * w + xx) * 4;
+        sr += data[idx]; sg += data[idx + 1]; sb += data[idx + 2]; sa += data[idx + 3]; n++;
+      }
+      const o = (y * w + x) * 4;
+      td[o] = sr / n; td[o + 1] = sg / n; td[o + 2] = sb / n; td[o + 3] = sa / n;
+    }
+  }
+  const out = new ImageData(w, h);
+  const od = out.data;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let sr = 0, sg = 0, sb = 0, sa = 0, n = 0;
+      for (let dy = -r; dy <= r; dy++) {
+        const yy = y + dy; if (yy < 0 || yy >= h) continue;
+        const idx = (yy * w + x) * 4;
+        sr += td[idx]; sg += td[idx + 1]; sb += td[idx + 2]; sa += td[idx + 3]; n++;
+      }
+      const o = (y * w + x) * 4;
+      od[o] = sr / n; od[o + 1] = sg / n; od[o + 2] = sb / n; od[o + 3] = sa / n;
+    }
+  }
+  return out;
+}
+
+function desaturate(data: Uint8ClampedArray, amount: number): void {
+  const a = amount / 100;
+  for (let i = 0; i < data.length; i += 4) {
+    const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    data[i] = data[i] + (luma - data[i]) * a;
+    data[i + 1] = data[i + 1] + (luma - data[i + 1]) * a;
+    data[i + 2] = data[i + 2] + (luma - data[i + 2]) * a;
+  }
+}
+
 export async function stylize(
   albedo: ImageBitmap,
   opts: StylizerOptions,
@@ -202,7 +248,28 @@ export async function stylize(
       }
       posterize(img.data, opts.levels);
       break;
-    // painterly / watercolor / sketch added in later tasks
+    case 'painterly': {
+      // Stronger Kuwahara scaled by brush strength, softened by detailPreserve.
+      const brushRadius = Math.max(1, Math.round((opts.brushStrength / 100) * 6));
+      img = kuwahara(img, brushRadius);
+      if (opts.detailPreserve < 50) {
+        img = boxBlur(img, 1);
+      }
+      break;
+    }
+    case 'watercolor': {
+      const blurR = Math.max(1, Math.round((opts.bleed / 100) * 4));
+      img = boxBlur(img, blurR);
+      desaturate(img.data, opts.granulation * 0.4);
+      posterize(img.data, 12); // gentle banding for pigment pooling
+      // wash: lift toward white by washStrength
+      const lift = (opts.washStrength / 100) * 40;
+      for (let i = 0; i < img.data.length; i += 4) {
+        img.data[i] += lift; img.data[i + 1] += lift; img.data[i + 2] += lift;
+      }
+      break;
+    }
+    // sketch added in later tasks
     default:
       break;
   }
