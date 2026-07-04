@@ -6,7 +6,7 @@
 
 **Architecture:** Mirror the existing per-tool pattern — an isolated page under `src/app/tools/stylizer/` owning all state, its own `StylizerContext`, a `StylizerDockLayout` (flexlayout-react), and dedicated panel components. A pure engine `src/lib/stylizer.ts` follows the `pixelator.ts` shape (`Options` + `DEFAULT` + processing functions taking/returning `ImageBitmap`). The `ThreePainter` engine is reused read-only for the optional 3D preview.
 
-**Tech Stack:** Next.js App Router (React 19, `'use client'`), TypeScript, CSS Modules + Tailwind v4 tokens, `flexlayout-react`, Canvas/`OffscreenCanvas`/`ImageBitmap`, Three.js (`threePainter.ts`), IndexedDB (`projectDatabase.ts`), `jszip` (already used by exporter).
+**Tech Stack:** Next.js App Router (React 19, `'use client'`), TypeScript, CSS Modules + Tailwind v4 tokens, `flexlayout-react`, Canvas/`OffscreenCanvas`/`ImageBitmap`, Three.js (`threePainter.ts`), IndexedDB (`projectDatabase.ts`), `fflate` (`zipSync`, already used by the trimsheet exporter — do NOT add jszip).
 
 ## Global Constraints
 
@@ -1186,7 +1186,7 @@ git commit -m "feat(stylizer): add style controls and map-output panels"
 - Create: `src/components/StylizerExportPanel.tsx` (+ `.module.css`)
 
 **Interfaces:**
-- Consumes: `useStylizerContext()`, `ThreePainter` from `@/lib/threePainter`, `jszip`.
+- Consumes: `useStylizerContext()`, `ThreePainter` from `@/lib/threePainter`, `fflate` (`zipSync`).
 - Produces: `StylizerPreviewPanel` (id `preview-2d`), `StylizerPreview3DPanel` (id `preview-3d`), `StylizerExportPanel` (id `export`) for Task 10.
 
 - [ ] **Step 1: Create the 2D preview panel (wipe + tile)**
@@ -1367,11 +1367,12 @@ const EXPORTABLE: { slot: MapSlot; label: string; source: 'derived' | 'material'
   { slot: 'ao', label: 'AO (original)', source: 'material' },
 ];
 
-async function bitmapToBlob(bitmap: ImageBitmap): Promise<Blob> {
+async function bitmapToPngBytes(bitmap: ImageBitmap): Promise<Uint8Array> {
   const canvas = document.createElement('canvas');
   canvas.width = bitmap.width; canvas.height = bitmap.height;
   canvas.getContext('2d')!.drawImage(bitmap, 0, 0);
-  return new Promise((res) => canvas.toBlob((b) => res(b!), 'image/png'));
+  const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/png'));
+  return new Uint8Array(await blob.arrayBuffer());
 }
 
 export function StylizerExportPanel() {
@@ -1399,18 +1400,20 @@ export function StylizerExportPanel() {
   const onExport = useCallback(async () => {
     setBusy(true);
     try {
-      const { default: JSZip } = await import('jszip');
-      const zip = new JSZip();
-      const base = (projectName || 'material').replace(/\s+/g, '_');
+      // Match the trimsheet tool's export: bundle PNGs into one zip via fflate
+      // (already a dependency — see src/lib/trimsheetBaker.ts).
+      const { zipSync } = await import('fflate');
+      const base = (projectName || 'material').replace(/[^a-z0-9_-]+/gi, '_');
+      const files: Record<string, Uint8Array> = {};
       for (const item of EXPORTABLE) {
         if (!selected.has(item.slot)) continue;
         const bmp = getBitmap(item.slot, item.source);
         if (!bmp) continue;
-        const blob = await bitmapToBlob(bmp);
-        zip.file(`${base}_${item.slot}.png`, blob);
+        files[`${base}_${item.slot}.png`] = await bitmapToPngBytes(bmp);
       }
-      const out = await zip.generateAsync({ type: 'blob' });
-      const url = URL.createObjectURL(out);
+      const zipped = zipSync(files, { level: 6 });
+      const blob = new Blob([zipped], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = `${base}_stylized.zip`; a.click();
       URL.revokeObjectURL(url);
@@ -1452,7 +1455,7 @@ Create `src/components/StylizerExportPanel.module.css`:
 - [ ] **Step 4: Verify build**
 
 Run: `npm run build`
-Expected: PASS. (Confirm `jszip` is a dependency: `grep '"jszip"' package.json` — the existing exporter uses it. If absent, run `npm install jszip` and commit the lockfile change with this task.)
+Expected: PASS. (`fflate` is already a dependency — `grep '"fflate"' package.json` confirms it; the trimsheet exporter uses `zipSync` the same way. Do NOT install jszip.)
 
 - [ ] **Step 5: Commit**
 
