@@ -1,0 +1,11 @@
+.panel { display: flex; flex-direction: column; gap: 14px; padding: 12px; height: 100%; overflow-y: auto; color: var(--foreground); }
+.section { display: flex; flex-direction: column; gap: 8px; }
+.section h4 { margin: 0; font-size: 12px; text-transform: uppercase; opacity: .7; letter-spacing: .04em; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.slider { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.slider span { display: flex; justify-content: space-between; }
+.slider em { opacity: .6; font-style: normal; }
+.slider input { width: 100%; accent-color: var(--primary); }
+.thumbs { display: flex; gap: 10px; }
+.thumb { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; opacity: .85; }
+.thumbCanvas { border: 1px solid var(--border); border-radius: 6px; background: var(--muted); image-rendering: auto; }

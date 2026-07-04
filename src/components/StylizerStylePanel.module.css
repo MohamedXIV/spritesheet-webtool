@@ -1,0 +1,12 @@
+.panel { display: flex; flex-direction: column; gap: 14px; padding: 12px; height: 100%; overflow-y: auto; color: var(--foreground); }
+.styleRow { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.styleBtn { padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--foreground); cursor: pointer; font-size: 12px; }
+.styleActive { border-color: var(--primary); background: var(--primary); color: var(--primary-foreground); }
+.section { display: flex; flex-direction: column; gap: 8px; }
+.section h4 { margin: 0; font-size: 12px; text-transform: uppercase; opacity: .7; letter-spacing: .04em; }
+.slider { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.slider span { display: flex; justify-content: space-between; }
+.slider em { opacity: .6; font-style: normal; }
+.slider input { width: 100%; accent-color: var(--primary); }
+.check { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.colorRow { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
