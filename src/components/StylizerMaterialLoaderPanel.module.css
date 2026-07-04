@@ -1,0 +1,13 @@
+.panel { display: flex; flex-direction: column; height: 100%; padding: 12px; gap: 10px; color: var(--foreground); }
+.header { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 13px; }
+.resetBtn { background: var(--secondary); color: var(--secondary-foreground); border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px; cursor: pointer; font-size: 12px; }
+.slots { display: flex; flex-direction: column; gap: 8px; }
+.slot { position: relative; border: 1px dashed var(--border); border-radius: 8px; padding: 10px 12px; cursor: pointer; background: var(--card); transition: border-color .15s, background .15s; }
+.slot:hover { border-color: var(--primary); }
+.slotLoaded { border-style: solid; border-color: var(--primary); }
+.slotRequired .slotLabel { color: var(--primary); }
+.slotLabel { font-size: 12px; font-weight: 600; }
+.slotState { font-size: 11px; opacity: .7; margin-top: 2px; }
+.clearBtn { position: absolute; top: 6px; right: 8px; background: transparent; border: none; color: var(--foreground); font-size: 16px; cursor: pointer; line-height: 1; }
+.hiddenInput { display: none; }
+.hint { font-size: 11px; opacity: .6; margin: 0; }
