@@ -231,6 +231,34 @@ function desaturate(data: Uint8ClampedArray, amount: number): void {
   }
 }
 
+// Returns a Float32Array of edge magnitude (0..~1) per pixel.
+function sobelEdges(src: ImageData): Float32Array {
+  const { width: w, height: h, data } = src;
+  const lum = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    lum[i] = (0.299 * data[i * 4] + 0.587 * data[i * 4 + 1] + 0.114 * data[i * 4 + 2]) / 255;
+  }
+  const edges = new Float32Array(w * h);
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x;
+      const gx =
+        -lum[i - w - 1] - 2 * lum[i - 1] - lum[i + w - 1] +
+        lum[i - w + 1] + 2 * lum[i + 1] + lum[i + w + 1];
+      const gy =
+        -lum[i - w - 1] - 2 * lum[i - w] - lum[i - w + 1] +
+        lum[i + w - 1] + 2 * lum[i + w] + lum[i + w + 1];
+      edges[i] = Math.sqrt(gx * gx + gy * gy);
+    }
+  }
+  return edges;
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
 export async function stylize(
   albedo: ImageBitmap,
   opts: StylizerOptions,
@@ -269,10 +297,141 @@ export async function stylize(
       }
       break;
     }
-    // sketch added in later tasks
+    case 'sketch': {
+      const edges = sobelEdges(img);
+      const thr = opts.lineThreshold / 100;
+      const strength = opts.lineStrength / 100;
+      const { width: w, height: h } = img;
+      // Start from a lightly posterized tone, then draw dark lines over it.
+      posterize(img.data, 4);
+      desaturate(img.data, 100);
+      for (let i = 0; i < w * h; i++) {
+        const e = edges[i];
+        if (e > thr) {
+          const ink = Math.min(1, (e - thr) * strength * 4);
+          const o = i * 4;
+          img.data[o] *= (1 - ink);
+          img.data[o + 1] *= (1 - ink);
+          img.data[o + 2] *= (1 - ink);
+        }
+      }
+      break;
+    }
     default:
       break;
   }
 
+  // Shared outline/ink post-stage
+  if (opts.outlineEnabled) {
+    const edges = sobelEdges(img);
+    const [or, og, ob] = hexToRgb(opts.outlineColor);
+    const t = opts.outlineThickness; // 1..4 → threshold scaling
+    const thr = 0.5 / t;
+    for (let i = 0; i < edges.length; i++) {
+      if (edges[i] > thr) {
+        const o = i * 4;
+        img.data[o] = or; img.data[o + 1] = og; img.data[o + 2] = ob;
+      }
+    }
+  }
+
+  return fromImageData(img);
+}
+
+// --- Lighting bake --------------------------------------------------------
+
+export async function bakeLighting(
+  stylizedAlbedo: ImageBitmap,
+  ao: ImageBitmap | undefined,
+  height: ImageBitmap | undefined,
+  opts: StylizerOptions,
+): Promise<ImageBitmap> {
+  const img = toImageData(stylizedAlbedo);
+  const strength = opts.bakeStrength / 100;
+
+  if (opts.bakeAO && ao) {
+    const aoData = toImageData(ao).data;
+    for (let i = 0; i < img.data.length; i += 4) {
+      const occ = aoData[i] / 255; // AO stored in R (grayscale)
+      const factor = 1 - (1 - occ) * strength;
+      img.data[i] *= factor;
+      img.data[i + 1] *= factor;
+      img.data[i + 2] *= factor;
+    }
+  }
+
+  if (opts.bakeShading && height) {
+    // Soft top-down light: brighten where height slope faces up.
+    const hd = toImageData(height);
+    const { width: w, height: h } = hd;
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        const up = hd.data[((y - 1) * w + x) * 4];
+        const down = hd.data[((y + 1) * w + x) * 4];
+        const slope = (up - down) / 255; // -1..1
+        const light = 1 + slope * strength * 0.5;
+        const o = i * 4;
+        img.data[o] *= light;
+        img.data[o + 1] *= light;
+        img.data[o + 2] *= light;
+      }
+    }
+  }
+
+  return fromImageData(img);
+}
+
+// --- Map regeneration -----------------------------------------------------
+
+export async function regenerateNormal(
+  albedo: ImageBitmap,
+  strength: number,
+): Promise<ImageBitmap> {
+  const src = toImageData(albedo);
+  const { width: w, height: h } = src;
+  const edges = sobelEdges(src); // reuse luma gradient magnitude is not enough; recompute directional
+  // Directional gradients for normal:
+  const lum = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    lum[i] = (0.299 * src.data[i * 4] + 0.587 * src.data[i * 4 + 1] + 0.114 * src.data[i * 4 + 2]) / 255;
+  }
+  const out = new ImageData(w, h);
+  const s = (strength / 100) * 4;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      const xl = lum[y * w + Math.max(0, x - 1)];
+      const xr = lum[y * w + Math.min(w - 1, x + 1)];
+      const yu = lum[Math.max(0, y - 1) * w + x];
+      const yd = lum[Math.min(h - 1, y + 1) * w + x];
+      const dx = (xl - xr) * s;
+      const dy = (yu - yd) * s;
+      const len = Math.sqrt(dx * dx + dy * dy + 1);
+      const o = i * 4;
+      out.data[o] = ((dx / len) * 0.5 + 0.5) * 255;
+      out.data[o + 1] = ((dy / len) * 0.5 + 0.5) * 255;
+      out.data[o + 2] = ((1 / len) * 0.5 + 0.5) * 255;
+      out.data[o + 3] = 255;
+    }
+  }
+  void edges;
+  return fromImageData(out);
+}
+
+export async function regenerateHeight(albedo: ImageBitmap): Promise<ImageBitmap> {
+  let img = toImageData(albedo);
+  img = boxBlur(img, 1);
+  const out = new ImageData(img.width, img.height);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const luma = 0.299 * img.data[i] + 0.587 * img.data[i + 1] + 0.114 * img.data[i + 2];
+    out.data[i] = luma; out.data[i + 1] = luma; out.data[i + 2] = luma; out.data[i + 3] = 255;
+  }
+  return fromImageData(out);
+}
+
+export async function flattenMap(map: ImageBitmap, levels: number): Promise<ImageBitmap> {
+  const img = toImageData(map);
+  posterize(img.data, levels);
   return fromImageData(img);
 }
