@@ -55,6 +55,12 @@ export default function ThreePainterPage() {
     height: HTMLCanvasElement | null;
   } | null>(null);
 
+  const [pbrMaps, setPbrMaps] = useState<Record<string, { url: string | null; name: string | null }>>({});
+  
+  const setPbrMap = useCallback((slot: string, url: string | null, name: string | null) => {
+    setPbrMaps(prev => ({ ...prev, [slot]: { url, name } }));
+  }, []);
+
   const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set([
     '3d-preview', '2d-preview', 'brush-panel', 'layers-panel', 'lighting-panel',
     'texture-maps', 'pixelate-panel', 'export-panel', 'ai-generation', 'material-merger',
@@ -374,6 +380,7 @@ export default function ThreePainterPage() {
     setIsLoadingModel(true); setLoadProgress(0);
     setLoadedModelName(file.name); setLoadedModelSize(file.size);
     modelFileBlobRef.current = file;
+    setPbrMaps({});
     try {
       const data = await file.arrayBuffer();
       if (painter) {
@@ -482,6 +489,7 @@ export default function ThreePainterPage() {
     setLayers([]); setActiveLayerId('');
     setTextureSlots([]);
     setSmartMaps(null);
+    setPbrMaps({});
     modelFileBlobRef.current = null;
     undoStackRef.current = []; redoStackRef.current = [];
     setIsDirty(false);
@@ -1290,6 +1298,7 @@ export default function ThreePainterPage() {
     visiblePanels, togglePanel, resetLayout,
     textureSlots, setTextureSlots, analyzeLoadedModel, applyTextureAtlas,
     smartMaps, bakeModelSmartMaps, applySmartMaterialPreset,
+    pbrMaps, setPbrMap,
   }), [
     projectId, projectName, setProjectName, isSaving, autosaveNotification,
     loadedModelName, loadedModelSize, isModelLoaded, loadNewModel, resetWorkspace, isLoadingModel, loadProgress,
@@ -1306,6 +1315,7 @@ export default function ThreePainterPage() {
     visiblePanels, togglePanel, resetLayout,
     textureSlots, analyzeLoadedModel, applyTextureAtlas,
     smartMaps, bakeModelSmartMaps, applySmartMaterialPreset,
+    pbrMaps, setPbrMap,
   ]);
 
   return (

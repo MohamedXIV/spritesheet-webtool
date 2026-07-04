@@ -46,31 +46,31 @@ function SliderRow({ label, value, min, max, step = 0.01, onChange }: {
 type PainterRef = ReturnType<typeof useThreePainterContext>['painter'];
 
 function useMapSlot(slot: MapSlot, painter: PainterRef) {
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const [fileName, setFileName]   = useState<string | null>(null);
-  const prevUrl = useRef<string | null>(null);
+  const { pbrMaps, setPbrMap } = useThreePainterContext();
+  const currentMap = pbrMaps[slot] || { url: null, name: null };
+  const objectUrl = currentMap.url;
+  const fileName = currentMap.name;
 
   const load = (file: File) => {
-    if (prevUrl.current) URL.revokeObjectURL(prevUrl.current);
+    if (objectUrl && objectUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(objectUrl);
+    }
     const url = URL.createObjectURL(file);
-    prevUrl.current = url;
     new THREE.TextureLoader().load(url, (tex) => {
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
       tex.needsUpdate = true;
       painter?.setMap(slot, tex);
     });
-    setObjectUrl(url);
-    setFileName(file.name);
+    setPbrMap(slot, url, file.name);
   };
 
   const clear = () => {
-    if (prevUrl.current) { URL.revokeObjectURL(prevUrl.current); prevUrl.current = null; }
+    if (objectUrl && objectUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(objectUrl);
+    }
     painter?.setMap(slot, null);
-    setObjectUrl(null);
-    setFileName(null);
+    setPbrMap(slot, null, null);
   };
-
-  useEffect(() => () => { if (prevUrl.current) URL.revokeObjectURL(prevUrl.current); }, []);
 
   return { objectUrl, fileName, load, clear };
 }
@@ -216,11 +216,13 @@ function AlbedoSlot({ layers, activeLayerId, importImageToLayer, clearLayer }: A
     const activeFill = fillLayers.find(l => l.id === activeLayerId);
     return activeFill ? activeFill.id : (fillLayers[0]?.id || '');
   });
-  const [objectUrl, setObjectUrl] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
-  const prevUrl = useRef<string | null>(null);
+  
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+
+  const targetLayer = fillLayers.find(l => l.id === targetLayerId);
+  const objectUrl = targetLayer?.fillTextureUrl || null;
+  const fileName = targetLayer?.fillTextureName || null;
 
   useEffect(() => {
     const activeFill = fillLayers.find(l => l.id === activeLayerId);
@@ -231,39 +233,21 @@ function AlbedoSlot({ layers, activeLayerId, importImageToLayer, clearLayer }: A
     }
   }, [activeLayerId, layers]);
 
-  useEffect(() => {
-    return () => {
-      if (prevUrl.current) URL.revokeObjectURL(prevUrl.current);
-    };
-  }, []);
-
   const load = (file: File) => {
-    const targetLayer = fillLayers.find(l => l.id === targetLayerId);
     if (targetLayer && targetLayer.fillTextureName) {
       const proceed = confirm(`Are you sure you want to replace the existing texture map "${targetLayer.fillTextureName}" on this Fill Layer?`);
       if (!proceed) return;
     }
 
-    if (prevUrl.current) URL.revokeObjectURL(prevUrl.current);
-    const url = URL.createObjectURL(file);
-    prevUrl.current = url;
     if (importImageToLayer) {
       importImageToLayer(file, targetLayerId);
     }
-    setObjectUrl(url);
-    setFileName(file.name);
   };
 
   const clear = () => {
-    if (prevUrl.current) {
-      URL.revokeObjectURL(prevUrl.current);
-      prevUrl.current = null;
-    }
     if (clearLayer) {
       clearLayer(targetLayerId);
     }
-    setObjectUrl(null);
-    setFileName(null);
   };
 
   const handleFiles = (files: FileList | null) => {

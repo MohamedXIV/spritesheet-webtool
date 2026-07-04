@@ -153,6 +153,10 @@ export interface ThreePainterContextValue {
   } | null;
   bakeModelSmartMaps: () => Promise<void>;
   applySmartMaterialPreset: (presetId: string) => void;
+
+  // PBR texture maps state synchronization
+  pbrMaps: Record<string, { url: string | null; name: string | null }>;
+  setPbrMap: (slot: string, url: string | null, name: string | null) => void;
 }
 
 export type { ShadingMode, LightingSettings };

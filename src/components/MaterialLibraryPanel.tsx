@@ -126,6 +126,7 @@ export function MaterialLibraryPanel() {
     updateLayerFillSettings,
     painter,
     isModelLoaded,
+    setPbrMap,
   } = useThreePainterContext();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -197,6 +198,13 @@ export function MaterialLibraryPanel() {
             fillTextureUrl: url,
           });
         }
+        // Reset normal and roughness maps
+        setPbrMap('normal', null, null);
+        setPbrMap('roughness', null, null);
+        if (painter) {
+          painter.setMap('normal', null);
+          painter.setMap('roughness', null);
+        }
         setApplyingAssetId(null);
       }, 'image/png');
     } catch (err) {
@@ -257,22 +265,50 @@ export function MaterialLibraryPanel() {
 
       // 2. Load Normal Map if available and painter exists
       if (normalUrl && painter) {
-        const texLoader = new THREE.TextureLoader();
-        texLoader.load(normalUrl, (tex) => {
-          tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-          tex.needsUpdate = true;
-          painter.setMap('normal', tex);
-        });
+        try {
+          const normRes = await fetch(normalUrl);
+          const normBlob = await normRes.blob();
+          const localNormUrl = URL.createObjectURL(normBlob);
+
+          const texLoader = new THREE.TextureLoader();
+          texLoader.load(localNormUrl, (tex) => {
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            tex.needsUpdate = true;
+            painter.setMap('normal', tex);
+          });
+          setPbrMap('normal', localNormUrl, `${asset.name}_normal.jpg`);
+        } catch (normErr) {
+          console.warn('Failed to download normal map:', normErr);
+          setPbrMap('normal', null, null);
+          painter.setMap('normal', null);
+        }
+      } else {
+        setPbrMap('normal', null, null);
+        if (painter) painter.setMap('normal', null);
       }
 
       // 3. Load Roughness Map if available and painter exists
       if (roughnessUrl && painter) {
-        const texLoader = new THREE.TextureLoader();
-        texLoader.load(roughnessUrl, (tex) => {
-          tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-          tex.needsUpdate = true;
-          painter.setMap('roughness', tex);
-        });
+        try {
+          const roughRes = await fetch(roughnessUrl);
+          const roughBlob = await roughRes.blob();
+          const localRoughUrl = URL.createObjectURL(roughBlob);
+
+          const texLoader = new THREE.TextureLoader();
+          texLoader.load(localRoughUrl, (tex) => {
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            tex.needsUpdate = true;
+            painter.setMap('roughness', tex);
+          });
+          setPbrMap('roughness', localRoughUrl, `${asset.name}_roughness.jpg`);
+        } catch (roughErr) {
+          console.warn('Failed to download roughness map:', roughErr);
+          setPbrMap('roughness', null, null);
+          painter.setMap('roughness', null);
+        }
+      } else {
+        setPbrMap('roughness', null, null);
+        if (painter) painter.setMap('roughness', null);
       }
 
     } catch (err) {
