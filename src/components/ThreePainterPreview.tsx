@@ -22,6 +22,7 @@ export function ThreePainterPreview() {
     psxEnabled,
     isPaintMode,
     setBrushColor,
+    canvasResolution,
   } = useThreePainterContext();
 
   const viewportRef = useRef<HTMLCanvasElement>(null);
@@ -38,13 +39,13 @@ export function ThreePainterPreview() {
     if (!compCanvas) {
       compCanvas = document.createElement('canvas');
       compCanvas.id = 'three-painter-composite-canvas';
-      compCanvas.width = 512;
-      compCanvas.height = 512;
+      compCanvas.width = canvasResolution;
+      compCanvas.height = canvasResolution;
       // Paint baseline texture color
       const ctx = compCanvas.getContext('2d');
       if (ctx) {
         ctx.fillStyle = '#dfdfdf';
-        ctx.fillRect(0, 0, 512, 512);
+        ctx.fillRect(0, 0, canvasResolution, canvasResolution);
       }
       document.body.appendChild(compCanvas);
       // Hide offscreen
@@ -103,6 +104,14 @@ export function ThreePainterPreview() {
       painter.setPaintMode(isPaintMode);
     }
   }, [isPaintMode, painter]);
+
+  useEffect(() => {
+    if (compositeCanvasRef.current && painter) {
+      compositeCanvasRef.current.width = canvasResolution;
+      compositeCanvasRef.current.height = canvasResolution;
+      painter.resizeTextureCanvas(canvasResolution);
+    }
+  }, [canvasResolution, painter]);
 
   // Drag and drop event handlers
   const handleDrag = (e: React.DragEvent) => {

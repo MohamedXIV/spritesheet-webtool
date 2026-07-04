@@ -277,3 +277,26 @@
   font-style: italic;
   text-align: center;
 }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qualitySelect {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color-muted);
+  border-radius: 4px;
+  color: var(--text-color);
+  font-size: 10px;
+  padding: 4px 8px;
+  outline: none;
+  cursor: pointer;
+  height: 24px;
+  box-sizing: border-box;
+}
+
+.qualitySelect:focus {
+  border-color: var(--primary-color-alpha);
+}

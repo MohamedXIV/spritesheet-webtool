@@ -96,6 +96,7 @@ export class ThreePainter {
   private isPaintMode = true;
   private isDrawing = false;
   private handleKeyDown?: (e: KeyboardEvent) => void;
+  private textureTiling = 1.0;
 
   constructor(config: ThreePainterConfig) {
     this.canvas = config.canvasElement;
@@ -286,6 +287,10 @@ export class ThreePainter {
 
   /** Set or clear a PBR texture map slot. Pass null to remove the map. */
   public setMap(slot: MapSlot, tex: THREE.Texture | null) {
+    if (tex) {
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.repeat.set(this.textureTiling, this.textureTiling);
+    }
     switch (slot) {
       case 'ao':
         if (this.pbrMaterial.aoMap) this.pbrMaterial.aoMap.dispose();
@@ -343,6 +348,27 @@ export class ThreePainter {
   /** Set the emissive tint colour on the PBR material (hex string, e.g. '#ff8800'). */
   public setEmissiveColor(hex: string) {
     this.pbrMaterial.emissive.set(hex);
+  }
+
+  /** Force update the composite canvas texture in Three.js after resolution resizing. */
+  public resizeTextureCanvas(newRes: number) {
+    this.canvasTexture.needsUpdate = true;
+  }
+
+  /** Set texture tiling (repeat scale) for PBR maps. */
+  public setTextureTiling(tiling: number) {
+    this.textureTiling = tiling;
+    const slots: MapSlot[] = ['ao', 'normal', 'emissive', 'roughness', 'metalness', 'displacement', 'alpha'];
+    slots.forEach(slot => {
+      const mapKey = (slot === 'alpha' ? 'alphaMap' : slot + 'Map') as keyof THREE.MeshStandardMaterial;
+      const map = this.pbrMaterial[mapKey] as THREE.Texture | null;
+      if (map) {
+        map.wrapS = map.wrapT = THREE.RepeatWrapping;
+        map.repeat.set(tiling, tiling);
+        map.needsUpdate = true;
+      }
+    });
+    this.pbrMaterial.needsUpdate = true;
   }
 
   // ── Public API: legacy PSX ───────────────────────────────────────────────────

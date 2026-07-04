@@ -157,6 +157,14 @@ export interface ThreePainterContextValue {
   // PBR texture maps state synchronization
   pbrMaps: Record<string, { url: string | null; name: string | null }>;
   setPbrMap: (slot: string, url: string | null, name: string | null) => void;
+
+  // Resolution & Tiling Controls
+  canvasResolution: number;
+  setCanvasResolution: (res: number) => void;
+  textureTiling: number;
+  setTextureTiling: (tiling: number) => void;
+  materialResolution: '1k' | '2k' | '4k';
+  setMaterialResolution: (res: '1k' | '2k' | '4k') => void;
 }
 
 export type { ShadingMode, LightingSettings };

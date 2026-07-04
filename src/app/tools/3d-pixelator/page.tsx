@@ -61,6 +61,65 @@ export default function ThreePainterPage() {
     setPbrMaps(prev => ({ ...prev, [slot]: { url, name } }));
   }, []);
 
+  const [canvasResolution, setCanvasResolutionState] = useState<number>(512);
+  const [textureTiling, setTextureTilingState] = useState<number>(1.0);
+  const [materialResolution, setMaterialResolution] = useState<'1k' | '2k' | '4k'>('2k');
+
+  const setTextureTiling = useCallback((tiling: number) => {
+    setTextureTilingState(tiling);
+  }, []);
+
+  useEffect(() => {
+    if (painter) {
+      painter.setTextureTiling(textureTiling);
+    }
+  }, [painter, textureTiling]);
+
+  const setCanvasResolution = useCallback((newRes: number) => {
+    setCanvasResolutionState(newRes);
+    setLayers(prev => {
+      const updatedLayers = prev.map(layer => {
+        if (!layer.canvas) return layer;
+        
+        // Copy old content
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = layer.canvas.width;
+        tempCanvas.height = layer.canvas.height;
+        const tempCtx = tempCanvas.getContext('2d')!;
+        tempCtx.drawImage(layer.canvas, 0, 0);
+
+        // Resize
+        layer.canvas.width = newRes;
+        layer.canvas.height = newRes;
+        const ctx = layer.canvas.getContext('2d')!;
+        ctx.drawImage(tempCanvas, 0, 0, newRes, newRes);
+
+        // Repeat for mask
+        if (layer.maskCanvas) {
+          const tempMask = document.createElement('canvas');
+          tempMask.width = layer.maskCanvas.width;
+          tempMask.height = layer.maskCanvas.height;
+          const tempMaskCtx = tempMask.getContext('2d')!;
+          tempMaskCtx.drawImage(layer.maskCanvas, 0, 0);
+
+          layer.maskCanvas.width = newRes;
+          layer.maskCanvas.height = newRes;
+          const maskCtx = layer.maskCanvas.getContext('2d')!;
+          maskCtx.drawImage(tempMask, 0, 0, newRes, newRes);
+        }
+
+        return layer;
+      });
+
+      // Delay compositing slightly so DOM canvas updates are processed
+      setTimeout(() => {
+        compositeAndPixelate();
+      }, 50);
+
+      return updatedLayers;
+    });
+  }, [compositeAndPixelate]);
+
   const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set([
     '3d-preview', '2d-preview', 'brush-panel', 'layers-panel', 'lighting-panel',
     'texture-maps', 'pixelate-panel', 'export-panel', 'ai-generation', 'material-merger',
@@ -393,7 +452,7 @@ export default function ThreePainterPage() {
 
         // Bake smart maps
         try {
-          const maps = painter.bakeSmartMaps(512, 512);
+          const maps = painter.bakeSmartMaps(canvasResolution, canvasResolution);
           if (maps) {
             setSmartMaps(maps);
           }
@@ -424,7 +483,7 @@ export default function ThreePainterPage() {
       restoredLayers.forEach(l => {
         const canvas = document.createElement('canvas');
         canvas.id = `layer-canvas-${l.id}`;
-        canvas.width = canvas.height = 512;
+        canvas.width = canvas.height = canvasResolution;
         document.body.appendChild(canvas);
         canvas.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
         l.canvas = canvas;
@@ -432,7 +491,7 @@ export default function ThreePainterPage() {
         if (l.maskVisible !== undefined) {
           const mCanvas = document.createElement('canvas');
           mCanvas.id = `layer-mask-canvas-${l.id}`;
-          mCanvas.width = mCanvas.height = 512;
+          mCanvas.width = mCanvas.height = canvasResolution;
           document.body.appendChild(mCanvas);
           mCanvas.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
           l.maskCanvas = mCanvas;
@@ -446,7 +505,7 @@ export default function ThreePainterPage() {
     const paintId = `layer-${Date.now()}-paint`;
     const make = (id: string) => {
       const c = document.createElement('canvas');
-      c.id = `layer-canvas-${id}`; c.width = c.height = 512;
+      c.id = `layer-canvas-${id}`; c.width = c.height = canvasResolution;
       document.body.appendChild(c);
       c.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
       return c;
@@ -454,10 +513,10 @@ export default function ThreePainterPage() {
     const baseCanvas  = make(baseId);
     const baseCtx     = baseCanvas.getContext('2d')!;
     if (originalImage) {
-      baseCtx.drawImage(originalImage, 0, 0, 512, 512);
+      baseCtx.drawImage(originalImage, 0, 0, canvasResolution, canvasResolution);
     } else {
-      baseCtx.fillStyle = '#e4e4e7'; baseCtx.fillRect(0, 0, 512, 512);
-      baseCtx.strokeStyle = '#a1a1aa'; baseCtx.strokeRect(0, 0, 512, 512);
+      baseCtx.fillStyle = '#e4e4e7'; baseCtx.fillRect(0, 0, canvasResolution, canvasResolution);
+      baseCtx.strokeStyle = '#a1a1aa'; baseCtx.strokeRect(0, 0, canvasResolution, canvasResolution);
     }
     const paintCanvas = make(paintId);
     setLayers([
@@ -490,6 +549,9 @@ export default function ThreePainterPage() {
     setTextureSlots([]);
     setSmartMaps(null);
     setPbrMaps({});
+    setCanvasResolutionState(512);
+    setTextureTilingState(1.0);
+    setMaterialResolution('2k');
     modelFileBlobRef.current = null;
     undoStackRef.current = []; redoStackRef.current = [];
     setIsDirty(false);
@@ -780,14 +842,14 @@ export default function ThreePainterPage() {
     if (layers.length >= 5) return;
     const newId  = `layer-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
     const canvas = document.createElement('canvas');
-    canvas.id = `layer-canvas-${newId}`; canvas.width = canvas.height = 512;
+    canvas.id = `layer-canvas-${newId}`; canvas.width = canvas.height = canvasResolution;
     document.body.appendChild(canvas);
     canvas.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
 
     if (type === 'fill') {
       const ctx = canvas.getContext('2d')!;
       ctx.fillStyle = '#e4e4e7';
-      ctx.fillRect(0, 0, 512, 512);
+      ctx.fillRect(0, 0, canvasResolution, canvasResolution);
     }
 
     undoStackRef.current.push(captureHistorySnapshot());
@@ -828,7 +890,22 @@ export default function ThreePainterPage() {
           const img = new Image();
           img.src = updated.fillTextureUrl;
           img.onload = () => {
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            if (textureTiling > 1.0) {
+              const pattern = ctx.createPattern(img, 'repeat');
+              if (pattern) {
+                const matrix = new DOMMatrix();
+                const scaleX = (canvas.width / textureTiling) / img.width;
+                const scaleY = (canvas.height / textureTiling) / img.height;
+                matrix.scaleSelf(scaleX, scaleY);
+                pattern.setTransform(matrix);
+                ctx.fillStyle = pattern;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+              } else {
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              }
+            } else {
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            }
             compositeAndPixelate();
           };
         } else {
@@ -840,7 +917,41 @@ export default function ThreePainterPage() {
     }));
     setIsDirty(true);
     compositeAndPixelate();
-  }, [compositeAndPixelate]);
+  }, [compositeAndPixelate, textureTiling]);
+
+  // Redraw all fill layers when textureTiling changes
+  useEffect(() => {
+    setLayers(prev => prev.map(l => {
+      if (l.type !== 'fill' || !l.fillTextureUrl) return l;
+      const canvas = document.getElementById(`layer-canvas-${l.id}`) as HTMLCanvasElement;
+      const ctx = canvas?.getContext('2d');
+      if (canvas && ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const img = new Image();
+        img.src = l.fillTextureUrl;
+        img.onload = () => {
+          if (textureTiling > 1.0) {
+            const pattern = ctx.createPattern(img, 'repeat');
+            if (pattern) {
+              const matrix = new DOMMatrix();
+              const scaleX = (canvas.width / textureTiling) / img.width;
+              const scaleY = (canvas.height / textureTiling) / img.height;
+              matrix.scaleSelf(scaleX, scaleY);
+              pattern.setTransform(matrix);
+              ctx.fillStyle = pattern;
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            }
+          } else {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          }
+          compositeAndPixelate();
+        };
+      }
+      return l;
+    }));
+  }, [textureTiling, compositeAndPixelate]);
 
   const updateLayerFilters = useCallback((layerId: string, filterOpts: Partial<NonNullable<PaintingLayer['filters']>>) => {
     setLayers(prev => prev.map(l => {
@@ -864,12 +975,12 @@ export default function ThreePainterPage() {
       } else {
         const mCanvas = document.createElement('canvas');
         mCanvas.id = `layer-mask-canvas-${layerId}`;
-        mCanvas.width = mCanvas.height = 512;
+        mCanvas.width = mCanvas.height = canvasResolution;
         document.body.appendChild(mCanvas);
         mCanvas.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
         const mCtx = mCanvas.getContext('2d')!;
         mCtx.fillStyle = '#ffffff';
-        mCtx.fillRect(0, 0, 512, 512);
+        mCtx.fillRect(0, 0, canvasResolution, canvasResolution);
         return { ...l, maskCanvas: mCanvas, maskVisible: true, maskActive: true };
       }
     }));
@@ -923,8 +1034,8 @@ export default function ThreePainterPage() {
     } else {
       const baseLayer = layers[0];
       if (layerId === baseLayer?.id) {
-        ctx.fillStyle = '#e4e4e7'; ctx.fillRect(0, 0, 512, 512);
-        ctx.strokeStyle = '#a1a1aa'; ctx.strokeRect(0, 0, 512, 512);
+        ctx.fillStyle = '#e4e4e7'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#a1a1aa'; ctx.strokeRect(0, 0, canvas.width, canvas.height);
       }
     }
     setIsDirty(true);
@@ -934,14 +1045,14 @@ export default function ThreePainterPage() {
   const bakeModelSmartMaps = useCallback(async () => {
     if (!painter) return;
     try {
-      const maps = painter.bakeSmartMaps(512, 512);
+      const maps = painter.bakeSmartMaps(canvasResolution, canvasResolution);
       if (maps) {
         setSmartMaps(maps);
       }
     } catch (e) {
       console.warn('Failed to bake smart maps:', e);
     }
-  }, [painter]);
+  }, [painter, canvasResolution]);
 
   const applySmartMaterialPreset = useCallback((presetId: string) => {
     undoStackRef.current.push(captureHistorySnapshot());
@@ -952,7 +1063,7 @@ export default function ThreePainterPage() {
     const now = Date.now();
     let newLayers: PaintingLayer[] = [];
 
-    const createLayerCanvas = (id: string, width = 512, height = 512) => {
+    const createLayerCanvas = (id: string, width = canvasResolution, height = canvasResolution) => {
       const c = document.createElement('canvas');
       c.id = `layer-canvas-${id}`;
       c.width = width;
@@ -967,25 +1078,25 @@ export default function ThreePainterPage() {
       const baseC = createLayerCanvas(baseId);
       const baseCtx = baseC.getContext('2d')!;
       baseCtx.fillStyle = '#7f8899';
-      baseCtx.fillRect(0, 0, 512, 512);
+      baseCtx.fillRect(0, 0, canvasResolution, canvasResolution);
 
       const aoId = `layer-${now}-ao`;
       const aoC = createLayerCanvas(aoId);
       const aoCtx = aoC.getContext('2d')!;
       aoCtx.fillStyle = '#261b30';
-      aoCtx.fillRect(0, 0, 512, 512);
+      aoCtx.fillRect(0, 0, canvasResolution, canvasResolution);
 
       const heightId = `layer-${now}-height`;
       const heightC = createLayerCanvas(heightId);
       const heightCtx = heightC.getContext('2d')!;
       heightCtx.fillStyle = '#ffffff';
-      heightCtx.fillRect(0, 0, 512, 512);
+      heightCtx.fillRect(0, 0, canvasResolution, canvasResolution);
 
       const edgeId = `layer-${now}-edges`;
       const edgeC = createLayerCanvas(edgeId);
       const edgeCtx = edgeC.getContext('2d')!;
       edgeCtx.fillStyle = '#ebf0ff';
-      edgeCtx.fillRect(0, 0, 512, 512);
+      edgeCtx.fillRect(0, 0, canvasResolution, canvasResolution);
 
       newLayers = [
         {
@@ -1048,19 +1159,19 @@ export default function ThreePainterPage() {
       const baseC = createLayerCanvas(baseId);
       const baseCtx = baseC.getContext('2d')!;
       baseCtx.fillStyle = '#3f444a';
-      baseCtx.fillRect(0, 0, 512, 512);
+      baseCtx.fillRect(0, 0, canvasResolution, canvasResolution);
 
       const dirtId = `layer-${now}-dirt`;
       const dirtC = createLayerCanvas(dirtId);
       const dirtCtx = dirtC.getContext('2d')!;
       dirtCtx.fillStyle = '#382a20';
-      dirtCtx.fillRect(0, 0, 512, 512);
+      dirtCtx.fillRect(0, 0, canvasResolution, canvasResolution);
 
       const scratchesId = `layer-${now}-scratches`;
       const scratchesC = createLayerCanvas(scratchesId);
       const scratchesCtx = scratchesC.getContext('2d')!;
       scratchesCtx.fillStyle = '#e5e7eb';
-      scratchesCtx.fillRect(0, 0, 512, 512);
+      scratchesCtx.fillRect(0, 0, canvasResolution, canvasResolution);
 
       newLayers = [
         {
@@ -1107,19 +1218,19 @@ export default function ThreePainterPage() {
       const baseC = createLayerCanvas(baseId);
       const baseCtx = baseC.getContext('2d')!;
       baseCtx.fillStyle = '#5c636e';
-      baseCtx.fillRect(0, 0, 512, 512);
+      baseCtx.fillRect(0, 0, canvasResolution, canvasResolution);
 
       const mossId = `layer-${now}-moss`;
       const mossC = createLayerCanvas(mossId);
       const mossCtx = mossC.getContext('2d')!;
       mossCtx.fillStyle = '#2f4233';
-      mossCtx.fillRect(0, 0, 512, 512);
+      mossCtx.fillRect(0, 0, canvasResolution, canvasResolution);
 
       const edgeId = `layer-${now}-edges`;
       const edgeC = createLayerCanvas(edgeId);
       const edgeCtx = edgeC.getContext('2d')!;
       edgeCtx.fillStyle = '#c5cad4';
-      edgeCtx.fillRect(0, 0, 512, 512);
+      edgeCtx.fillRect(0, 0, canvasResolution, canvasResolution);
 
       newLayers = [
         {
@@ -1166,19 +1277,19 @@ export default function ThreePainterPage() {
       const baseC = createLayerCanvas(baseId);
       const baseCtx = baseC.getContext('2d')!;
       baseCtx.fillStyle = '#e23c52';
-      baseCtx.fillRect(0, 0, 512, 512);
+      baseCtx.fillRect(0, 0, canvasResolution, canvasResolution);
 
       const shadowId = `layer-${now}-shadow`;
       const shadowC = createLayerCanvas(shadowId);
       const shadowCtx = shadowC.getContext('2d')!;
       shadowCtx.fillStyle = '#7a1728';
-      shadowCtx.fillRect(0, 0, 512, 512);
+      shadowCtx.fillRect(0, 0, canvasResolution, canvasResolution);
 
       const highlightId = `layer-${now}-highlight`;
       const highlightC = createLayerCanvas(highlightId);
       const highlightCtx = highlightC.getContext('2d')!;
       highlightCtx.fillStyle = '#ffd2d7';
-      highlightCtx.fillRect(0, 0, 512, 512);
+      highlightCtx.fillRect(0, 0, canvasResolution, canvasResolution);
 
       newLayers = [
         {
@@ -1297,8 +1408,10 @@ export default function ThreePainterPage() {
     undo, redo, canUndo, canRedo, isDirty, triggerSave, triggerSaveAs,
     visiblePanels, togglePanel, resetLayout,
     textureSlots, setTextureSlots, analyzeLoadedModel, applyTextureAtlas,
-    smartMaps, bakeModelSmartMaps, applySmartMaterialPreset,
     pbrMaps, setPbrMap,
+    canvasResolution, setCanvasResolution,
+    textureTiling, setTextureTiling,
+    materialResolution, setMaterialResolution,
   }), [
     projectId, projectName, setProjectName, isSaving, autosaveNotification,
     loadedModelName, loadedModelSize, isModelLoaded, loadNewModel, resetWorkspace, isLoadingModel, loadProgress,
@@ -1316,6 +1429,9 @@ export default function ThreePainterPage() {
     textureSlots, analyzeLoadedModel, applyTextureAtlas,
     smartMaps, bakeModelSmartMaps, applySmartMaterialPreset,
     pbrMaps, setPbrMap,
+    canvasResolution, setCanvasResolution,
+    textureTiling, setTextureTiling,
+    materialResolution, setMaterialResolution,
   ]);
 
   return (

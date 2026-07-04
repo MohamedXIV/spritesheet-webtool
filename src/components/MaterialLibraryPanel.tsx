@@ -127,6 +127,9 @@ export function MaterialLibraryPanel() {
     painter,
     isModelLoaded,
     setPbrMap,
+    materialResolution,
+    setMaterialResolution,
+    textureTiling,
   } = useThreePainterContext();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -236,7 +239,15 @@ export function MaterialLibraryPanel() {
 
       const getMapUrl = (mapObject: any) => {
         if (!mapObject) return null;
-        const resObj = mapObject["1k"] || mapObject["2k"] || Object.values(mapObject)[0];
+        const order = [materialResolution, '2k', '1k', '4k', '8k'];
+        let resObj = null;
+        for (const resKey of order) {
+          if (mapObject[resKey]) {
+            resObj = mapObject[resKey];
+            break;
+          }
+        }
+        if (!resObj) resObj = Object.values(mapObject)[0];
         if (!resObj) return null;
         const formatObj = resObj["jpg"] || resObj["png"] || Object.values(resObj)[0];
         return formatObj?.url || null;
@@ -353,15 +364,27 @@ export function MaterialLibraryPanel() {
 
       {/* Toolbar: Search and Filter */}
       <div className={styles.toolbar}>
-        <div className={styles.searchWrap}>
-          <Search size={12} className={styles.searchIcon} />
-          <input
-            type="text"
-            className={styles.searchInput}
-            placeholder="Search material assets..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <div className={styles.row}>
+          <div className={styles.searchWrap} style={{ flex: 1 }}>
+            <Search size={12} className={styles.searchIcon} />
+            <input
+              type="text"
+              className={styles.searchInput}
+              placeholder="Search material assets..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <select
+            className={styles.qualitySelect}
+            value={materialResolution}
+            onChange={(e) => setMaterialResolution(e.target.value as any)}
+            title="Download Texture Resolution from Polyhaven"
+          >
+            <option value="1k">1K Quality</option>
+            <option value="2k">2K Quality</option>
+            <option value="4k">4K Quality</option>
+          </select>
         </div>
 
         <div className={styles.categories}>

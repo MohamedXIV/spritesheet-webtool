@@ -276,3 +276,46 @@
   background: var(--surface-color);
   color: var(--text-muted);
 }
+
+.settingsGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--surface-color);
+  border-bottom: 1px solid var(--border-color-muted);
+  padding: 8px 10px;
+}
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settingLabel {
+  width: 90px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.settingSelect {
+  flex: 1;
+  background: var(--surface-hover);
+  border: 1px solid var(--border-color-muted);
+  border-radius: 4px;
+  color: var(--text-color);
+  font-size: 10px;
+  padding: 3px 6px;
+  outline: none;
+  cursor: pointer;
+}
+
+.settingValue {
+  font-size: 10px;
+  font-family: 'Consolas', 'SF Mono', monospace;
+  color: var(--primary-color);
+  font-weight: 600;
+  width: 32px;
+  text-align: right;
+}

@@ -327,7 +327,19 @@ function AlbedoSlot({ layers, activeLayerId, importImageToLayer, clearLayer }: A
 // ── Main Panel ────────────────────────────────────────────────────────────────
 
 export function TextureMapsPanel() {
-  const { painter, shadingMode, isModelLoaded, layers, activeLayerId, importImageToLayer, clearLayer } = useThreePainterContext();
+  const {
+    painter,
+    shadingMode,
+    isModelLoaded,
+    layers,
+    activeLayerId,
+    importImageToLayer,
+    clearLayer,
+    canvasResolution,
+    setCanvasResolution,
+    textureTiling,
+    setTextureTiling,
+  } = useThreePainterContext();
 
   const [aoIntensity,       setAoIntensity]       = useState(1.0);
   const [normalScale,       setNormalScale]       = useState(1.0);
@@ -351,6 +363,36 @@ export function TextureMapsPanel() {
 
   return (
     <div className={styles.container}>
+
+      {/* Global Resolution & Tiling Controls */}
+      <div className={styles.settingsGroup}>
+        <div className={styles.settingRow}>
+          <span className={styles.settingLabel}>Canvas Resolution</span>
+          <select
+            className={styles.settingSelect}
+            value={canvasResolution}
+            onChange={(e) => setCanvasResolution(Number(e.target.value))}
+          >
+            <option value={512}>512 x 512 (Standard)</option>
+            <option value={1024}>1024 x 1024 (1K HD)</option>
+            <option value={2048}>2048 x 2048 (2K Ultra)</option>
+          </select>
+        </div>
+
+        <div className={styles.settingRow}>
+          <span className={styles.settingLabel}>Tiling Scale</span>
+          <input
+            type="range"
+            className={styles.sliderTrack}
+            min={1.0}
+            max={20.0}
+            step={0.1}
+            value={textureTiling}
+            onChange={(e) => setTextureTiling(Number(e.target.value))}
+          />
+          <span className={styles.settingValue}>{textureTiling.toFixed(1)}x</span>
+        </div>
+      </div>
 
       {/* Mode hint */}
       {!isPBR && shadingMode !== 'matcap' && (
