@@ -1,0 +1,11 @@
+.menubar { display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: var(--card); border-bottom: 1px solid var(--border); color: var(--foreground); }
+.brand { font-weight: 700; text-decoration: none; color: var(--foreground); }
+.nameInput { background: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; color: var(--foreground); font-size: 12px; }
+.item { background: transparent; border: none; color: var(--foreground); cursor: pointer; font-size: 12px; padding: 4px 8px; border-radius: 6px; }
+.item:hover { background: var(--muted); }
+.viewMenu { position: relative; }
+.viewMenu:hover .dropdown { display: block; }
+.dropdown { display: none; position: absolute; top: 100%; left: 0; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 4px; z-index: 50; min-width: 160px; }
+.dropItem { display: block; width: 100%; text-align: left; background: transparent; border: none; color: var(--foreground); padding: 6px 10px; font-size: 12px; cursor: pointer; border-radius: 6px; white-space: pre; }
+.dropItem:hover { background: var(--muted); }
+.note { margin-left: auto; font-size: 11px; opacity: .7; }
