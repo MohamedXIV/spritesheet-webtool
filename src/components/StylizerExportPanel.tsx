@@ -35,8 +35,11 @@ export function StylizerExportPanel() {
   const onExport = useCallback(async () => {
     setBusy(true);
     // Every bitmap in `maps` is caller-owned (fresh or a clone), so we close them all.
-    const maps = await renderFullRes();
+    // Kept inside the try so a throw from renderFullRes() still resets busy and, since a
+    // failed render returns nothing, leaves no bitmaps for us to leak.
+    let maps: Partial<Record<MapSlot, ImageBitmap>> = {};
     try {
+      maps = await renderFullRes();
       // Match the trimsheet tool's export: bundle PNGs into one zip via fflate
       // (already a dependency — see src/lib/trimsheetBaker.ts).
       const { zipSync } = await import('fflate');
@@ -55,7 +58,7 @@ export function StylizerExportPanel() {
       a.href = url; a.download = `${base}_stylized.zip`; a.click();
       URL.revokeObjectURL(url);
     } finally {
-      Object.values(maps).forEach((b) => { try { b.close(); } catch { /* noop */ } });
+      Object.values(maps).forEach((b) => { try { b?.close(); } catch { /* noop */ } });
       setBusy(false);
     }
   }, [selected, renderFullRes, projectName]);
