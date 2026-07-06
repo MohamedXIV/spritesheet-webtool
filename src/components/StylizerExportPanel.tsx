@@ -4,13 +4,13 @@ import React, { useState, useCallback } from 'react';
 import { useStylizerContext, MapSlot } from '@/contexts/StylizerContext';
 import styles from './StylizerExportPanel.module.css';
 
-const EXPORTABLE: { slot: MapSlot; label: string; source: 'derived' | 'material' }[] = [
-  { slot: 'albedo', label: 'Albedo (stylized)', source: 'derived' },
-  { slot: 'normal', label: 'Normal', source: 'derived' },
-  { slot: 'height', label: 'Height', source: 'derived' },
-  { slot: 'roughness', label: 'Roughness', source: 'derived' },
-  { slot: 'metallic', label: 'Metallic', source: 'derived' },
-  { slot: 'ao', label: 'AO (original)', source: 'material' },
+const EXPORTABLE: { slot: MapSlot; label: string }[] = [
+  { slot: 'albedo', label: 'Albedo (stylized)' },
+  { slot: 'normal', label: 'Normal' },
+  { slot: 'height', label: 'Height' },
+  { slot: 'roughness', label: 'Roughness' },
+  { slot: 'metallic', label: 'Metallic' },
+  { slot: 'ao', label: 'AO (original)' },
 ];
 
 async function bitmapToPngBytes(bitmap: ImageBitmap): Promise<Uint8Array> {
@@ -22,7 +22,7 @@ async function bitmapToPngBytes(bitmap: ImageBitmap): Promise<Uint8Array> {
 }
 
 export function StylizerExportPanel() {
-  const { material, derived, projectName } = useStylizerContext();
+  const { renderFullRes, projectName, hasAlbedo } = useStylizerContext();
   const [selected, setSelected] = useState<Set<MapSlot>>(new Set(['albedo', 'normal', 'height']));
   const [busy, setBusy] = useState(false);
 
@@ -32,19 +32,10 @@ export function StylizerExportPanel() {
     return next;
   });
 
-  const getBitmap = (slot: MapSlot, source: 'derived' | 'material'): ImageBitmap | null => {
-    if (source === 'derived') {
-      if (slot === 'albedo') return derived.stylizedAlbedo;
-      if (slot === 'normal') return derived.normal ?? material.maps.normal ?? null;
-      if (slot === 'height') return derived.height ?? material.maps.height ?? null;
-      if (slot === 'roughness') return derived.roughness ?? material.maps.roughness ?? null;
-      if (slot === 'metallic') return derived.metallic ?? material.maps.metallic ?? null;
-    }
-    return material.maps[slot] ?? null;
-  };
-
   const onExport = useCallback(async () => {
     setBusy(true);
+    // Every bitmap in `maps` is caller-owned (fresh or a clone), so we close them all.
+    const maps = await renderFullRes();
     try {
       // Match the trimsheet tool's export: bundle PNGs into one zip via fflate
       // (already a dependency — see src/lib/trimsheetBaker.ts).
@@ -53,7 +44,7 @@ export function StylizerExportPanel() {
       const files: Record<string, Uint8Array> = {};
       for (const item of EXPORTABLE) {
         if (!selected.has(item.slot)) continue;
-        const bmp = getBitmap(item.slot, item.source);
+        const bmp = maps[item.slot];
         if (!bmp) continue;
         files[`${base}_${item.slot}.png`] = await bitmapToPngBytes(bmp);
       }
@@ -64,9 +55,10 @@ export function StylizerExportPanel() {
       a.href = url; a.download = `${base}_stylized.zip`; a.click();
       URL.revokeObjectURL(url);
     } finally {
+      Object.values(maps).forEach((b) => { try { b.close(); } catch { /* noop */ } });
       setBusy(false);
     }
-  }, [selected, derived, material, projectName]);
+  }, [selected, renderFullRes, projectName]);
 
   return (
     <div className={styles.panel}>
@@ -79,7 +71,7 @@ export function StylizerExportPanel() {
           </label>
         ))}
       </div>
-      <button className={styles.exportBtn} disabled={busy || !derived.stylizedAlbedo} onClick={onExport}>
+      <button className={styles.exportBtn} disabled={busy || !hasAlbedo} onClick={onExport}>
         {busy ? 'Exporting…' : 'Download ZIP'}
       </button>
     </div>

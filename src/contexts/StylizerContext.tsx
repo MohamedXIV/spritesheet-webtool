@@ -40,6 +40,9 @@ export interface StylizerContextValue {
   // Derived results (recomputed by the page effect)
   derived: StylizerDerived;
   isProcessing: boolean;
+  // Re-runs the full pipeline at source resolution for export. Every returned
+  // bitmap is caller-owned (fresh or a clone) and must be closed by the caller.
+  renderFullRes: () => Promise<Partial<Record<MapSlot, ImageBitmap>>>;
 
   // Preview UI state
   wipePosition: number;            // 0..100

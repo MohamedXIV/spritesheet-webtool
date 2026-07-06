@@ -137,8 +137,45 @@ export default function StylizerPage() {
         if (runId === runIdRef.current) setIsProcessing(false);
       }
     }, 200);
-    return () => clearTimeout(handle);
+    return () => { clearTimeout(handle); runIdRef.current++; };
   }, [material.maps.albedo, material.maps.ao, material.maps.height, material.maps.roughness, material.maps.metallic, options]);
+
+  // --- Full-resolution export render (on demand) ---
+  // Mirrors the preview pipeline but WITHOUT downscaling. Every bitmap in the
+  // returned map is caller-owned: fresh outputs are new, and pass-through source
+  // maps are cloned so the caller can uniformly close everything it receives.
+  const renderFullRes = useCallback(async (): Promise<Partial<Record<MapSlot, ImageBitmap>>> => {
+    const albedo = material.maps.albedo;
+    if (!albedo) return {};
+
+    let styled = await stylize(albedo, options);
+    if (options.bakeAO || options.bakeShading) {
+      const baked = await bakeLighting(styled, material.maps.ao, material.maps.height, options);
+      disposeBitmap(styled); styled = baked;
+    }
+
+    const normal = options.regenerateNormal
+      ? await regenerateNormal(styled, options.normalStrength)
+      : (material.maps.normal ? await createImageBitmap(material.maps.normal) : undefined);
+    const height = options.regenerateHeight
+      ? await regenerateHeight(styled)
+      : (material.maps.height ? await createImageBitmap(material.maps.height) : undefined);
+    const roughness = options.flattenRoughness && material.maps.roughness
+      ? await flattenMap(material.maps.roughness, 4)
+      : (material.maps.roughness ? await createImageBitmap(material.maps.roughness) : undefined);
+    const metallic = options.flattenMetallic && material.maps.metallic
+      ? await flattenMap(material.maps.metallic, 2)
+      : (material.maps.metallic ? await createImageBitmap(material.maps.metallic) : undefined);
+    const ao = material.maps.ao ? await createImageBitmap(material.maps.ao) : undefined;
+
+    const out: Partial<Record<MapSlot, ImageBitmap>> = { albedo: styled };
+    if (normal) out.normal = normal;
+    if (height) out.height = height;
+    if (roughness) out.roughness = roughness;
+    if (metallic) out.metallic = metallic;
+    if (ao) out.ao = ao;
+    return out;
+  }, [material.maps.albedo, material.maps.ao, material.maps.height, material.maps.normal, material.maps.roughness, material.maps.metallic, options]);
 
   // --- Persistence: serialize source maps as frames ---
   const customFrames = useCallback(async () => {
@@ -239,12 +276,12 @@ export default function StylizerPage() {
     loadMap, clearMap, resetMaterial,
     hasAlbedo: !!material.maps.albedo,
     options, setOptions,
-    derived, isProcessing,
+    derived, isProcessing, renderFullRes,
     wipePosition, setWipePosition, tiled, setTiled,
     visiblePanels, togglePanel, resetLayout,
     projectId, projectName, setProjectName,
     triggerSave, isSaving, autosaveNotification,
-  }), [material, loadMap, clearMap, resetMaterial, options, setOptions, derived, isProcessing,
+  }), [material, loadMap, clearMap, resetMaterial, options, setOptions, derived, isProcessing, renderFullRes,
     wipePosition, tiled, visiblePanels, togglePanel, resetLayout,
     projectId, projectName, triggerSave, isSaving, autosaveNotification]);
 

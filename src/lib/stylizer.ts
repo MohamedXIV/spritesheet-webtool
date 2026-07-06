@@ -100,6 +100,15 @@ export function toImageData(bitmap: ImageBitmap): ImageData {
   return ctx.getImageData(0, 0, bitmap.width, bitmap.height);
 }
 
+// Draw a bitmap into a canvas of an explicit target size and read it back.
+// Used to resample auxiliary maps (AO/height) to the styled albedo's dimensions.
+function toImageDataScaled(bitmap: ImageBitmap, width: number, height: number): ImageData {
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  return ctx.getImageData(0, 0, width, height);
+}
+
 export async function fromImageData(imageData: ImageData): Promise<ImageBitmap> {
   const canvas = makeCanvas(imageData.width, imageData.height);
   const ctx = canvas.getContext('2d')!;
@@ -348,9 +357,12 @@ export async function bakeLighting(
 ): Promise<ImageBitmap> {
   const img = toImageData(stylizedAlbedo);
   const strength = opts.bakeStrength / 100;
+  // AO/height maps may be full-resolution while the styled albedo was downscaled
+  // for preview; resample them to the styled dimensions so all arrays align.
+  const { width: bw, height: bh } = stylizedAlbedo;
 
   if (opts.bakeAO && ao) {
-    const aoData = toImageData(ao).data;
+    const aoData = toImageDataScaled(ao, bw, bh).data;
     for (let i = 0; i < img.data.length; i += 4) {
       const occ = aoData[i] / 255; // AO stored in R (grayscale)
       const factor = 1 - (1 - occ) * strength;
@@ -362,13 +374,12 @@ export async function bakeLighting(
 
   if (opts.bakeShading && height) {
     // Soft top-down light: brighten where height slope faces up.
-    const hd = toImageData(height);
-    const { width: w, height: h } = hd;
-    for (let y = 1; y < h - 1; y++) {
-      for (let x = 0; x < w; x++) {
-        const i = y * w + x;
-        const up = hd.data[((y - 1) * w + x) * 4];
-        const down = hd.data[((y + 1) * w + x) * 4];
+    const hd = toImageDataScaled(height, bw, bh);
+    for (let y = 1; y < bh - 1; y++) {
+      for (let x = 0; x < bw; x++) {
+        const i = y * bw + x;
+        const up = hd.data[((y - 1) * bw + x) * 4];
+        const down = hd.data[((y + 1) * bw + x) * 4];
         const slope = (up - down) / 255; // -1..1
         const light = 1 + slope * strength * 0.5;
         const o = i * 4;
@@ -390,7 +401,6 @@ export async function regenerateNormal(
 ): Promise<ImageBitmap> {
   const src = toImageData(albedo);
   const { width: w, height: h } = src;
-  const edges = sobelEdges(src); // reuse luma gradient magnitude is not enough; recompute directional
   // Directional gradients for normal:
   const lum = new Float32Array(w * h);
   for (let i = 0; i < w * h; i++) {
@@ -415,7 +425,6 @@ export async function regenerateNormal(
       out.data[o + 3] = 255;
     }
   }
-  void edges;
   return fromImageData(out);
 }
 

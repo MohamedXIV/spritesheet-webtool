@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { useStylizerContext, MapSlot } from '@/contexts/StylizerContext';
+import { useStylizerContext } from '@/contexts/StylizerContext';
 import styles from './StylizerMapOutputPanel.module.css';
 
 function Thumb({ bitmap, label }: { bitmap: ImageBitmap | null; label: string }) {
