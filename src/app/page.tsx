@@ -16,7 +16,7 @@ export default function Home() {
   
   // Interactive Changelog Drawer States
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
-  const [changelogFilter, setChangelogFilter] = useState<'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet'>('All');
+  const [changelogFilter, setChangelogFilter] = useState<'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet' | 'stylizer'>('All');
 
   // Fetch projects from IndexedDB on mount
   const loadProjects = async () => {
@@ -73,7 +73,7 @@ export default function Home() {
     });
   };
 
-  const openChangelog = (filter: 'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet') => {
+  const openChangelog = (filter: 'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet' | 'stylizer') => {
     setChangelogFilter(filter);
     setIsChangelogOpen(true);
   };
@@ -102,6 +102,9 @@ export default function Home() {
             </Link>
             <Link href="/tools/3d-pixelator" className={styles.navItem}>
               📦 3D Pixel-Painter
+            </Link>
+            <Link href="/tools/stylizer" className={styles.navItem}>
+              🎨 Material Stylizer
             </Link>
           </nav>
         </div>
@@ -262,6 +265,30 @@ export default function Home() {
               Launch Trimsheet Builder
             </Link>
           </div>
+
+          <div className={styles.toolCard}>
+            <div className={styles.toolHeader}>
+              <div className={styles.toolIcon}>🎨</div>
+              <span className={styles.toolBadge}>v0.10.0-beta</span>
+            </div>
+            <div className={styles.toolTitleRow}>
+              <h2 className={styles.toolTitle}>Material Stylizer</h2>
+              <button
+                onClick={() => openChangelog('stylizer')}
+                className={styles.toolChangelogBtn}
+                title="View tool updates history"
+              >
+                <Clock size={12} />
+              </button>
+            </div>
+            <p className={styles.toolDesc}>
+              Convert realistic textures and PBR materials into hand-painted, stylized looks —
+              painterly, cel, watercolor, or sketch — with baked lighting and regenerated maps.
+            </p>
+            <Link href="/tools/stylizer" className={styles.toolCta}>
+              Launch Material Stylizer
+            </Link>
+          </div>
         </section>
 
         {/* Recent Local Projects Dashboard Section */}
@@ -286,12 +313,14 @@ export default function Home() {
                 const isPixelator = proj.type === 'pixelator';
                 const isThreePainter = proj.type === '3d-painter';
                 const isTrimsheet = proj.type === 'trimsheet';
+                const isStylizer = proj.type === 'stylizer';
 
                 let targetLink = '';
                 if (isSpritesheet) targetLink = `/tools/video-to-spritesheet?project=${proj.id}`;
                 else if (isPixelator) targetLink = `/tools/pixelator?project=${proj.id}`;
                 else if (isThreePainter) targetLink = `/tools/3d-pixelator?project=${proj.id}`;
                 else if (isTrimsheet) targetLink = `/tools/trimsheet?project=${proj.id}`;
+                else if (isStylizer) targetLink = `/tools/stylizer?project=${proj.id}`;
 
                 return (
                   <div key={proj.id} className={styles.projectCard}>
@@ -305,7 +334,7 @@ export default function Home() {
                               : styles.badge3d
                         }`}
                       >
-                        {isSpritesheet ? '🎬 Spritesheet' : isPixelator ? '👾 Pixelator' : isTrimsheet ? '🧱 Trimsheet' : '📦 3D Painter'}
+                        {isSpritesheet ? '🎬 Spritesheet' : isPixelator ? '👾 Pixelator' : isTrimsheet ? '🧱 Trimsheet' : isStylizer ? '🎨 Stylizer' : '📦 3D Painter'}
                       </span>
                       <div className={styles.projectActions}>
                         <button 
@@ -424,7 +453,7 @@ export default function Home() {
       <ChangelogDrawer 
         isOpen={isChangelogOpen} 
         onClose={() => setIsChangelogOpen(false)} 
-        initialFilter={changelogFilter} 
+        initialFilter={changelogFilter as 'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet'}
       />
     </main>
   );

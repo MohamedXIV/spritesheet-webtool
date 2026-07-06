@@ -6,12 +6,23 @@ export interface ChangelogItem {
 export interface ChangelogVersion {
   version: string;
   date: string;
-  toolScope: 'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet';
+  toolScope: 'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet' | 'stylizer';
   toolName: string;
   items: ChangelogItem[];
 }
 
 export const changelogData: ChangelogVersion[] = [
+  {
+    version: '0.10.0-beta',
+    date: '2026-07-06',
+    toolScope: 'stylizer',
+    toolName: 'Material Stylizer',
+    items: [
+      { category: 'Added', detail: 'New Material Stylizer tool: convert realistic textures and PBR materials into painterly, cel, watercolor, or sketch styles.' },
+      { category: 'Added', detail: 'Bake AO and soft shading into the stylized albedo; regenerate normal and height maps from the stylized result.' },
+      { category: 'Added', detail: 'Live 2D before/after wipe preview with 2x2 tiling, an optional 3D material preview, and ZIP export of selected maps.' }
+    ]
+  },
   {
     version: '0.9.0-beta',
     date: '2026-06-28',
