@@ -1,17 +1,47 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { Download, ChevronDown, ChevronRight } from 'lucide-react';
 import { useStylizerContext, MapSlot } from '@/contexts/StylizerContext';
 import styles from './StylizerExportPanel.module.css';
 
 const EXPORTABLE: { slot: MapSlot; label: string }[] = [
-  { slot: 'albedo', label: 'Albedo (stylized)' },
-  { slot: 'normal', label: 'Normal' },
-  { slot: 'height', label: 'Height' },
+  { slot: 'albedo',    label: 'Albedo (stylized)' },
+  { slot: 'normal',    label: 'Normal' },
+  { slot: 'height',    label: 'Height' },
   { slot: 'roughness', label: 'Roughness' },
-  { slot: 'metallic', label: 'Metallic' },
-  { slot: 'ao', label: 'AO (original)' },
+  { slot: 'metallic',  label: 'Metallic' },
+  { slot: 'ao',        label: 'AO (original)' },
 ];
+
+function Section({ label, children, defaultOpen = true }: {
+  label: string; children: React.ReactNode; defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className={styles.section}>
+      <button className={styles.sectionHeader} onClick={() => setOpen(!open)}>
+        {open ? <ChevronDown size={9} strokeWidth={2.5} /> : <ChevronRight size={9} strokeWidth={2.5} />}
+        <span>{label}</span>
+      </button>
+      {open && <div className={styles.sectionBody}>{children}</div>}
+    </div>
+  );
+}
+
+function ToggleRow({ label, checked, onChange, disabled = false }: {
+  label: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean;
+}) {
+  return (
+    <div className={`${styles.toggleRow} ${disabled ? styles.sliderRowDisabled : ''}`}>
+      <span className={styles.toggleLabel}>{label}</span>
+      <label className={styles.switch}>
+        <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+        <span className={styles.switchSlider} />
+      </label>
+    </div>
+  );
+}
 
 async function bitmapToPngBytes(bitmap: ImageBitmap): Promise<Uint8Array> {
   const canvas = document.createElement('canvas');
@@ -28,20 +58,19 @@ export function StylizerExportPanel() {
 
   const toggle = (slot: MapSlot) => setSelected((prev) => {
     const next = new Set(prev);
-    next.has(slot) ? next.delete(slot) : next.add(slot);
+    if (next.has(slot)) {
+      next.delete(slot);
+    } else {
+      next.add(slot);
+    }
     return next;
   });
 
   const onExport = useCallback(async () => {
     setBusy(true);
-    // Every bitmap in `maps` is caller-owned (fresh or a clone), so we close them all.
-    // Kept inside the try so a throw from renderFullRes() still resets busy and, since a
-    // failed render returns nothing, leaves no bitmaps for us to leak.
     let maps: Partial<Record<MapSlot, ImageBitmap>> = {};
     try {
       maps = await renderFullRes();
-      // Match the trimsheet tool's export: bundle PNGs into one zip via fflate
-      // (already a dependency — see src/lib/trimsheetBaker.ts).
       const { zipSync } = await import('fflate');
       const base = (projectName || 'material').replace(/[^a-z0-9_-]+/gi, '_');
       const files: Record<string, Uint8Array> = {};
@@ -65,18 +94,31 @@ export function StylizerExportPanel() {
 
   return (
     <div className={styles.panel}>
-      <h4>Export Maps</h4>
-      <div className={styles.list}>
-        {EXPORTABLE.map((item) => (
-          <label key={item.slot} className={styles.row}>
-            <input type="checkbox" checked={selected.has(item.slot)} onChange={() => toggle(item.slot)} />
-            {item.label}
-          </label>
-        ))}
-      </div>
-      <button className={styles.exportBtn} disabled={busy || !hasAlbedo} onClick={onExport}>
-        {busy ? 'Exporting…' : 'Download ZIP'}
-      </button>
+      <Section label="SELECT MAPS TO EXPORT">
+        <p className={styles.hint}>Choose which generated PBR maps to include in your package.</p>
+        <div className={styles.list}>
+          {EXPORTABLE.map((item) => (
+            <ToggleRow
+              key={item.slot}
+              label={item.label}
+              checked={selected.has(item.slot)}
+              onChange={() => toggle(item.slot)}
+            />
+          ))}
+        </div>
+      </Section>
+
+      <Section label="DOWNLOAD ASSET BUNDLE">
+        <p className={styles.hint}>Compiles selected textures at full resolution into a compressed ZIP.</p>
+        <button
+          className={`${styles.btn} ${styles.btnPrimary}`}
+          disabled={busy || !hasAlbedo}
+          onClick={onExport}
+        >
+          <Download size={12} strokeWidth={2.5} />
+          {busy ? 'Exporting…' : 'Download ZIP Bundle'}
+        </button>
+      </Section>
     </div>
   );
 }

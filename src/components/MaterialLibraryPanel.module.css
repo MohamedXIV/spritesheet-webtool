@@ -300,3 +300,60 @@
 .qualitySelect:focus {
   border-color: var(--primary-color-alpha);
 }
+
+.uploadBox {
+  border: 1.5px dashed var(--border-color-muted);
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--surface-color);
+  margin: 8px;
+}
+
+.uploadLabel {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-color);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.uploadInput {
+  font-size: 10px;
+  color: var(--text-muted);
+  outline: none;
+}
+
+.hint {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.loadMoreContainer {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+  width: 100%;
+  grid-column: 1 / -1;
+}
+
+.loadMoreButton {
+  background: var(--surface-color);
+  border: 1px dashed var(--border-color-muted);
+  color: var(--text-color);
+  padding: 8px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.loadMoreButton:hover {
+  background: var(--primary-color-alpha);
+  border-color: var(--primary-color-alpha);
+  color: var(--primary-color);
+}

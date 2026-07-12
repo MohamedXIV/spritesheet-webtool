@@ -9,7 +9,8 @@ import 'flexlayout-react/style/dark.css';
 
 import { TrimsheetCanvas } from '@/components/TrimsheetCanvas';
 import { RegionPanel } from '@/components/RegionPanel';
-import { TrimMaterialPanel } from '@/components/TrimMaterialPanel';
+import { MaterialLibraryPanel } from '@/components/MaterialLibraryPanel';
+import { TextureMapsPanel } from '@/components/TextureMapsPanel';
 import { RegionInspectorPanel } from '@/components/RegionInspectorPanel';
 import { TrimsheetExportPanel } from '@/components/TrimsheetExportPanel';
 
@@ -21,6 +22,7 @@ const PANEL_INFO: Record<string, { name: string }> = {
   'canvas': { name: 'Trimsheet' },
   'regions': { name: 'Regions' },
   'materials': { name: 'Materials' },
+  'texture-maps': { name: 'Texture Maps' },
   'inspector': { name: 'Region Inspector' },
   'export': { name: 'Export' },
 };
@@ -57,6 +59,7 @@ const defaultLayout = {
         type: 'tabset', weight: 25,
         children: [
           { type: 'tab', name: 'Materials', component: 'materials' },
+          { type: 'tab', name: 'Texture Maps', component: 'texture-maps' },
           { type: 'tab', name: 'Export', component: 'export' },
         ],
       },
@@ -102,7 +105,9 @@ export const TrimsheetDockLayout = forwardRef<TrimsheetDockLayoutRef, TrimsheetD
         case 'regions':
           return <div className={styles.panelContent}><RegionPanel /></div>;
         case 'materials':
-          return <div className={styles.panelContent}><TrimMaterialPanel /></div>;
+          return <div className={styles.panelContent}><MaterialLibraryPanel /></div>;
+        case 'texture-maps':
+          return <div className={styles.panelContent}><TextureMapsPanel /></div>;
         case 'inspector':
           return <div className={styles.panelContent}><RegionInspectorPanel /></div>;
         case 'export':

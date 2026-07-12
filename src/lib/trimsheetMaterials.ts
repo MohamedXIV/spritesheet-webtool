@@ -37,10 +37,18 @@ export async function fetchPolyhavenIndex(): Promise<PolyhavenAsset[]> {
   });
 }
 
-/** Pick a URL from a Polyhaven map object, preferring 1k then 2k, jpg then png. */
-function getMapUrl(mapObject: any): string | null {
+/** Pick a URL from a Polyhaven map object, preferring preferredRes then 1k then 2k, jpg then png. */
+function getMapUrl(mapObject: any, preferredRes: string = '1k'): string | null {
   if (!mapObject) return null;
-  const resObj = mapObject['1k'] || mapObject['2k'] || Object.values(mapObject)[0];
+  const order = [preferredRes, '2k', '1k', '4k', '8k'];
+  let resObj = null;
+  for (const resKey of order) {
+    if (mapObject[resKey]) {
+      resObj = mapObject[resKey];
+      break;
+    }
+  }
+  if (!resObj) resObj = Object.values(mapObject)[0];
   if (!resObj) return null;
   const formatObj = (resObj as any)['jpg'] || (resObj as any)['png'] || Object.values(resObj as any)[0];
   return (formatObj as any)?.url || null;
@@ -58,7 +66,7 @@ async function urlToBitmap(url: string): Promise<ImageBitmap> {
  * (the baker substitutes solid fallbacks). Throws only if the index/file
  * fetch fails; individual missing maps are tolerated.
  */
-export async function loadPolyhavenMaterial(asset: PolyhavenAsset): Promise<TrimMaterial> {
+export async function loadPolyhavenMaterial(asset: PolyhavenAsset, preferredRes: string = '1k'): Promise<TrimMaterial> {
   const res = await fetch(`https://api.polyhaven.com/files/${asset.id}`, { headers: PH_HEADERS });
   if (!res.ok) throw new Error('Failed to fetch Polyhaven asset files');
   const data = await res.json();
@@ -69,11 +77,11 @@ export async function loadPolyhavenMaterial(asset: PolyhavenAsset): Promise<Trim
   }
 
   const urls: Record<MapChannel, string | null> = {
-    albedo: getMapUrl(lowercaseKeys.diffuse || lowercaseKeys.diff || lowercaseKeys.col || lowercaseKeys.albedo),
-    normal: getMapUrl(lowercaseKeys.nor_gl || lowercaseKeys.nor || lowercaseKeys.normal || lowercaseKeys.nor_dx),
-    roughness: getMapUrl(lowercaseKeys.rough || lowercaseKeys.roughness),
-    metalness: getMapUrl(lowercaseKeys.metal || lowercaseKeys.metalness),
-    ao: getMapUrl(lowercaseKeys.ao),
+    albedo: getMapUrl(lowercaseKeys.diffuse || lowercaseKeys.diff || lowercaseKeys.col || lowercaseKeys.albedo, preferredRes),
+    normal: getMapUrl(lowercaseKeys.nor_gl || lowercaseKeys.nor || lowercaseKeys.normal || lowercaseKeys.nor_dx, preferredRes),
+    roughness: getMapUrl(lowercaseKeys.rough || lowercaseKeys.roughness, preferredRes),
+    metalness: getMapUrl(lowercaseKeys.metal || lowercaseKeys.metalness, preferredRes),
+    ao: getMapUrl(lowercaseKeys.ao, preferredRes),
   };
 
   const maps: TrimMaterialMaps = {

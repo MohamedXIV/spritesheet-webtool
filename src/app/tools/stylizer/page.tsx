@@ -12,6 +12,7 @@ import {
   StylizerOptions, DEFAULT_STYLIZER_OPTIONS,
   stylize, bakeLighting, regenerateNormal, regenerateHeight, flattenMap,
 } from '@/lib/stylizer';
+import { LIGHTING_PRESETS, LightingSettings, DEFAULT_LIGHTING_PRESET_ID, ShadingMode } from '@/lib/lightingPresets';
 import { useProjectSave } from '@/hooks/useProjectSave';
 import styles from './page.module.css';
 
@@ -37,6 +38,25 @@ export default function StylizerPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [wipePosition, setWipePosition] = useState(50);
   const [tiled, setTiled] = useState(false);
+  const [previewShape, setPreviewShape] = useState<'sphere' | 'box' | 'plane' | 'custom'>('sphere');
+  const [customModelFile, setCustomModelFile] = useState<File | null>(null);
+
+  const [shadingMode, setShadingMode] = useState<ShadingMode>('standard');
+  const [lightingSettings, setLightingSettings] = useState<LightingSettings>(
+    LIGHTING_PRESETS.find(p => p.id === DEFAULT_LIGHTING_PRESET_ID)!.settings
+  );
+  const [activeLightingPresetId, setActiveLightingPresetId] = useState<string>(DEFAULT_LIGHTING_PRESET_ID);
+
+  const updateLightingSettings = useCallback((s: LightingSettings) => {
+    setLightingSettings(s);
+  }, []);
+
+  const setCustomModel = useCallback((file: File | null) => {
+    setCustomModelFile(file);
+    if (file) {
+      setPreviewShape('custom');
+    }
+  }, []);
   const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set([
     'material-loader', 'style', 'map-output', 'preview-2d', 'preview-3d', 'export',
   ]));
@@ -190,8 +210,18 @@ export default function StylizerPage() {
       const blob: Blob = await new Promise((res) => canvas.toBlob((b) => res(b!), 'image/png'));
       frames.push({ id: slot, index: index++, timestamp: 0, blob, sourceId: 'stylizer', sourceColor: '#8b5cf6' });
     }
+    if (customModelFile) {
+      frames.push({
+        id: 'custom-mesh-model',
+        index: index++,
+        timestamp: 0,
+        blob: customModelFile,
+        sourceId: 'stylizer-model',
+        sourceColor: '#10b981',
+      });
+    }
     return frames;
-  }, [material.maps]);
+  }, [material.maps, customModelFile]);
 
   const savedSlots = useMemo(() => MAP_SLOTS.filter((s) => material.maps[s]), [material.maps]);
 
@@ -204,6 +234,8 @@ export default function StylizerPage() {
     isDirty: !!material.maps.albedo,
     stylizerOptions: options,
     stylizerMapSlots: savedSlots,
+    previewShape,
+    customModelName: customModelFile ? customModelFile.name : null,
   });
 
   // --- Deep-link restore ---
@@ -217,9 +249,16 @@ export default function StylizerPage() {
       setProjectId(project.id);
       setProjectName(project.name);
       if (project.metadata.stylizerOptions) setOptionsState(project.metadata.stylizerOptions);
+      if (project.metadata.previewShape) setPreviewShape(project.metadata.previewShape);
       const maps: Partial<Record<MapSlot, ImageBitmap>> = {};
       let resolution: { width: number; height: number } | null = null;
       for (const f of project.frames) {
+        if (f.id === 'custom-mesh-model') {
+          const fileName = project.metadata.customModelName || 'model.glb';
+          const file = new File([f.blob], fileName, { type: f.blob.type });
+          setCustomModelFile(file);
+          continue;
+        }
         const slot = f.id as MapSlot;
         if (!MAP_SLOTS.includes(slot)) continue;
         const bmp = await createImageBitmap(f.blob);
@@ -250,8 +289,19 @@ export default function StylizerPage() {
   const togglePanel = useCallback((panelId: string) => {
     setVisiblePanels((prev) => {
       const next = new Set(prev);
-      if (next.has(panelId)) { next.delete(panelId); dockRef.current?.removeTab(panelId); }
-      else { next.add(panelId); dockRef.current?.addTab(panelId); }
+      const isVisible = next.has(panelId);
+      if (isVisible) {
+        next.delete(panelId);
+      } else {
+        next.add(panelId);
+      }
+      setTimeout(() => {
+        if (isVisible) {
+          dockRef.current?.removeTab(panelId);
+        } else {
+          dockRef.current?.addTab(panelId);
+        }
+      }, 0);
       return next;
     });
   }, []);
@@ -278,11 +328,19 @@ export default function StylizerPage() {
     options, setOptions,
     derived, isProcessing, renderFullRes,
     wipePosition, setWipePosition, tiled, setTiled,
+    previewShape, setPreviewShape,
+    customModelFile, customModelName: customModelFile ? customModelFile.name : null,
+    setCustomModel,
+    shadingMode, setShadingMode,
+    lightingSettings, updateLightingSettings,
+    activeLightingPresetId, setActiveLightingPresetId,
     visiblePanels, togglePanel, resetLayout,
     projectId, projectName, setProjectName,
     triggerSave, isSaving, autosaveNotification,
   }), [material, loadMap, clearMap, resetMaterial, options, setOptions, derived, isProcessing, renderFullRes,
-    wipePosition, tiled, visiblePanels, togglePanel, resetLayout,
+    wipePosition, tiled, previewShape, customModelFile, setCustomModel,
+    shadingMode, lightingSettings, activeLightingPresetId, updateLightingSettings,
+    visiblePanels, togglePanel, resetLayout,
     projectId, projectName, triggerSave, isSaving, autosaveNotification]);
 
   return (

@@ -17,6 +17,8 @@ export function useProjectSave(options: {
   trimsheetOptions?: any; // Custom settings blob for the trimsheet tool
   stylizerOptions?: import('@/lib/stylizer').StylizerOptions;
   stylizerMapSlots?: string[];
+  previewShape?: 'sphere' | 'box' | 'plane' | 'custom';
+  customModelName?: string | null;
   fps: number;
   loopMode: string;
   previewBgMode?: string;
@@ -73,6 +75,8 @@ export function useProjectSave(options: {
         trimsheetOptions: currentOpts.trimsheetOptions,
         stylizerOptions: currentOpts.stylizerOptions,
         stylizerMapSlots: currentOpts.stylizerMapSlots,
+        previewShape: currentOpts.previewShape,
+        customModelName: currentOpts.customModelName,
         globalLayers: currentOpts.globalLayers,
       };
 
@@ -134,6 +138,8 @@ export function useProjectSave(options: {
         trimsheetOptions: currentOpts.trimsheetOptions,
         stylizerOptions: currentOpts.stylizerOptions,
         stylizerMapSlots: currentOpts.stylizerMapSlots,
+        previewShape: currentOpts.previewShape,
+        customModelName: currentOpts.customModelName,
         globalLayers: currentOpts.globalLayers,
       };
 

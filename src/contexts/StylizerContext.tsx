@@ -7,6 +7,7 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { StylizerOptions } from '@/lib/stylizer';
+import { ShadingMode, LightingSettings } from '@/lib/lightingPresets';
 
 export type MapSlot = 'albedo' | 'normal' | 'roughness' | 'metallic' | 'ao' | 'height';
 
@@ -49,6 +50,19 @@ export interface StylizerContextValue {
   setWipePosition: (v: number) => void;
   tiled: boolean;
   setTiled: (v: boolean) => void;
+  previewShape: 'sphere' | 'box' | 'plane' | 'custom';
+  setPreviewShape: (v: 'sphere' | 'box' | 'plane' | 'custom') => void;
+  customModelFile: File | null;
+  customModelName: string | null;
+  setCustomModel: (file: File | null) => void;
+
+  // Lighting & Shading
+  shadingMode: ShadingMode;
+  setShadingMode: (m: ShadingMode) => void;
+  lightingSettings: LightingSettings;
+  updateLightingSettings: (s: LightingSettings) => void;
+  activeLightingPresetId: string;
+  setActiveLightingPresetId: (id: string) => void;
 
   // Panel visibility / layout
   visiblePanels: Set<string>;

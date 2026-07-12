@@ -70,6 +70,8 @@ export interface ProjectMetadata {
   };
   stylizerOptions?: StylizerOptions;
   stylizerMapSlots?: string[]; // ordered MapSlot names matching the saved frame blobs
+  previewShape?: 'sphere' | 'box' | 'plane' | 'custom';
+  customModelName?: string | null;
 }
 
 export interface DbProjectFrameLayer {

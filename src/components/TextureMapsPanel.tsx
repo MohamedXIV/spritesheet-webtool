@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import * as THREE from 'three';
 import { ChevronDown, ChevronRight, Upload, X, ImageIcon, Layers } from 'lucide-react';
-import { useThreePainterContext, PaintingLayer } from '@/contexts/ThreePainterContext';
+import { ThreePainterContext, useThreePainterContext, PaintingLayer } from '@/contexts/ThreePainterContext';
+import { TrimsheetContext, useTrimsheetContext } from '@/contexts/TrimsheetContext';
 import { MapSlot } from '@/lib/threePainter';
+import { makeMaterialId, TrimMaterial } from '@/lib/trimsheetTypes';
 import styles from './TextureMapsPanel.module.css';
 
 // ── Section ───────────────────────────────────────────────────────────────────
@@ -43,33 +45,104 @@ function SliderRow({ label, value, min, max, step = 0.01, onChange }: {
 
 // ── useMapSlot hook ─────────────────────────────────────────────────────────────
 
-type PainterRef = ReturnType<typeof useThreePainterContext>['painter'];
+type TexturePanelSlot = MapSlot | 'albedo';
+type PainterRef = ReturnType<typeof useThreePainterContext>['painter'] | null;
 
-function useMapSlot(slot: MapSlot, painter: PainterRef) {
-  const { pbrMaps, setPbrMap } = useThreePainterContext();
-  const currentMap = pbrMaps[slot] || { url: null, name: null };
-  const objectUrl = currentMap.url;
-  const fileName = currentMap.name;
+function useMapSlot(slot: TexturePanelSlot, painter: PainterRef) {
+  const painterCtx = useContext(ThreePainterContext);
+  const trimsheetCtx = useContext(TrimsheetContext);
+  const isTrimsheetMode = !!trimsheetCtx;
 
-  const load = (file: File) => {
-    if (objectUrl && objectUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(objectUrl);
+  // Resolve current map values
+  let objectUrl: string | null = null;
+  let fileName: string | null = null;
+
+  if (isTrimsheetMode) {
+    const region = trimsheetCtx.regions.find(r => r.id === trimsheetCtx.selectedRegionId);
+    const material = region?.materialId ? trimsheetCtx.materials.find(m => m.id === region.materialId) || null : null;
+    const slotName = slot === 'ao' ? 'ao' : slot === 'normal' ? 'normal' : slot === 'roughness' ? 'roughness' : slot === 'metalness' ? 'metalness' : 'albedo';
+    const bitmap = material?.maps[slotName] || null;
+    if (bitmap) {
+      objectUrl = material?.thumbnailUrl || null;
+      fileName = `${slot.toUpperCase()} Map (${bitmap.width}x${bitmap.height})`;
     }
-    const url = URL.createObjectURL(file);
-    new THREE.TextureLoader().load(url, (tex) => {
-      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-      tex.needsUpdate = true;
-      painter?.setMap(slot, tex);
-    });
-    setPbrMap(slot, url, file.name);
+  } else if (painterCtx) {
+    const currentMap = painterCtx.pbrMaps[slot as MapSlot] || { url: null, name: null };
+    objectUrl = currentMap.url;
+    fileName = currentMap.name;
+  }
+
+  const load = async (file: File) => {
+    if (isTrimsheetMode) {
+      const region = trimsheetCtx.regions.find(r => r.id === trimsheetCtx.selectedRegionId);
+      if (!region) return;
+      
+      const bitmap = await createImageBitmap(file);
+      const slotName = slot === 'ao' ? 'ao' : slot === 'normal' ? 'normal' : slot === 'roughness' ? 'roughness' : slot === 'metalness' ? 'metalness' : 'albedo';
+      
+      const currentMaterial = region.materialId ? trimsheetCtx.materials.find(m => m.id === region.materialId) || null : null;
+      
+      let updatedMat: TrimMaterial;
+      if (currentMaterial) {
+        updatedMat = {
+          ...currentMaterial,
+          maps: {
+            ...currentMaterial.maps,
+            [slotName]: bitmap
+          }
+        };
+        if (slotName === 'albedo') {
+          updatedMat.thumbnailUrl = URL.createObjectURL(file);
+        }
+      } else {
+        const mapsObj: TrimMaterial['maps'] = { albedo: null, normal: null, roughness: null, metalness: null, ao: null };
+        mapsObj[slotName] = bitmap;
+        updatedMat = {
+          id: makeMaterialId(),
+          name: `Custom Region Material`,
+          source: 'upload' as const,
+          maps: mapsObj,
+          thumbnailUrl: slotName === 'albedo' ? URL.createObjectURL(file) : '',
+        };
+      }
+      trimsheetCtx.assignMaterialToRegion(region.id, updatedMat);
+    } else if (painterCtx) {
+      if (objectUrl && objectUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(objectUrl);
+      }
+      const url = URL.createObjectURL(file);
+      new THREE.TextureLoader().load(url, (tex) => {
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.needsUpdate = true;
+        painter?.setMap(slot as MapSlot, tex);
+      });
+      painterCtx.setPbrMap(slot as MapSlot, url, file.name);
+    }
   };
 
   const clear = () => {
-    if (objectUrl && objectUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(objectUrl);
+    if (isTrimsheetMode) {
+      const region = trimsheetCtx.regions.find(r => r.id === trimsheetCtx.selectedRegionId);
+      if (!region) return;
+      const currentMaterial = region.materialId ? trimsheetCtx.materials.find(m => m.id === region.materialId) || null : null;
+      if (currentMaterial) {
+        const slotName = slot === 'ao' ? 'ao' : slot === 'normal' ? 'normal' : slot === 'roughness' ? 'roughness' : slot === 'metalness' ? 'metalness' : 'albedo';
+        const updatedMat = {
+          ...currentMaterial,
+          maps: {
+            ...currentMaterial.maps,
+            [slotName]: null
+          }
+        };
+        trimsheetCtx.assignMaterialToRegion(region.id, updatedMat);
+      }
+    } else if (painterCtx) {
+      if (objectUrl && objectUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(objectUrl);
+      }
+      painter?.setMap(slot as MapSlot, null);
+      painterCtx.setPbrMap(slot as MapSlot, null, null);
     }
-    painter?.setMap(slot, null);
-    setPbrMap(slot, null, null);
   };
 
   return { objectUrl, fileName, load, clear };
@@ -78,7 +151,7 @@ function useMapSlot(slot: MapSlot, painter: PainterRef) {
 // ── MapSlotSection ─────────────────────────────────────────────────────────────
 
 function MapSlotSection({ label, slot, badge, painter, controls }: {
-  label: string; slot: MapSlot; badge?: string;
+  label: string; slot: TexturePanelSlot; badge?: string;
   painter: PainterRef; controls?: React.ReactNode;
 }) {
   const { objectUrl, fileName, load, clear } = useMapSlot(slot, painter);
@@ -327,19 +400,22 @@ function AlbedoSlot({ layers, activeLayerId, importImageToLayer, clearLayer }: A
 // ── Main Panel ────────────────────────────────────────────────────────────────
 
 export function TextureMapsPanel() {
-  const {
-    painter,
-    shadingMode,
-    isModelLoaded,
-    layers,
-    activeLayerId,
-    importImageToLayer,
-    clearLayer,
-    canvasResolution,
-    setCanvasResolution,
-    textureTiling,
-    setTextureTiling,
-  } = useThreePainterContext();
+  const painterCtx = useContext(ThreePainterContext);
+  const trimsheetCtx = useContext(TrimsheetContext);
+  const isTrimsheetMode = !!trimsheetCtx;
+
+  // Resolving states
+  const painter = painterCtx?.painter ?? null;
+  const shadingMode = painterCtx?.shadingMode ?? 'standard';
+  const isModelLoaded = painterCtx?.isModelLoaded ?? false;
+  const layers = painterCtx?.layers ?? [];
+  const activeLayerId = painterCtx?.activeLayerId ?? '';
+  const importImageToLayer = painterCtx?.importImageToLayer;
+  const clearLayer = painterCtx?.clearLayer;
+  const canvasResolution = painterCtx?.canvasResolution ?? 512;
+  const setCanvasResolution = painterCtx?.setCanvasResolution;
+  const textureTiling = painterCtx?.textureTiling ?? 1.0;
+  const setTextureTiling = painterCtx?.setTextureTiling;
 
   const [aoIntensity,       setAoIntensity]       = useState(1.0);
   const [normalScale,       setNormalScale]       = useState(1.0);
@@ -351,6 +427,75 @@ export function TextureMapsPanel() {
   const [displacementScale, setDisplacementScale] = useState(0.1);
 
   const isPBR = shadingMode === 'standard';
+
+  // Trimsheet specific resolving
+  const region = trimsheetCtx?.regions.find(r => r.id === trimsheetCtx.selectedRegionId) || null;
+  const material = region?.materialId ? trimsheetCtx?.materials.find(m => m.id === region.materialId) || null : null;
+
+  if (isTrimsheetMode) {
+    if (!region) {
+      return (
+        <div className={styles.empty}>
+          <Upload size={26} className={styles.emptyIcon} />
+          <p>Select a region in the Trimsheet editor to inspect and assign PBR texture maps.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className={styles.container}>
+        {/* Global Resolution & Tiling Controls */}
+        <div className={styles.settingsGroup}>
+          <div className={styles.settingRow}>
+            <span className={styles.settingLabel}>Trimsheet Size</span>
+            <select
+              className={styles.settingSelect}
+              value={trimsheetCtx.resolution}
+              onChange={(e) => trimsheetCtx.setResolution(Number(e.target.value) as any)}
+            >
+              <option value={512}>512 x 512</option>
+              <option value={1024}>1024 x 1024 (1K HD)</option>
+              <option value={2048}>2048 x 2048 (2K Ultra)</option>
+            </select>
+          </div>
+
+          <div className={styles.settingRow}>
+            <span className={styles.settingLabel}>Region Tiling</span>
+            <input
+              type="range"
+              className={styles.sliderTrack}
+              min={0.25}
+              max={8.0}
+              step={0.25}
+              value={region.tiling.scale}
+              onChange={(e) => trimsheetCtx.updateRegionTiling(region.id, { scale: Number(e.target.value) })}
+            />
+            <span className={styles.settingValue}>{region.tiling.scale.toFixed(2)}x</span>
+          </div>
+        </div>
+
+        {/* Trimsheet Mode Info */}
+        <div className={styles.modeNoticeOk}>
+          PBR Region Map Composer — drop or select textures per channel.
+        </div>
+
+        {/* Albedo / Diffuse */}
+        <MapSlotSection label="ALBEDO / DIFFUSE MAP" slot="albedo" badge="PBR" painter={null} />
+
+        {/* AO */}
+        <MapSlotSection label="AMBIENT OCCLUSION" slot="ao" badge="PBR" painter={null} />
+
+        {/* Normal */}
+        <MapSlotSection label="NORMAL MAP" slot="normal" badge="PBR" painter={null} />
+
+        {/* Metalness */}
+        <MapSlotSection label="METALNESS MAP" slot="metalness" badge="PBR" painter={null} />
+
+        {/* Roughness */}
+        <MapSlotSection label="ROUGHNESS MAP" slot="roughness" badge="PBR" painter={null} />
+      </div>
+    );
+  }
 
   if (!isModelLoaded) {
     return (
@@ -371,7 +516,7 @@ export function TextureMapsPanel() {
           <select
             className={styles.settingSelect}
             value={canvasResolution}
-            onChange={(e) => setCanvasResolution(Number(e.target.value))}
+            onChange={(e) => setCanvasResolution?.(Number(e.target.value))}
           >
             <option value={512}>512 x 512 (Standard)</option>
             <option value={1024}>1024 x 1024 (1K HD)</option>
@@ -388,7 +533,7 @@ export function TextureMapsPanel() {
             max={20.0}
             step={0.1}
             value={textureTiling}
-            onChange={(e) => setTextureTiling(Number(e.target.value))}
+            onChange={(e) => setTextureTiling?.(Number(e.target.value))}
           />
           <span className={styles.settingValue}>{textureTiling.toFixed(1)}x</span>
         </div>

@@ -169,7 +169,7 @@ export interface ThreePainterContextValue {
 
 export type { ShadingMode, LightingSettings };
 
-const ThreePainterContext = createContext<ThreePainterContextValue | null>(null);
+export const ThreePainterContext = createContext<ThreePainterContextValue | null>(null);
 
 export function useThreePainterContext() {
   const ctx = useContext(ThreePainterContext);

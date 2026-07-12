@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useTrimsheetContext } from '@/contexts/TrimsheetContext';
-import { NormRect, Region } from '@/lib/trimsheetTypes';
+import { NormRect, Region, MapChannel } from '@/lib/trimsheetTypes';
 import { loadPolyhavenMaterial } from '@/lib/trimsheetMaterials';
 import styles from './TrimsheetCanvas.module.css';
 
@@ -105,6 +105,9 @@ export function TrimsheetCanvas() {
   const [draft, setDraft] = useState<NormRect | null>(null);
   const [hover, setHover] = useState<HoverTarget>(null);
 
+  // Preview channel selection
+  const [activeChannel, setActiveChannel] = useState<MapChannel>('albedo');
+
   // Viewport transformation states
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -142,17 +145,17 @@ export function TrimsheetCanvas() {
     }
   }, [stageSize]);
 
-  // Paint baker preview whenever bake version changes
+  // Paint baker preview whenever bake version changes or active preview channel changes
   useEffect(() => {
     const baker = ctx.baker;
     const cvs = previewRef.current;
     if (!baker || !cvs) return;
-    const src = baker.getPreviewCanvas();
+    const src = baker.getChannel(activeChannel);
     const c = cvs.getContext('2d');
     if (!c) return;
     c.clearRect(0, 0, cvs.width, cvs.height);
     c.drawImage(src as unknown as CanvasImageSource, 0, 0, cvs.width, cvs.height);
-  }, [ctx.baker, ctx.bakeVersion, ctx.resolution]);
+  }, [ctx.baker, ctx.bakeVersion, ctx.resolution, activeChannel]);
 
   // Primary color — matches CSS var
   const PRIMARY = '#7C3AED';
@@ -596,6 +599,19 @@ export function TrimsheetCanvas() {
             }}
             onDrop={onDrop}
           />
+        </div>
+
+        {/* Floating Channel Selector */}
+        <div className={styles.channelControls}>
+          {(['albedo', 'ao', 'normal', 'roughness', 'metalness'] as MapChannel[]).map((ch) => (
+            <button
+              key={ch}
+              className={`${styles.channelButton} ${activeChannel === ch ? styles.channelActive : ''}`}
+              onClick={() => setActiveChannel(ch)}
+            >
+              {ch === 'albedo' ? 'Albedo' : ch === 'roughness' ? 'Rough' : ch === 'metalness' ? 'Metal' : ch.toUpperCase()}
+            </button>
+          ))}
         </div>
 
         {/* Floating Zoom Controls */}

@@ -230,16 +230,6 @@ function boxBlur(src: ImageData, radius: number): ImageData {
   return out;
 }
 
-function desaturate(data: Uint8ClampedArray, amount: number): void {
-  const a = amount / 100;
-  for (let i = 0; i < data.length; i += 4) {
-    const luma = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-    data[i] = data[i] + (luma - data[i]) * a;
-    data[i + 1] = data[i + 1] + (luma - data[i + 1]) * a;
-    data[i + 2] = data[i + 2] + (luma - data[i + 2]) * a;
-  }
-}
-
 // Returns a Float32Array of edge magnitude (0..~1) per pixel.
 function sobelEdges(src: ImageData): Float32Array {
   const { width: w, height: h, data } = src;
@@ -268,6 +258,37 @@ function hexToRgb(hex: string): [number, number, number] {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+const TOON_COLORS = [
+  [16, 16, 20], [240, 240, 245], [235, 75, 75], [75, 190, 110], [60, 120, 240],
+  [250, 200, 50], [230, 90, 220], [70, 210, 215], [110, 115, 125], [175, 180, 190],
+  [120, 30, 30], [120, 120, 30], [25, 90, 45], [80, 25, 110], [20, 95, 100],
+  [15, 30, 100], [255, 215, 185], [245, 185, 145], [195, 130, 95], [105, 60, 40],
+  [255, 125, 150], [150, 220, 90], [255, 160, 60], [100, 80, 70]
+];
+
+function snapToPalette(data: Uint8ClampedArray, palette: number[][]): void {
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    let bestDist = Infinity;
+    let br = r, bg = g, bb = b;
+    for (const [pr, pg, pb] of palette) {
+      const dr = r - pr;
+      const dg = g - pg;
+      const db = b - pb;
+      const d = dr * dr + dg * dg + db * db;
+      if (d < bestDist) {
+        bestDist = d;
+        br = pr; bg = pg; bb = pb;
+      }
+    }
+    data[i] = br;
+    data[i + 1] = bg;
+    data[i + 2] = bb;
+  }
+}
+
 export async function stylize(
   albedo: ImageBitmap,
   opts: StylizerOptions,
@@ -279,12 +300,37 @@ export async function stylize(
 
   // Style stage
   switch (opts.style) {
-    case 'cel':
+    case 'cel': {
       if (opts.celSmoothing > 0) {
-        img = kuwahara(img, Math.round((opts.celSmoothing / 100) * 4));
+        const celR = Math.max(1, Math.round((opts.celSmoothing / 100) * 5));
+        img = kuwahara(img, celR);
       }
-      posterize(img.data, opts.levels);
+      // Posterize the Value (brightness) channel to preserve hue/saturation and prevent gray-out
+      const step = 255 / Math.max(1, opts.levels - 1);
+      for (let i = 0; i < img.data.length; i += 4) {
+        let r = img.data[i];
+        let g = img.data[i + 1];
+        let b = img.data[i + 2];
+
+        // Soft saturation boost for cartoon color pop
+        const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+        r = Math.min(255, Math.max(0, luma + (r - luma) * 1.25));
+        g = Math.min(255, Math.max(0, luma + (g - luma) * 1.25));
+        b = Math.min(255, Math.max(0, luma + (b - luma) * 1.25));
+
+        const val = Math.max(r, g, b);
+        if (val > 0) {
+          const newVal = Math.round(Math.round(val / step) * step);
+          img.data[i] = Math.min(255, (r / val) * newVal);
+          img.data[i + 1] = Math.min(255, (g / val) * newVal);
+          img.data[i + 2] = Math.min(255, (b / val) * newVal);
+        }
+      }
+      if (opts.paletteSnap) {
+        snapToPalette(img.data, TOON_COLORS);
+      }
       break;
+    }
     case 'painterly': {
       // Stronger Kuwahara scaled by brush strength, softened by detailPreserve.
       const brushRadius = Math.max(1, Math.round((opts.brushStrength / 100) * 6));
@@ -295,14 +341,55 @@ export async function stylize(
       break;
     }
     case 'watercolor': {
-      const blurR = Math.max(1, Math.round((opts.bleed / 100) * 4));
-      img = boxBlur(img, blurR);
-      desaturate(img.data, opts.granulation * 0.4);
-      posterize(img.data, 12); // gentle banding for pigment pooling
-      // wash: lift toward white by washStrength
-      const lift = (opts.washStrength / 100) * 40;
+      // Saturation boost for glowing, translucent watercolor colors
       for (let i = 0; i < img.data.length; i += 4) {
-        img.data[i] += lift; img.data[i + 1] += lift; img.data[i + 2] += lift;
+        const r = img.data[i], g = img.data[i + 1], b = img.data[i + 2];
+        const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+        img.data[i] = Math.min(255, Math.max(0, luma + (r - luma) * 1.55));
+        img.data[i + 1] = Math.min(255, Math.max(0, luma + (g - luma) * 1.55));
+        img.data[i + 2] = Math.min(255, Math.max(0, luma + (b - luma) * 1.55));
+      }
+
+      const blurR = Math.round((opts.bleed / 100) * 3);
+      if (blurR > 0) {
+        img = boxBlur(img, blurR);
+      }
+      posterize(img.data, 12); // gentle banding for pigment pooling
+
+      // 1. Organic paper grain/fiber texture (bright and dark fibers)
+      const { width: w, height: h } = img;
+      const grain = opts.granulation / 100;
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const o = (y * w + x) * 4;
+          const val1 = Math.sin(x * 0.35) * Math.cos(y * 0.35);
+          const val2 = Math.sin(x * 0.1 + 3) * Math.sin(y * 0.1 + 1);
+          const val3 = ((Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1) * 2.0 - 1.0;
+          const noise = (val1 * 0.45 + val2 * 0.45 + val3 * 0.1) * grain;
+          const factor = 1.0 + noise * 0.12;
+          img.data[o] = Math.min(255, Math.max(0, img.data[o] * factor));
+          img.data[o + 1] = Math.min(255, Math.max(0, img.data[o + 1] * factor));
+          img.data[o + 2] = Math.min(255, Math.max(0, img.data[o + 2] * factor));
+        }
+      }
+
+      // 2. Wet-edge pigment pooling (dark contour borders)
+      const edgeMag = sobelEdges(img);
+      const bleedStrength = (opts.bleed / 100) * 0.5;
+      for (let i = 0; i < img.data.length; i += 4) {
+        const edge = edgeMag[i / 4];
+        const factor = 1.0 - edge * bleedStrength * 0.55;
+        img.data[i] = Math.min(255, Math.max(0, img.data[i] * factor));
+        img.data[i + 1] = Math.min(255, Math.max(0, img.data[i + 1] * factor));
+        img.data[i + 2] = Math.min(255, Math.max(0, img.data[i + 2] * factor));
+      }
+
+      // 3. Watercolor wash lift (blends dilution color towards paper white)
+      const wash = opts.washStrength / 100;
+      for (let i = 0; i < img.data.length; i += 4) {
+        img.data[i] = Math.min(255, img.data[i] + (255 - img.data[i]) * wash * 0.35);
+        img.data[i + 1] = Math.min(255, img.data[i + 1] + (255 - img.data[i + 1]) * wash * 0.35);
+        img.data[i + 2] = Math.min(255, img.data[i + 2] + (255 - img.data[i + 2]) * wash * 0.35);
       }
       break;
     }
@@ -311,17 +398,51 @@ export async function stylize(
       const thr = opts.lineThreshold / 100;
       const strength = opts.lineStrength / 100;
       const { width: w, height: h } = img;
-      // Start from a lightly posterized tone, then draw dark lines over it.
-      posterize(img.data, 4);
-      desaturate(img.data, 100);
+
+      // 1. Compute grayscale luma
+      const lumaData = new Uint8Array(w * h);
+      for (let i = 0; i < w * h; i++) {
+        const o = i * 4;
+        lumaData[i] = 0.299 * img.data[o] + 0.587 * img.data[o + 1] + 0.114 * img.data[o + 2];
+      }
+
+      // 2. Draw light paper pencil shading & cross-hatching
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          const i = y * w + x;
+          const o = i * 4;
+          const luma = lumaData[i];
+          const shadingFactor = 0.75 + (luma / 255) * 0.25;
+          let pencilVal = 255 * shadingFactor;
+
+          if (opts.hatching) {
+            const normL = luma / 255;
+            if (normL < 0.65) {
+              if ((x + y) % 6 === 0) pencilVal *= 0.75;
+            }
+            if (normL < 0.45) {
+              if ((x - y) % 6 === 0) pencilVal *= 0.75;
+            }
+            if (normL < 0.25) {
+              if (x % 6 === 0) pencilVal *= 0.75;
+            }
+          }
+
+          img.data[o] = Math.min(255, Math.max(0, pencilVal));
+          img.data[o + 1] = Math.min(255, Math.max(0, pencilVal));
+          img.data[o + 2] = Math.min(255, Math.max(0, pencilVal));
+        }
+      }
+
+      // 3. Apply edge outlines
       for (let i = 0; i < w * h; i++) {
         const e = edges[i];
         if (e > thr) {
           const ink = Math.min(1, (e - thr) * strength * 4);
           const o = i * 4;
-          img.data[o] *= (1 - ink);
-          img.data[o + 1] *= (1 - ink);
-          img.data[o + 2] *= (1 - ink);
+          img.data[o] = Math.max(0, img.data[o] * (1 - ink));
+          img.data[o + 1] = Math.max(0, img.data[o + 1] * (1 - ink));
+          img.data[o + 2] = Math.max(0, img.data[o + 2] * (1 - ink));
         }
       }
       break;

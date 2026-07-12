@@ -1,13 +1,214 @@
-.panel { display: flex; flex-direction: column; height: 100%; padding: 12px; gap: 10px; color: var(--foreground); }
-.header { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 13px; }
-.resetBtn { background: var(--secondary); color: var(--secondary-foreground); border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px; cursor: pointer; font-size: 12px; }
-.slots { display: flex; flex-direction: column; gap: 8px; }
-.slot { position: relative; border: 1px dashed var(--border); border-radius: 8px; padding: 10px 12px; cursor: pointer; background: var(--card); transition: border-color .15s, background .15s; }
-.slot:hover { border-color: var(--primary); }
-.slotLoaded { border-style: solid; border-color: var(--primary); }
-.slotRequired .slotLabel { color: var(--primary); }
-.slotLabel { font-size: 12px; font-weight: 600; }
-.slotState { font-size: 11px; opacity: .7; margin-top: 2px; }
-.clearBtn { position: absolute; top: 6px; right: 8px; background: transparent; border: none; color: var(--foreground); font-size: 16px; cursor: pointer; line-height: 1; }
-.hiddenInput { display: none; }
-.hint { font-size: 11px; opacity: .6; margin: 0; }
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-size: 11px;
+  color: var(--text-color);
+  background: var(--surface-color);
+  padding: 0 0 16px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color-muted) transparent;
+}
+
+.panel::-webkit-scrollbar { width: 3px; }
+.panel::-webkit-scrollbar-track { background: transparent; }
+.panel::-webkit-scrollbar-thumb { background: var(--border-color-muted); border-radius: 2px; }
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1.5px solid var(--border-color-muted);
+  background: var(--surface-color);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.headerTitle {
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-color);
+}
+
+.resetBtn {
+  composes: neo-btn-secondary from global;
+  padding: 3px 8px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  height: 22px;
+}
+
+.slots {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Collapsable Section */
+.section {
+  border-bottom: 1.5px solid var(--border-color-muted);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.12s;
+  user-select: none;
+}
+.sectionHeader:hover {
+  color: var(--primary-color);
+  background: var(--surface-hover);
+}
+
+.sectionBody {
+  padding: 6px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Individual Slot Layout */
+.slotWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.slotLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.requiredStar {
+  color: var(--danger-color);
+}
+
+/* Drag & Drop Zone */
+.dropZone {
+  border: 1.5px dashed var(--border-color-muted);
+  border-radius: 5px;
+  cursor: pointer;
+  background: var(--surface-color);
+  transition: border-color 0.12s, background 0.12s;
+  overflow: hidden;
+  padding: 8px 10px;
+}
+.dropZone:hover {
+  border-color: var(--primary-color-alpha);
+  background: var(--primary-color-alpha);
+}
+.dropZoneDrag {
+  border-color: var(--primary-color);
+  background: var(--primary-color-alpha);
+}
+.dropZoneLoaded {
+  border-style: solid;
+  border-color: var(--border-color-muted);
+  cursor: default;
+}
+.dropZoneLoaded:hover {
+  background: transparent;
+}
+
+.hiddenInput {
+  display: none;
+}
+
+.dropPlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 10px;
+  pointer-events: none;
+  user-select: none;
+  min-height: 24px;
+}
+
+.dropIcon {
+  color: var(--text-muted);
+}
+
+/* Loaded thumbnail metadata row */
+.thumbRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.thumbCanvas {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-color);
+  background: var(--background-color);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.thumbMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.thumbName {
+  font-size: 10px;
+  font-weight: 650;
+  color: var(--text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clearBtn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 0;
+  cursor: pointer;
+  width: fit-content;
+  transition: color 0.1s;
+}
+.clearBtn:hover {
+  color: var(--danger-color);
+}
+
+.hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 10px 12px;
+  margin: 0;
+  line-height: 1.4;
+  font-style: italic;
+}

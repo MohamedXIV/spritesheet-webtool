@@ -10,6 +10,7 @@ import { StylizerMapOutputPanel } from '@/components/StylizerMapOutputPanel';
 import { StylizerPreviewPanel } from '@/components/StylizerPreviewPanel';
 import { StylizerPreview3DPanel } from '@/components/StylizerPreview3DPanel';
 import { StylizerExportPanel } from '@/components/StylizerExportPanel';
+import { StylizerLightingPanel } from '@/components/StylizerLightingPanel';
 
 import styles from './StylizerDockLayout.module.css';
 
@@ -21,6 +22,7 @@ const PANEL_INFO: Record<string, { name: string }> = {
   'map-output': { name: 'Map Output' },
   'preview-2d': { name: 'Preview' },
   'preview-3d': { name: '3D Preview' },
+  'lighting': { name: 'Lighting & Shading' },
   'export': { name: 'Export' },
 };
 
@@ -46,6 +48,7 @@ const defaultLayout = {
       { type: 'tabset', weight: 50, children: [
         { type: 'tab', name: 'Preview', component: 'preview-2d' },
         { type: 'tab', name: '3D Preview', component: 'preview-3d' },
+        { type: 'tab', name: 'Lighting & Shading', component: 'lighting' },
       ]},
       { type: 'tabset', weight: 26, children: [
         { type: 'tab', name: 'Map Output', component: 'map-output' },
@@ -93,6 +96,7 @@ export const StylizerDockLayout = forwardRef<StylizerDockLayoutRef, StylizerDock
         case 'map-output': return <div className={styles.panelContent}><StylizerMapOutputPanel /></div>;
         case 'preview-2d': return <div className={styles.panelContent}><StylizerPreviewPanel /></div>;
         case 'preview-3d': return <div className={styles.panelContent}><StylizerPreview3DPanel /></div>;
+        case 'lighting': return <div className={styles.panelContent}><StylizerLightingPanel /></div>;
         case 'export': return <div className={styles.panelContent}><StylizerExportPanel /></div>;
         default: return <div className={styles.placeholder}>Unknown Panel: {component}</div>;
       }

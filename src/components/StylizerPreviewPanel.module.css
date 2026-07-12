@@ -1,8 +1,239 @@
-.panel { display: flex; flex-direction: column; height: 100%; color: var(--foreground); }
-.toolbar { display: flex; align-items: center; gap: 14px; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
-.check { display: flex; align-items: center; gap: 6px; }
-.wipe { flex: 1; accent-color: var(--primary); }
-.processing { opacity: .7; }
-.canvasWrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 12px; overflow: hidden; }
-.canvas { max-width: 100%; max-height: 100%; border: 1px solid var(--border); border-radius: 8px; background: var(--muted); }
-.placeholder { opacity: .6; font-size: 13px; }
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  color: var(--text-color);
+  background: var(--background-color);
+  user-select: none;
+}
+
+.canvasContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.canvasWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.canvas {
+  max-width: 100%;
+  max-height: 100%;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--surface-color);
+  box-shadow: var(--shadow-md);
+}
+
+/* Floating HUD */
+.hudHeader {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  height: 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.hudLeft, .hudRight, .hudCenter {
+  display: flex;
+  align-items: center;
+  pointer-events: auto;
+  background: var(--surface-color);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  box-shadow: var(--shadow-sm);
+}
+
+.hudLeft {
+  gap: 4px;
+}
+
+.hudBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.hudBtn:hover {
+  background: var(--surface-hover);
+  color: var(--text-color);
+}
+.hudBtnActive {
+  background: var(--primary-color-alpha) !important;
+  border: 1px solid var(--primary-color) !important;
+  color: var(--primary-color) !important;
+}
+
+.hudCenter {
+  gap: 6px;
+  padding: 3px 8px;
+}
+
+.sliderLabel {
+  font-size: 9.5px;
+  font-weight: 750;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.wipeSlider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 120px;
+  height: 4px;
+  background: var(--border-color-muted);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.wipeSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  border: 1.5px solid var(--border-color);
+  cursor: pointer;
+}
+
+.sliderVal {
+  font-size: 9px;
+  font-family: 'Consolas', 'SF Mono', monospace;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.processingBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  height: 20px;
+  color: var(--primary-color);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Placeholders */
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  text-align: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.placeholderContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.placeholderIcon {
+  color: var(--text-muted);
+  animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
+}
+
+.placeholder p {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+  max-width: 200px;
+}
+
+.canvasInnerWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 100%;
+  user-select: none;
+}
+
+.draggable {
+  cursor: ew-resize;
+}
+
+.wipeLineOverlay {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+  z-index: 5;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.6);
+}
+
+.wipeHandle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--surface-color);
+  border: 1.5px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-color);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  z-index: 6;
+  pointer-events: none;
+}
+
+.zoomTag {
+  font-size: 9.5px;
+  font-family: 'Consolas', 'SF Mono', monospace;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 0 4px;
+}

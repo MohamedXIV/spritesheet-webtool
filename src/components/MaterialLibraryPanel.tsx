@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, Loader2, RefreshCw, Layers, Sparkles } from 'lucide-react';
-import { useThreePainterContext } from '@/contexts/ThreePainterContext';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { Search, Loader2, RefreshCw, Layers, Sparkles, Upload } from 'lucide-react';
+import { ThreePainterContext, useThreePainterContext } from '@/contexts/ThreePainterContext';
+import { TrimsheetContext, useTrimsheetContext } from '@/contexts/TrimsheetContext';
+import { loadPolyhavenMaterial, loadUploadMaterial } from '@/lib/trimsheetMaterials';
 import * as THREE from 'three';
 import styles from './MaterialLibraryPanel.module.css';
 
@@ -120,17 +122,22 @@ const LOCAL_MATERIALS = [
 ];
 
 export function MaterialLibraryPanel() {
-  const {
-    layers,
-    activeLayerId,
-    updateLayerFillSettings,
-    painter,
-    isModelLoaded,
-    setPbrMap,
-    materialResolution,
-    setMaterialResolution,
-    textureTiling,
-  } = useThreePainterContext();
+  const painterCtx = useContext(ThreePainterContext);
+  const trimsheetCtx = useContext(TrimsheetContext);
+  const isTrimsheetMode = !!trimsheetCtx;
+
+  // Painter specific destructured states (safe fallback)
+  const layers = painterCtx?.layers ?? [];
+  const activeLayerId = painterCtx?.activeLayerId ?? '';
+  const updateLayerFillSettings = painterCtx?.updateLayerFillSettings;
+  const painter = painterCtx?.painter ?? null;
+  const isModelLoaded = painterCtx?.isModelLoaded ?? false;
+  const setPbrMap = painterCtx?.setPbrMap;
+
+  // Expose materialResolution state
+  const [localMaterialRes, setLocalMaterialRes] = useState<'1k' | '2k' | '4k'>('2k');
+  const materialResolution = isTrimsheetMode ? localMaterialRes : (painterCtx?.materialResolution ?? '2k');
+  const setMaterialResolution = isTrimsheetMode ? setLocalMaterialRes : (painterCtx?.setMaterialResolution ?? (() => {}));
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -138,9 +145,19 @@ export function MaterialLibraryPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [applyingAssetId, setApplyingAssetId] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(24);
 
+  // Reset pagination on filter change
+  useEffect(() => {
+    setVisibleCount(24);
+  }, [searchQuery, activeCategory]);
+
+  // Target element validation
   const activeLayer = layers.find(l => l.id === activeLayerId);
   const isFillLayer = activeLayer?.type === 'fill';
+  const hasSelectedRegion = !!trimsheetCtx?.selectedRegionId;
+
+  const isTargetActive = isTrimsheetMode ? hasSelectedRegion : isFillLayer;
 
   // Fetch Polyhaven textures
   useEffect(() => {
@@ -180,36 +197,61 @@ export function MaterialLibraryPanel() {
     return () => { active = false; };
   }, []);
 
-  const handleApplyLocalMaterial = (mat: typeof LOCAL_MATERIALS[0]) => {
-    if (!isFillLayer) {
-      alert('Please select a "fill" layer to apply a material texture.');
+  const handleApplyLocalMaterial = async (mat: typeof LOCAL_MATERIALS[0]) => {
+    if (!isTargetActive) {
+      alert(isTrimsheetMode ? 'Please select a region first.' : 'Please select a "fill" layer to apply a material texture.');
       return;
     }
     setApplyingAssetId(mat.id);
 
     try {
+      const size = 512;
       const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = 512;
+      canvas.width = canvas.height = size;
       const ctx = canvas.getContext('2d')!;
-      mat.generate(ctx, 512, 512);
+      mat.generate(ctx, size, size);
 
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          updateLayerFillSettings(activeLayerId, {
-            fillTextureName: mat.name,
-            fillTextureUrl: url,
-          });
-        }
-        // Reset normal and roughness maps
-        setPbrMap('normal', null, null);
-        setPbrMap('roughness', null, null);
-        if (painter) {
-          painter.setMap('normal', null);
-          painter.setMap('roughness', null);
-        }
+      if (isTrimsheetMode) {
+        const regionId = trimsheetCtx.selectedRegionId;
+        if (!regionId) return;
+
+        const bitmap = await createImageBitmap(canvas);
+        const newMat = {
+          id: `procedural-${mat.id}-${Date.now()}`,
+          name: mat.name,
+          source: 'upload' as const,
+          maps: {
+            albedo: bitmap,
+            normal: null,
+            roughness: null,
+            metalness: null,
+            ao: null,
+          },
+          thumbnailUrl: canvas.toDataURL(),
+        };
+        trimsheetCtx.assignMaterialToRegion(regionId, newMat);
         setApplyingAssetId(null);
-      }, 'image/png');
+      } else {
+        canvas.toBlob((blob) => {
+          if (blob && updateLayerFillSettings) {
+            const url = URL.createObjectURL(blob);
+            updateLayerFillSettings(activeLayerId, {
+              fillTextureName: mat.name,
+              fillTextureUrl: url,
+            });
+          }
+          // Reset normal and roughness maps
+          if (setPbrMap) {
+            setPbrMap('normal', null, null);
+            setPbrMap('roughness', null, null);
+          }
+          if (painter) {
+            painter.setMap('normal', null);
+            painter.setMap('roughness', null);
+          }
+          setApplyingAssetId(null);
+        }, 'image/png');
+      }
     } catch (err) {
       console.error(err);
       setApplyingAssetId(null);
@@ -217,116 +259,188 @@ export function MaterialLibraryPanel() {
   };
 
   const handleApplyPolyhavenMaterial = async (asset: Asset) => {
-    if (!isFillLayer) {
-      alert('Please select a "fill" layer to apply a material texture.');
+    if (!isTargetActive) {
+      alert(isTrimsheetMode ? 'Please select a region first.' : 'Please select a "fill" layer to apply a material texture.');
       return;
     }
     setApplyingAssetId(asset.id);
 
     try {
-      const res = await fetch(`https://api.polyhaven.com/files/${asset.id}`, {
-        headers: {
-          'User-Agent': 'SpritesheetWebtoolSmartMaterials'
-        }
-      });
-      if (!res.ok) throw new Error('Failed to fetch asset file data');
-      const data = await res.json();
+      if (isTrimsheetMode) {
+        const regionId = trimsheetCtx.selectedRegionId;
+        if (!regionId) return;
+        trimsheetCtx.setLoadingRegionId(regionId, true);
 
-      const lowercaseKeys: Record<string, any> = {};
-      for (const key of Object.keys(data)) {
-        lowercaseKeys[key.toLowerCase()] = data[key];
-      }
-
-      const getMapUrl = (mapObject: any) => {
-        if (!mapObject) return null;
-        const order = [materialResolution, '2k', '1k', '4k', '8k'];
-        let resObj = null;
-        for (const resKey of order) {
-          if (mapObject[resKey]) {
-            resObj = mapObject[resKey];
-            break;
+        // Map Asset format to PolyhavenAsset expected by loadPolyhavenMaterial
+        const phAsset = {
+          id: asset.id,
+          name: asset.name,
+          category: asset.category,
+          thumbnail: asset.thumbnail,
+        };
+        // Wait, loadPolyhavenMaterial uses materialResolution state internally or maps it?
+        // Ah! In loadPolyhavenMaterial, it uses getMapUrl which was:
+        // getMapUrl(mapObject: any): string | null
+        // Let's check: does it support the quality parameter?
+        // Let's modify loadPolyhavenMaterial to accept custom resolution! Or let's rewrite it here or pass the selected quality.
+        // Actually, we can just pass the selected quality if we modify loadPolyhavenMaterial in trimsheetMaterials.ts,
+        // OR we can fetch it ourselves right here and assign it!
+        // Wait, loadPolyhavenMaterial in trimsheetMaterials.ts is already very clean:
+        // Let's read it:
+        // export async function loadPolyhavenMaterial(asset: PolyhavenAsset): Promise<TrimMaterial> { ... }
+        // If we fetch and load the material here, we can pass our materialResolution!
+        // But wait! Can we update loadPolyhavenMaterial signature to take a second optional resolution parameter?
+        // Let's check trimsheetMaterials.ts:
+        // export async function loadPolyhavenMaterial(asset: PolyhavenAsset, resolution: string = '1k'): Promise<TrimMaterial> { ... }
+        // And inside getMapUrl:
+        // function getMapUrl(mapObject: any, preferredRes: string = '1k'): string | null {
+        //   const resObj = mapObject[preferredRes] || mapObject['1k'] || mapObject['2k'] || ...
+        // }
+        // This is incredibly easy and elegant! Let's modify trimsheetMaterials.ts to support quality selection first,
+        // then call it with `materialResolution`!
+        
+        const mat = await loadPolyhavenMaterial(phAsset, materialResolution);
+        trimsheetCtx.assignMaterialToRegion(regionId, mat);
+        trimsheetCtx.setLoadingRegionId(regionId, false);
+      } else {
+        const res = await fetch(`https://api.polyhaven.com/files/${asset.id}`, {
+          headers: {
+            'User-Agent': 'SpritesheetWebtoolSmartMaterials'
           }
+        });
+        if (!res.ok) throw new Error('Failed to fetch asset file data');
+        const data = await res.json();
+
+        const lowercaseKeys: Record<string, any> = {};
+        for (const key of Object.keys(data)) {
+          lowercaseKeys[key.toLowerCase()] = data[key];
         }
-        if (!resObj) resObj = Object.values(mapObject)[0];
-        if (!resObj) return null;
-        const formatObj = resObj["jpg"] || resObj["png"] || Object.values(resObj)[0];
-        return formatObj?.url || null;
-      };
 
-      const diffuseUrl = getMapUrl(lowercaseKeys.diffuse || lowercaseKeys.diff || lowercaseKeys.col || lowercaseKeys.albedo);
-      const normalUrl = getMapUrl(lowercaseKeys.nor || lowercaseKeys.normal || lowercaseKeys.nor_gl || lowercaseKeys.nor_dx);
-      const roughnessUrl = getMapUrl(lowercaseKeys.rough || lowercaseKeys.roughness);
+        const getMapUrl = (mapObject: any) => {
+          if (!mapObject) return null;
+          const order = [materialResolution, '2k', '1k', '4k', '8k'];
+          let resObj = null;
+          for (const resKey of order) {
+            if (mapObject[resKey]) {
+              resObj = mapObject[resKey];
+              break;
+            }
+          }
+          if (!resObj) resObj = Object.values(mapObject)[0];
+          if (!resObj) return null;
+          const formatObj = resObj["jpg"] || resObj["png"] || Object.values(resObj)[0];
+          return formatObj?.url || null;
+        };
 
-      if (!diffuseUrl) {
-        alert('Could not find a valid diffuse map for this asset.');
-        setApplyingAssetId(null);
-        return;
-      }
+        const diffuseUrl = getMapUrl(lowercaseKeys.diffuse || lowercaseKeys.diff || lowercaseKeys.col || lowercaseKeys.albedo);
+        const normalUrl = getMapUrl(lowercaseKeys.nor || lowercaseKeys.normal || lowercaseKeys.nor_gl || lowercaseKeys.nor_dx);
+        const roughnessUrl = getMapUrl(lowercaseKeys.rough || lowercaseKeys.roughness);
 
-      // 1. Download diffuse map as blob
-      const diffRes = await fetch(diffuseUrl);
-      const diffBlob = await diffRes.blob();
-      const localDiffUrl = URL.createObjectURL(diffBlob);
+        if (!diffuseUrl) {
+          alert('Could not find a valid diffuse map for this asset.');
+          setApplyingAssetId(null);
+          return;
+        }
 
-      // Apply diffuse map to fill layer
-      updateLayerFillSettings(activeLayerId, {
-        fillTextureName: asset.name,
-        fillTextureUrl: localDiffUrl,
-      });
+        // 1. Download diffuse map as blob
+        const diffRes = await fetch(diffuseUrl);
+        const diffBlob = await diffRes.blob();
+        const localDiffUrl = URL.createObjectURL(diffBlob);
 
-      // 2. Load Normal Map if available and painter exists
-      if (normalUrl && painter) {
-        try {
-          const normRes = await fetch(normalUrl);
-          const normBlob = await normRes.blob();
-          const localNormUrl = URL.createObjectURL(normBlob);
-
-          const texLoader = new THREE.TextureLoader();
-          texLoader.load(localNormUrl, (tex) => {
-            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-            tex.needsUpdate = true;
-            painter.setMap('normal', tex);
+        // Apply diffuse map to fill layer
+        if (updateLayerFillSettings) {
+          updateLayerFillSettings(activeLayerId, {
+            fillTextureName: asset.name,
+            fillTextureUrl: localDiffUrl,
           });
-          setPbrMap('normal', localNormUrl, `${asset.name}_normal.jpg`);
-        } catch (normErr) {
-          console.warn('Failed to download normal map:', normErr);
+        }
+
+        // 2. Load Normal Map if available and painter exists
+        if (normalUrl && painter && setPbrMap) {
+          try {
+            const normRes = await fetch(normalUrl);
+            const normBlob = await normRes.blob();
+            const localNormUrl = URL.createObjectURL(normBlob);
+
+            const texLoader = new THREE.TextureLoader();
+            texLoader.load(localNormUrl, (tex) => {
+              tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+              tex.needsUpdate = true;
+              painter.setMap('normal', tex);
+            });
+            setPbrMap('normal', localNormUrl, `${asset.name}_normal.jpg`);
+          } catch (normErr) {
+            console.warn('Failed to download normal map:', normErr);
+            setPbrMap('normal', null, null);
+            painter.setMap('normal', null);
+          }
+        } else if (setPbrMap) {
           setPbrMap('normal', null, null);
-          painter.setMap('normal', null);
+          if (painter) painter.setMap('normal', null);
         }
-      } else {
-        setPbrMap('normal', null, null);
-        if (painter) painter.setMap('normal', null);
-      }
 
-      // 3. Load Roughness Map if available and painter exists
-      if (roughnessUrl && painter) {
-        try {
-          const roughRes = await fetch(roughnessUrl);
-          const roughBlob = await roughRes.blob();
-          const localRoughUrl = URL.createObjectURL(roughBlob);
+        // 3. Load Roughness Map if available and painter exists
+        if (roughnessUrl && painter && setPbrMap) {
+          try {
+            const roughRes = await fetch(roughnessUrl);
+            const roughBlob = await roughRes.blob();
+            const localRoughUrl = URL.createObjectURL(roughBlob);
 
-          const texLoader = new THREE.TextureLoader();
-          texLoader.load(localRoughUrl, (tex) => {
-            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-            tex.needsUpdate = true;
-            painter.setMap('roughness', tex);
-          });
-          setPbrMap('roughness', localRoughUrl, `${asset.name}_roughness.jpg`);
-        } catch (roughErr) {
-          console.warn('Failed to download roughness map:', roughErr);
+            const texLoader = new THREE.TextureLoader();
+            texLoader.load(localRoughUrl, (tex) => {
+              tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+              tex.needsUpdate = true;
+              painter.setMap('roughness', tex);
+            });
+            setPbrMap('roughness', localRoughUrl, `${asset.name}_roughness.jpg`);
+          } catch (roughErr) {
+            console.warn('Failed to download roughness map:', roughErr);
+            setPbrMap('roughness', null, null);
+            painter.setMap('roughness', null);
+          }
+        } else if (setPbrMap) {
           setPbrMap('roughness', null, null);
-          painter.setMap('roughness', null);
+          if (painter) painter.setMap('roughness', null);
         }
-      } else {
-        setPbrMap('roughness', null, null);
-        if (painter) painter.setMap('roughness', null);
       }
-
     } catch (err) {
       console.error('Failed to download Polyhaven textures:', err);
       alert('Error fetching texture files. Check connection or console.');
     } finally {
       setApplyingAssetId(null);
+    }
+  };
+
+  const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isTrimsheetMode) {
+      const regionId = trimsheetCtx.selectedRegionId;
+      if (!regionId) { alert('Select a region first.'); return; }
+      const albedo = e.target.files?.[0];
+      if (!albedo) return;
+      try {
+        const mat = await loadUploadMaterial(albedo.name, { albedo });
+        trimsheetCtx.assignMaterialToRegion(regionId, mat);
+      } catch (err) {
+        console.error(err);
+        alert('Failed to load uploaded image.');
+      } finally {
+        e.target.value = '';
+      }
+    } else {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!isFillLayer) {
+        alert('Select a fill layer first.');
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      if (updateLayerFillSettings) {
+        updateLayerFillSettings(activeLayerId, {
+          fillTextureName: file.name,
+          fillTextureUrl: url
+        });
+      }
+      e.target.value = '';
     }
   };
 
@@ -355,10 +469,25 @@ export function MaterialLibraryPanel() {
   return (
     <div className={styles.container}>
       {/* Target layer warning */}
-      {!isFillLayer && (
+      {!isTargetActive && (
         <div className={styles.warningBanner}>
           <Layers size={13} />
-          <span>Select or add a <strong>Fill Layer</strong> in Canvas Layers to apply materials.</span>
+          <span>
+            {isTrimsheetMode 
+              ? 'Select or add a region in the Trimsheet editor to apply materials.'
+              : 'Select or add a "fill" layer in Canvas Layers to apply materials.'}
+          </span>
+        </div>
+      )}
+
+      {/* Upload Box (Trimsheet only) */}
+      {isTrimsheetMode && (
+        <div className={styles.uploadBox}>
+          <strong className={styles.uploadLabel}>Upload custom albedo texture</strong>
+          <input type="file" accept="image/*" className={styles.uploadInput} onChange={onUpload} />
+          <span className={styles.hint}>
+            Assigns albedo to the selected region. Additional PBR channels can be managed in the <strong>Texture Maps</strong> panel.
+          </span>
         </div>
       )}
 
@@ -441,8 +570,8 @@ export function MaterialLibraryPanel() {
             </div>
           ))}
 
-          {/* Polyhaven materials */}
-          {filteredPolyhaven.map(asset => (
+          {/* Polyhaven materials (paginated) */}
+          {filteredPolyhaven.slice(0, visibleCount).map(asset => (
             <div
               key={asset.id}
               className={`${styles.card} ${applyingAssetId === asset.id ? styles.cardApplying : ''}`}
@@ -470,6 +599,18 @@ export function MaterialLibraryPanel() {
               </div>
             </div>
           ))}
+
+          {/* Load More Button */}
+          {visibleCount < filteredPolyhaven.length && (
+            <div className={styles.loadMoreContainer}>
+              <button
+                className={styles.loadMoreButton}
+                onClick={() => setVisibleCount(prev => prev + 24)}
+              >
+                Load More ({filteredPolyhaven.length - visibleCount} remaining)
+              </button>
+            </div>
+          )}
         </div>
 
         {!loading && filteredLocal.length === 0 && filteredPolyhaven.length === 0 && (

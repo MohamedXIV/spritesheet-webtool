@@ -1425,6 +1425,7 @@ export default function ThreePainterPage() {
     canvasResolution, setCanvasResolution,
     textureTiling, setTextureTiling,
     materialResolution, setMaterialResolution,
+    smartMaps, bakeModelSmartMaps, applySmartMaterialPreset,
   }), [
     projectId, projectName, setProjectName, isSaving, autosaveNotification,
     loadedModelName, loadedModelSize, isModelLoaded, loadNewModel, resetWorkspace, isLoadingModel, loadProgress,

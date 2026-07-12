@@ -69,7 +69,7 @@ export interface TrimsheetContextValue {
   resetLayout: () => void;
 }
 
-const TrimsheetContext = createContext<TrimsheetContextValue | null>(null);
+export const TrimsheetContext = createContext<TrimsheetContextValue | null>(null);
 
 export function useTrimsheetContext(): TrimsheetContextValue {
   const ctx = useContext(TrimsheetContext);
