@@ -12,12 +12,14 @@ export interface ChromaKeyOptions {
   spillAmount?: number; // 0-100
 }
 
+const DEFAULT_SAMPLE_SIZE = 10;
+
 /**
  * Sample the dominant color from corners of an image
  */
 export function sampleCornerColor(
   imageData: ImageData,
-  sampleSize: number = 10
+  sampleSize: number = DEFAULT_SAMPLE_SIZE
 ): { r: number; g: number; b: number } {
   const { data, width, height } = imageData;
   let totalR = 0, totalG = 0, totalB = 0;
@@ -185,12 +187,22 @@ export async function getColorAtPixel(
 export async function autoDetectBackgroundColor(
   bitmap: ImageBitmap
 ): Promise<{ r: number; g: number; b: number }> {
+  const sampleSize = DEFAULT_SAMPLE_SIZE;
   const canvas = document.createElement('canvas');
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(bitmap, 0, 0);
-  
+  canvas.width = sampleSize * 2;
+  canvas.height = sampleSize * 2;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+
+  // Draw 4 corners into the small canvas
+  // Top-left -> 0, 0
+  ctx.drawImage(bitmap, 0, 0, sampleSize, sampleSize, 0, 0, sampleSize, sampleSize);
+  // Top-right -> sampleSize, 0
+  ctx.drawImage(bitmap, bitmap.width - sampleSize, 0, sampleSize, sampleSize, sampleSize, 0, sampleSize, sampleSize);
+  // Bottom-left -> 0, sampleSize
+  ctx.drawImage(bitmap, 0, bitmap.height - sampleSize, sampleSize, sampleSize, 0, sampleSize, sampleSize, sampleSize);
+  // Bottom-right -> sampleSize, sampleSize
+  ctx.drawImage(bitmap, bitmap.width - sampleSize, bitmap.height - sampleSize, sampleSize, sampleSize, sampleSize, sampleSize, sampleSize, sampleSize);
+
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  return sampleCornerColor(imageData);
+  return sampleCornerColor(imageData, sampleSize);
 }
