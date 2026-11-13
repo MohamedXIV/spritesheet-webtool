@@ -140,12 +140,18 @@ export function useProjectSave(options: {
     return saveQueueRef.current(perform);
   }, [notify]);
 
+  // Preserve the existing Promise<void> context contract. The autosave timer
+  // uses queueSave directly to inspect its explicit success result.
   const triggerSave = useCallback(
-    (customName?: string) => queueSave('save', customName),
+    async (customName?: string): Promise<void> => {
+      await queueSave('save', customName);
+    },
     [queueSave]
   );
   const triggerSaveAs = useCallback(
-    (newName: string) => queueSave('copy', newName),
+    async (newName: string): Promise<void> => {
+      await queueSave('copy', newName);
+    },
     [queueSave]
   );
 
