@@ -136,7 +136,7 @@ export function MediaLoader({
             {loadedSources.length > 0 ? 'Add more files' : 'Drop files here'}
           </p>
           <p className={styles.subtitle}>
-            Videos or images • Multiple selection supported
+            Videos, GIFs or images • Multiple selection supported
           </p>
         </div>
       </div>
