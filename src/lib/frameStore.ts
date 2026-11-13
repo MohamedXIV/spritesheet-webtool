@@ -130,14 +130,10 @@ export function deselectAllFrames(state: FrameState): FrameState {
 }
 
 /**
- * Delete selected frames and clean up their bitmaps
+ * Delete selected frames without disposing their bitmaps.
+ * History may still reference the old state for Undo; it owns disposal.
  */
 export function deleteSelectedFrames(state: FrameState): FrameState {
-  // Close bitmaps of deleted frames to free memory
-  state.frames
-    .filter(f => state.selectedIds.has(f.id))
-    .forEach(f => f.bitmap.close());
-  
   const remainingFrames = state.frames.filter(f => !state.selectedIds.has(f.id));
   
   const newFolders = state.folders.map(folder => ({
@@ -176,11 +172,7 @@ export function deleteFolder(state: FrameState, folderId: string): FrameState {
   const folder = state.folders.find(f => f.id === folderId);
   if (!folder) return state;
   
-  // Close bitmaps of frames in this folder to release memory
-  state.frames
-    .filter(f => folder.frameIds.includes(f.id))
-    .forEach(f => f.bitmap.close());
-  
+  // Do not close removed frames here: the Undo stack may still own them.
   const remainingFrames = state.frames.filter(f => !folder.frameIds.includes(f.id));
   const newFolders = state.folders.filter(f => f.id !== folderId);
   
