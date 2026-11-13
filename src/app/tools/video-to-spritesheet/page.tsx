@@ -31,7 +31,8 @@ import {
   addFramesToFolder,
   reorderFolders,
   reorderFramesInFolder,
-  deleteSelectedFrames
+  deleteSelectedFrames,
+  appendSourceFrames
 } from '@/lib/frameStore';
 import { FrameData, ExtractionProgress, SourceInfo, SOURCE_COLORS, Folder, ProjectLayer } from '@/types';
 import { BrushTool } from '@/contexts/EditorContext';
@@ -429,11 +430,7 @@ export default function EditorPage() {
         collapsed: false,
         color: sourceColor,
       };
-      setFrameState(previous => ({
-        frames: [...(previous?.frames || []), ...imported],
-        folders: [...(previous?.folders || []), folder],
-        selectedIds: new Set(imported.map(frame => frame.id)),
-      }));
+      setFrameState(previous => appendSourceFrames(previous, imported, folder));
       setLoadedSources(previous => [...previous, {
         id: sourceId,
         name: sheetFile.name,
