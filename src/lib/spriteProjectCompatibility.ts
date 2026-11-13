@@ -6,7 +6,7 @@
  * rewrite, delete, or alter the IndexedDB record.
  */
 import type { DbProject, DbProjectFrame } from './projectDatabase';
-import type { Folder, ProjectLayer } from '@/types';
+import type { Folder, ProjectLayer, SourceInfo } from '@/types';
 
 export type SpriteProjectType = 'spritesheet' | 'pixelator';
 
@@ -97,4 +97,43 @@ export function prepareSpriteProjectRestore(project: DbProject): SpriteProjectRe
     selectedIds: new Set(selected),
     globalLayers,
   };
+}
+
+/**
+ * Projects created before source-list persistence still contain all the frame
+ * source IDs and folder names. Reconstruct a read-only display list from those
+ * records, and reconcile saved counts with frames that still exist.
+ */
+export function restoreSpriteSources(
+  project: DbProject,
+  folders: readonly Folder[]
+): SourceInfo[] {
+  const bySource = new Map<string, SourceInfo>();
+  const saved = Array.isArray(project.metadata.sources)
+    ? project.metadata.sources
+    : [];
+
+  for (const source of saved) {
+    if (source && typeof source.id === 'string' && typeof source.name === 'string' &&
+        (source.type === 'image' || source.type === 'video' || source.type === 'gif')) {
+      bySource.set(source.id, { ...source, frameCount: 0 });
+    }
+  }
+
+  for (const frame of project.frames) {
+    const existing = bySource.get(frame.sourceId);
+    if (existing) {
+      existing.frameCount += 1;
+      continue;
+    }
+    const matchingFolder = folders.find(folder => folder.frameIds.includes(frame.id));
+    bySource.set(frame.sourceId, {
+      id: frame.sourceId,
+      name: matchingFolder?.name || 'Imported Frames',
+      type: 'image',
+      color: frame.sourceColor,
+      frameCount: 1,
+    });
+  }
+  return [...bySource.values()].filter(source => source.frameCount > 0);
 }
