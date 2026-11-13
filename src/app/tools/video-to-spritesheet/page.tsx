@@ -14,6 +14,7 @@ import { EditorMenuBar } from '@/components/EditorMenuBar';
 import { OutlineOptions } from '@/lib/outlineGenerator';
 import { extractFrames, getVideoInfo } from '@/lib/videoDecoder';
 import { loadImagesAsFrames, isVideoFile, isImageFile } from '@/lib/imageLoader';
+import { sliceSpritesheetByGrid, sliceSpritesheetByDimensions } from '@/lib/spritesheetSlicer';
 import { 
   FrameState, 
   createFrameState, 
@@ -124,6 +125,34 @@ export default function EditorPage() {
   const [projectId, setProjectId] = useState<string>('');
   const [projectName, setProjectName] = useState<string>('Untitled Spritesheet Project');
 
+  // Active Real-Time Pixelator State Hooks
+  const [pixelatorEnabled, setPixelatorEnabled] = useState(true);
+  const [pixelSize, setPixelSize] = useState(8);
+  const [pixelatorPalette, setPixelatorPalette] = useState<any>('none');
+  const [pixelatorDitherType, setPixelatorDitherType] = useState<any>('none');
+  const [pixelatorDitherAmount, setPixelatorDitherAmount] = useState(50);
+  const [pixelatorPixelShape, setPixelatorPixelShape] = useState<any>('square');
+  const [pixelatorOutlineEnabled, setPixelatorOutlineEnabled] = useState(false);
+  const [pixelatorOutlineColor, setPixelatorOutlineColor] = useState('#000000');
+  const [pixelatorOutlineThickness, setPixelatorOutlineThickness] = useState(1);
+  const [pixelatorContrast, setPixelatorContrast] = useState(0);
+  const [pixelatorSaturation, setPixelatorSaturation] = useState(0);
+  const [pixelatorBrightness, setPixelatorBrightness] = useState(0);
+  
+
+  // Spritesheet import stays independent from the loaded document: choosing
+  // a new source must never wipe or reinitialize existing frames.
+  const [sheetFile, setSheetFile] = useState<File | null>(null);
+  const [sheetPreviewUrl, setSheetPreviewUrl] = useState<string | null>(null);
+  const [sheetDimensions, setSheetDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [sliceType, setSliceType] = useState<'grid' | 'dimensions'>('grid');
+  const [sliceCols, setSliceCols] = useState(4);
+  const [sliceRows, setSliceRows] = useState(4);
+  const [sliceCellWidth, setSliceCellWidth] = useState(64);
+  const [sliceCellHeight, setSliceCellHeight] = useState(64);
+  const [isSlicingSheet, setIsSlicingSheet] = useState(false);
+
+
   useEffect(() => {
     if (!projectId) {
       setProjectId(`spritesheet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
@@ -146,6 +175,27 @@ export default function EditorPage() {
     loopMode,
     previewBgMode,
     previewBgColor,
+    pixelatorOptions: {
+      enabled: pixelatorEnabled,
+      pixelSize,
+      palette: pixelatorPalette,
+      ditherType: pixelatorDitherType,
+      ditherAmount: pixelatorDitherAmount,
+      pixelShape: pixelatorPixelShape,
+      outlineEnabled: pixelatorOutlineEnabled,
+      outlineColor: pixelatorOutlineColor,
+      outlineThickness: pixelatorOutlineThickness,
+      contrast: pixelatorContrast,
+      saturation: pixelatorSaturation,
+      brightness: pixelatorBrightness,
+    },
+    slicerOptions: {
+      sliceType,
+      cols: sliceCols,
+      rows: sliceRows,
+      cellWidth: sliceCellWidth,
+      cellHeight: sliceCellHeight,
+    },
     isDirty,
     markSaved,
     globalLayers,
@@ -176,6 +226,31 @@ export default function EditorPage() {
         setLoopMode((project.metadata.loopMode as any) || 'normal');
         setPreviewBgMode((project.metadata.previewBgMode as any) || 'none');
         setPreviewBgColor(project.metadata.previewBgColor || '#1a1a2e');
+        // Preserve both video and pixelator controls in the unified editor.
+        const slicer = project.metadata.slicerOptions;
+        if (slicer) {
+          setSliceType(slicer.sliceType);
+          setSliceCols(slicer.cols);
+          setSliceRows(slicer.rows);
+          setSliceCellWidth(slicer.cellWidth);
+          setSliceCellHeight(slicer.cellHeight);
+        }
+        const pixels = project.metadata.pixelatorOptions;
+        if (pixels) {
+          setPixelatorEnabled(pixels.enabled ?? true);
+          setPixelSize(pixels.pixelSize ?? 8);
+          setPixelatorPalette(pixels.palette ?? 'none');
+          setPixelatorDitherType(pixels.ditherType ?? 'none');
+          setPixelatorDitherAmount(pixels.ditherAmount ?? 50);
+          setPixelatorPixelShape(pixels.pixelShape ?? 'square');
+          setPixelatorOutlineEnabled(pixels.outlineEnabled ?? false);
+          setPixelatorOutlineColor(pixels.outlineColor ?? '#000000');
+          setPixelatorOutlineThickness(pixels.outlineThickness ?? 1);
+          setPixelatorContrast(pixels.contrast ?? 0);
+          setPixelatorSaturation(pixels.saturation ?? 0);
+          setPixelatorBrightness(pixels.brightness ?? 0);
+        }
+
         
         // Restore global layers config
         if (project.metadata.globalLayers) {
@@ -253,20 +328,6 @@ export default function EditorPage() {
     });
   }, [resetHistory]);
 
-  // Active Real-Time Pixelator State Hooks
-  const [pixelatorEnabled, setPixelatorEnabled] = useState(true);
-  const [pixelSize, setPixelSize] = useState(8);
-  const [pixelatorPalette, setPixelatorPalette] = useState<any>('none');
-  const [pixelatorDitherType, setPixelatorDitherType] = useState<any>('none');
-  const [pixelatorDitherAmount, setPixelatorDitherAmount] = useState(50);
-  const [pixelatorPixelShape, setPixelatorPixelShape] = useState<any>('square');
-  const [pixelatorOutlineEnabled, setPixelatorOutlineEnabled] = useState(false);
-  const [pixelatorOutlineColor, setPixelatorOutlineColor] = useState('#000000');
-  const [pixelatorOutlineThickness, setPixelatorOutlineThickness] = useState(1);
-  const [pixelatorContrast, setPixelatorContrast] = useState(0);
-  const [pixelatorSaturation, setPixelatorSaturation] = useState(0);
-  const [pixelatorBrightness, setPixelatorBrightness] = useState(0);
-  
   // Panel visibility tracking
   const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set([
     'media-loader', 'frame-grid', 'preview', 'timeline',
