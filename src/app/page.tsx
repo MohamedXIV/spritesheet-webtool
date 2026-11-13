@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Trash2, Edit2, FolderOpen, Clock, Layout } from 'lucide-react';
 import { getAllProjectsSummary, deleteProject, renameProject, ProjectSummary } from '@/lib/projectDatabase';
+import { projectToolHref } from '@/lib/spriteProjectCompatibility';
 import ChangelogDrawer from '@/components/ChangelogDrawer';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import styles from './page.module.css';
@@ -283,12 +284,7 @@ export default function Home() {
                 const isTrimsheet = proj.type === 'trimsheet';
                 const isStylizer = proj.type === 'stylizer';
 
-                let targetLink = '';
-                if (isSpritesheet) targetLink = `/tools/video-to-spritesheet?project=${proj.id}`;
-                else if (isPixelator) targetLink = `/tools/pixelator?project=${proj.id}`;
-                else if (isThreePainter) targetLink = `/tools/3d-pixelator?project=${proj.id}`;
-                else if (isTrimsheet) targetLink = `/tools/trimsheet?project=${proj.id}`;
-                else if (isStylizer) targetLink = `/tools/stylizer?project=${proj.id}`;
+                const targetLink = projectToolHref(proj);
 
                 return (
                   <div key={proj.id} className={styles.projectCard}>
