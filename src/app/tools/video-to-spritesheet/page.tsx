@@ -15,6 +15,7 @@ import { OutlineOptions } from '@/lib/outlineGenerator';
 import { extractFrames, getVideoInfo } from '@/lib/videoDecoder';
 import { loadImagesAsFrames, isVideoFile, isImageFile } from '@/lib/imageLoader';
 import { sliceSpritesheetByGrid, sliceSpritesheetByDimensions } from '@/lib/spritesheetSlicer';
+import { importGifFrames, isGifFile } from '@/lib/gifImporter';
 import { 
   FrameState, 
   createFrameState, 
@@ -720,6 +721,10 @@ export default function EditorPage() {
             console.error('Failed to get video info for', file.name, e);
             fileFramesCount.push(0);
           }
+        } else if (isGifFile(file)) {
+          // Exact animated frame count is available after GIF decoding.
+          totalExpectedFrames += 1;
+          fileFramesCount.push(1);
         } else if (isImageFile(file)) {
           totalExpectedFrames += 1;
           fileFramesCount.push(1);
@@ -773,6 +778,33 @@ export default function EditorPage() {
           });
 
           framesExtractedSoFar += result.frames.length;
+        } else if (isGifFile(file)) {
+          const gifFrames = await importGifFrames(file, sourceId, sourceColor, (completed, total) => {
+            const progressTotal = Math.max(totalExpectedFrames, framesExtractedSoFar + total);
+            const current = framesExtractedSoFar + completed;
+            setProgress({
+              current,
+              total: progressTotal,
+              percentage: Math.round(current / progressTotal * 100),
+            });
+          });
+          newFrames.push(...gifFrames);
+          newSources.push({
+            id: sourceId,
+            name: file.name,
+            type: 'gif',
+            frameCount: gifFrames.length,
+            color: sourceColor,
+          });
+          incomingFolders.push({
+            id: `folder-gif-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+            name: file.name.replace(/\\.[^.]+$/, ''),
+            frameIds: gifFrames.map(frame => frame.id),
+            visible: true,
+            collapsed: false,
+            color: sourceColor,
+          });
+          framesExtractedSoFar += gifFrames.length;
         } else if (isImageFile(file)) {
           // For images, we can update progress immediately
           const current = framesExtractedSoFar + 1;
@@ -842,20 +874,13 @@ export default function EditorPage() {
       const allFolders = [...existingFolders, ...incomingFolders];
 
       setLoadedSources(newSources);
-      resetHistory({
-        frames: allFrames,
-        folders: allFolders.length > 0 ? allFolders : [
-          {
-            id: 'folder-main',
-            name: 'Main Frames',
-            frameIds: allFrames.map(f => f.id),
-            visible: true,
-            collapsed: false,
-            color: '#3b82f6'
-          }
-        ],
-        selectedIds: new Set(allFrames.map(f => f.id))
-      });
+      // Importing media is an undoable document edit. resetHistory would also
+      // incorrectly clear the dirty flag and discard existing Undo snapshots.
+      setFrameState(previous => ({
+        frames: [...(previous?.frames || []), ...newFrames],
+        folders: [...(previous?.folders || []), ...incomingFolders],
+        selectedIds: new Set(newFrames.map(frame => frame.id)),
+      }));
       setCurrentFrame(0);
       setEditorState('ready');
 
