@@ -1047,8 +1047,9 @@ export default function EditorPage() {
   const resetLayout = useCallback(() => {
     dockLayoutRef.current?.resetLayout();
     setVisiblePanels(new Set([
-      'video-loader', 'frame-grid', 'preview', 'timeline',
-      'media-loader', 'bg-removal', 'outline', 'watermark', 'export'
+      'media-loader', 'spritesheet-slicer', 'frame-grid', 'preview', 'timeline',
+      'frame-editor', 'frame-layers', 'bg-removal', 'outline',
+      'pixelate', 'watermark', 'export'
     ]));
   }, []);
 
@@ -1133,7 +1134,28 @@ export default function EditorPage() {
     visiblePanels,
     togglePanel,
     resetLayout,
-    
+
+    pixelatorSlicer: {
+      appendToWorkspace: true,
+      file: sheetFile,
+      originalImgSrc: sheetPreviewUrl,
+      imgDimensions: sheetDimensions,
+      sliceType,
+      cols: sliceCols,
+      rows: sliceRows,
+      cellWidth: sliceCellWidth,
+      cellHeight: sliceCellHeight,
+      isSlicing: isSlicingSheet,
+      setSliceType,
+      setCols: setSliceCols,
+      setRows: setSliceRows,
+      setCellWidth: setSliceCellWidth,
+      setCellHeight: setSliceCellHeight,
+      handleSliceSpritesheet: handleSliceSheet,
+      loadNewFile: loadNewSheetFile,
+      handleResetImage: resetSheetFile,
+    },
+
     undo,
     redo,
     canUndo,
@@ -1243,6 +1265,18 @@ export default function EditorPage() {
     visiblePanels,
     togglePanel,
     resetLayout,
+    sheetFile,
+    sheetPreviewUrl,
+    sheetDimensions,
+    sliceType,
+    sliceCols,
+    sliceRows,
+    sliceCellWidth,
+    sliceCellHeight,
+    isSlicingSheet,
+    loadNewSheetFile,
+    handleSliceSheet,
+    resetSheetFile,
     pixelatorEnabled,
     pixelSize,
     pixelatorPalette,
