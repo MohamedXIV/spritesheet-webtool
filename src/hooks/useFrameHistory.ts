@@ -151,9 +151,11 @@ export function useFrameHistory(maxDepth: number = 8): UseFrameHistoryReturn {
       if (prev === nextState) return prev;
 
       // When a new state is set, we push the OLD state (prev) to the past stack
+      // Even the first imported batch is unsaved. There is no previous
+      // snapshot to Undo to, but it must count as a document edit.
+      currentIndexRef.current += 1;
       if (prev) {
         pastRef.current.push(prev);
-        currentIndexRef.current += 1;
 
         // Bounded depth manager: if we exceed maxDepth, evict the oldest state
         if (pastRef.current.length > maxDepth) {
