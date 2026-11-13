@@ -38,7 +38,9 @@ export function useProjectSave(options: {
   // Each request captures its state at invocation time. Queuing prevents an
   // older, slower PNG serialization from overwriting a newer save.
   const optionsRef = useRef(options);
-  optionsRef.current = options;
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
   const saveQueueRef = useRef(createSaveQueue());
   const pendingSavesRef = useRef(0);
   const noticeSequenceRef = useRef(0);
