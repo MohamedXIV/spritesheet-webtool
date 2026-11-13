@@ -24,6 +24,7 @@ export interface FrameData {
   id: string;
   index: number;
   timestamp: number;
+  durationMs?: number; // Exact source frame hold time (animated GIF), in milliseconds
   layerContents?: Record<string, ImageBitmap | null>; // Maps globalLayerId -> ImageBitmap
   bitmap: ImageBitmap;
   thumbnailUrl?: string;
@@ -34,7 +35,7 @@ export interface FrameData {
 export interface SourceInfo {
   id: string;
   name: string;
-  type: 'video' | 'image';
+  type: 'video' | 'image' | 'gif';
   frameCount: number;
   color: string;
 }
@@ -61,6 +62,7 @@ export interface FramePosition {
   w: number;
   h: number;
   index: number;
+  durationMs?: number;
 }
 
 export interface ExtractionProgress {

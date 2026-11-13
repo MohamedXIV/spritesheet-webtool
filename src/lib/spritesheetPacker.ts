@@ -87,7 +87,8 @@ export function packFrames(
       y,
       w: frameWidth,
       h: frameHeight,
-      index
+      index,
+      ...(frame.durationMs ? { durationMs: frame.durationMs } : {}),
     });
   });
   

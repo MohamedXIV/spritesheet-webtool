@@ -7,9 +7,9 @@
 import React, { useState, useMemo } from 'react';
 import { FrameData, SpritesheetConfig } from '@/types';
 import { packFrames, calculateOptimalColumns } from '@/lib/spritesheetPacker';
-import { exportSpritesheetPng, exportMetadataJson, exportAll } from '@/lib/exporter';
+import { exportSpritesheetPng, exportMetadataJson, exportAll, downloadBlob } from '@/lib/exporter';
+import { exportAnimatedGif } from '@/lib/gifExporter';
 import { LoopMode } from './Timeline';
-import { useOptionalEditorContext } from '@/contexts/EditorContext';
 import styles from './ExportPanel.module.css';
 
 interface ExportPanelProps {
@@ -20,12 +20,16 @@ interface ExportPanelProps {
 }
 
 export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: ExportPanelProps) {
-  const context = useOptionalEditorContext();
   const [columns, setColumns] = useState(0); // 0 = auto
   const [padding, setPadding] = useState(0);
   const [backgroundColor, setBackgroundColor] = useState('transparent');
   const [isExporting, setIsExporting] = useState(false);
   const [applyLoopToExport, setApplyLoopToExport] = useState(false);
+  const [gifColors, setGifColors] = useState(256);
+  const [gifRepeat, setGifRepeat] = useState<'forever' | 'once'>('forever');
+  const [gifSourceTiming, setGifSourceTiming] = useState(true);
+  const [isExportingGif, setIsExportingGif] = useState(false);
+  const [gifProgress, setGifProgress] = useState<number | null>(null);
 
   // Apply loop mode to frames for export
   const getExportFrames = (): FrameData[] => {
@@ -87,7 +91,6 @@ export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: E
     try {
       const { canvas } = packFrames(exportFrames, config, fps);
       await exportSpritesheetPng(canvas);
-      context?.markSaved?.();
     } catch (error) {
       console.error('Export failed:', error);
       alert('Failed to export spritesheet');
@@ -103,7 +106,6 @@ export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: E
     try {
       const { metadata } = packFrames(exportFrames, config, fps);
       exportMetadataJson(metadata);
-      context?.markSaved?.();
     } catch (error) {
       console.error('Export failed:', error);
       alert('Failed to export metadata');
@@ -118,12 +120,34 @@ export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: E
     try {
       const { canvas, metadata } = packFrames(exportFrames, config, fps);
       await exportAll(canvas, metadata);
-      context?.markSaved?.();
     } catch (error) {
       console.error('Export failed:', error);
       alert('Failed to export files');
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleExportGif = async () => {
+    const exportFrames = getExportFrames();
+    if (exportFrames.length === 0 || isExportingGif) return;
+    setIsExportingGif(true);
+    setGifProgress(0);
+    try {
+      const gifBlob = await exportAnimatedGif(exportFrames, {
+        fps,
+        colors: gifColors,
+        repeat: gifRepeat,
+        useSourceTiming: gifSourceTiming,
+        onProgress: (done, total) => setGifProgress(Math.round(done / total * 100)),
+      });
+      downloadBlob(gifBlob, 'sprite-animation.gif');
+    } catch (error) {
+      console.error('Animated GIF export failed:', error);
+      alert(error instanceof Error ? error.message : 'Unable to export GIF');
+    } finally {
+      setIsExportingGif(false);
+      setGifProgress(null);
     }
   };
 
@@ -246,6 +270,44 @@ export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: E
           disabled={!hasFrames || isExporting}
         >
           Export Both
+        </button>
+
+        <div className={styles.field}>
+          <label htmlFor="gif-colors" className={styles.label}>GIF Palette</label>
+          <select id="gif-colors" className={styles.select} value={gifColors}
+            onChange={event => setGifColors(Number(event.target.value))}>
+            <option value={256}>256 colors</option>
+            <option value={128}>128 colors</option>
+            <option value={64}>64 colors</option>
+            <option value={32}>32 colors</option>
+            <option value={16}>16 colors</option>
+          </select>
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="gif-repeat" className={styles.label}>GIF Playback</label>
+          <select id="gif-repeat" className={styles.select} value={gifRepeat}
+            onChange={event => setGifRepeat(event.target.value as 'forever' | 'once')}>
+            <option value="forever">Loop forever</option>
+            <option value="once">Play once</option>
+          </select>
+        </div>
+
+        <div className={styles.checkboxField}>
+          <input id="gif-source-timing" type="checkbox" className={styles.checkbox}
+            checked={gifSourceTiming}
+            onChange={event => setGifSourceTiming(event.target.checked)} />
+          <label htmlFor="gif-source-timing" className={styles.checkboxLabel}>
+            Preserve imported GIF frame timings (otherwise use {fps} FPS)
+          </label>
+        </div>
+
+        <button
+          onClick={handleExportGif}
+          className={`${styles.button} ${styles.primary}`}
+          disabled={!hasFrames || isExportingGif || isExporting}
+        >
+          {isExportingGif ? `Encoding GIF… ${gifProgress ?? 0}%` : 'Download Animated GIF'}
         </button>
       </div>
     </div>

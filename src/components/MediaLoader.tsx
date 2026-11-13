@@ -9,6 +9,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import styles from './MediaLoader.module.css';
 import { SourceInfo } from '@/types';
 import { isImageFile, isVideoFile } from '@/lib/imageLoader';
+import { isGifFile } from '@/lib/gifImporter';
 import { X, Film, Image as ImageIcon, Plus } from 'lucide-react';
 
 interface MediaLoaderProps {
@@ -29,7 +30,7 @@ export function MediaLoader({
 
   const handleFiles = useCallback((files: FileList | File[]) => {
     const fileArray = Array.from(files);
-    const validFiles = fileArray.filter(f => isVideoFile(f) || isImageFile(f));
+    const validFiles = fileArray.filter(f => isVideoFile(f) || isImageFile(f) || isGifFile(f));
     
     if (validFiles.length === 0) {
       alert('Please select video or image files');
@@ -136,7 +137,7 @@ export function MediaLoader({
             {loadedSources.length > 0 ? 'Add more files' : 'Drop files here'}
           </p>
           <p className={styles.subtitle}>
-            Videos or images • Multiple selection supported
+            Videos, GIFs or images • Multiple selection supported
           </p>
         </div>
       </div>

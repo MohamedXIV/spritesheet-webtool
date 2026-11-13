@@ -26,6 +26,8 @@
     "clsx": "^2.1.1",
     "fflate": "^0.8.3",
     "flexlayout-react": "^0.8.17",
+    "gifenc": "1.0.3",
+    "gifuct-js": "2.1.2",
     "gsap": "^3.15.0",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",

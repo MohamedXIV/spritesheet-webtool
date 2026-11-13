@@ -11,6 +11,7 @@ import { FrameData } from '@/types';
 import { LoopMode } from './Timeline';
 import { addOutline, OutlineOptions } from '@/lib/outlineGenerator';
 import { pixelateImage } from '@/lib/pixelator';
+import { resolveFrameDurationMs } from '@/lib/gifTiming';
 import { Play, Pause, SkipBack, SkipForward, ChevronLeft, ChevronRight } from 'lucide-react';
 import styles from './PreviewPlayer.module.css';
 
@@ -258,7 +259,8 @@ export function PreviewPlayer({
       return;
     }
 
-    const frameInterval = 1000 / fps;
+    // Respect GIF frame hold times; video/image frames still follow workspace FPS.
+    const frameInterval = resolveFrameDurationMs(frames[currentFrame], fps);
 
     const animate = (timestamp: number) => {
       const elapsed = timestamp - lastFrameTimeRef.current;

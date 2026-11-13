@@ -239,6 +239,11 @@ export function Timeline({
       <div className={styles.header}>
         <h3 className={styles.title}>Timeline</h3>
         
+        {activeFrame?.durationMs != null && (
+          <span className={styles.badge} title="GIF frame timings are preserved; FPS controls non-GIF frames">
+            Frame: {activeFrame.durationMs} ms
+          </span>
+        )}
         {/* Folder Stats mini display */}
         {ctx && (
           <div className={styles.folderBadges}>

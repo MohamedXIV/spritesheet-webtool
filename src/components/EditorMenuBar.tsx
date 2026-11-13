@@ -83,7 +83,7 @@ export function EditorMenuBar() {
           onMouseEnter={() => onMouseEnter('app')}
         >
           <span style={{ color: '#a855f7', filter: 'drop-shadow(0 0 5px rgba(168, 85, 247, 0.5))' }}>◆</span>
-          Spritesheet Creator
+          Sprite Editor
           {isDirty && <span className={styles.dirtyDot} title="Unsaved changes">●</span>}
         </div>
         {activeMenu === 'app' && (

@@ -83,6 +83,7 @@ export interface DbProjectFrame {
   id: string;
   index: number;
   timestamp: number;
+  durationMs?: number;
   sourceId: string;
   sourceColor: string;
   blob: Blob; // Binary PNG frame stored in database
