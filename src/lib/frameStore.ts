@@ -2,7 +2,7 @@
  * Frame Store - Manages extracted frames, folders, and selection state
  */
 
-import { FrameData, Folder } from '@/types';
+import type { FrameData, Folder } from '@/types';
 
 export interface FrameState {
   frames: FrameData[];
