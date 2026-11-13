@@ -76,6 +76,7 @@ interface EditorContextValue {
 
   // Standalone Pixelator slicing state (optional)
   pixelatorSlicer?: {
+    appendToWorkspace?: boolean;
     file: File | null;
     originalImgSrc: string | null;
     imgDimensions: { width: number; height: number } | null;

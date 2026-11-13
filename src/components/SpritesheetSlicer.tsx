@@ -37,6 +37,7 @@ export function SpritesheetSlicer() {
   } = ctx.pixelatorSlicer;
 
   const totalFramesCount = ctx.orderedFrames.length;
+  const appendMode = ctx.pixelatorSlicer.appendToWorkspace === true;
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -65,11 +66,11 @@ export function SpritesheetSlicer() {
       {!file && (
         <div className={styles.uploaderBox}>
           <div className={styles.introHeader}>
-            <h3 className={styles.title}>Pixelate Any Spritesheet</h3>
+            <h3 className={styles.title}>Import a Spritesheet</h3>
             <p className={styles.description}>
               Upload your high-definition sheet, segment it into animation frames,
-              apply vintage palette shading, dither gradients, and outlines, 
-              then export back to a clean packed sheet. Runs 100% locally.
+              edit, pixelate, preview, and export the extracted frames in one workspace.
+              Runs locally in your browser.
             </p>
           </div>
           <div 
@@ -95,12 +96,12 @@ export function SpritesheetSlicer() {
         </div>
       )}
 
-      {/* 2. Grid Slicer Controls */}
-      {file && totalFramesCount === 0 && (
+      {/* Configure a sheet any time in the unified workspace. */}
+      {file && (appendMode || totalFramesCount === 0) && (
         <div className={styles.slicerBox}>
-          <h3 className={styles.title}>Segment Your Spritesheet</h3>
+          <h3 className={styles.title}>Slice Your Spritesheet</h3>
           <p className={styles.description}>
-            Configure how the sheet should be sliced into separate frames for pixelation editing.
+            Choose the grid before importing. In Sprite Editor, slices are added to your current frames without replacing them.
           </p>
 
           {originalImgSrc && (
@@ -186,14 +187,14 @@ export function SpritesheetSlicer() {
                   <div className={styles.spinner} />
                   <span>Slicing grid...</span>
                 </div>
-              ) : 'Slice & Load Workspace'}
+              ) : appendMode ? 'Slice & Add Frames' : 'Slice & Load Workspace'}
             </button>
           </div>
         </div>
       )}
 
       {/* 3. Loaded Metadata View */}
-      {file && totalFramesCount > 0 && (
+      {file && totalFramesCount > 0 && !appendMode && (
         <div className={styles.metaBox}>
           <div className={styles.metaHeader}>
             <h4 className={styles.metaTitle}>Source Spritesheet</h4>

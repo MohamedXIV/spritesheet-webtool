@@ -11,6 +11,7 @@ import { useEditorContext } from '@/contexts/EditorContext';
 
 // Panel components (lazy imported via factory)
 import { MediaLoader } from '@/components/MediaLoader';
+import { SpritesheetSlicer } from '@/components/SpritesheetSlicer';
 import { FrameGrid } from '@/components/FrameGrid';
 import { PreviewPlayer } from '@/components/PreviewPlayer';
 import { Timeline } from '@/components/Timeline';
@@ -29,6 +30,7 @@ const STORAGE_KEY = 'editor-dock-layout';
 // Panel info for adding tabs dynamically
 const PANEL_INFO: Record<string, { name: string }> = {
   'media-loader': { name: 'Load Media' },
+  'spritesheet-slicer': { name: 'Slice Spritesheet' },
   'frame-grid': { name: 'Frames' },
   'preview': { name: 'Preview' },
   'timeline': { name: 'Timeline' },
@@ -69,6 +71,7 @@ const defaultLayout = {
         weight: 25,
         children: [
           { type: 'tab', name: 'Load Media', component: 'media-loader' },
+          { type: 'tab', name: 'Slice Spritesheet', component: 'spritesheet-slicer' },
           { type: 'tab', name: 'Frames', component: 'frame-grid' },
         ],
       },
@@ -130,7 +133,27 @@ export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function Do
       // Use default
     }
     
-    setModel(Model.fromJson(layoutJson));
+    const restoredModel = Model.fromJson(layoutJson);
+    // Add the new slicer to previously saved dock layouts without discarding
+    // personal tab arrangements.
+    let hasSlicer = false;
+    let firstTabsetId: string | null = null;
+    restoredModel.visitNodes((node) => {
+      if (node.getType() === 'tab' && (node as TabNode).getComponent() === 'spritesheet-slicer') {
+        hasSlicer = true;
+      }
+      if (!firstTabsetId && node.getType() === 'tabset') firstTabsetId = node.getId();
+    });
+    if (!hasSlicer && firstTabsetId) {
+      restoredModel.doAction(Actions.addNode(
+        { type: 'tab', name: 'Slice Spritesheet', component: 'spritesheet-slicer' },
+        firstTabsetId,
+        DockLocation.CENTER,
+        -1,
+        false
+      ));
+    }
+    setModel(restoredModel);
   }, []);
 
   // Save layout on change and update visible panels
@@ -159,6 +182,13 @@ export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function Do
     const component = node.getComponent();
     
     switch (component) {
+      case 'spritesheet-slicer':
+        return (
+          <div className={styles.panelContent}>
+            <SpritesheetSlicer />
+          </div>
+        );
+
       case 'frame-editor':
         return (
           <div className={styles.panelContent}>
@@ -268,7 +298,7 @@ export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function Do
         
       case 'bg-removal':
         if (ctx.editorState !== 'ready' || !ctx.frameState) {
-          return <div className={styles.panelContent}><div className={styles.placeholder}>Load a video first</div></div>;
+          return <div className={styles.panelContent}><div className={styles.placeholder}>Load media or a spritesheet first</div></div>;
         }
         return (
           <div className={styles.panelContent}>

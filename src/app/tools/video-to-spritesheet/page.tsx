@@ -14,6 +14,7 @@ import { EditorMenuBar } from '@/components/EditorMenuBar';
 import { OutlineOptions } from '@/lib/outlineGenerator';
 import { extractFrames, getVideoInfo } from '@/lib/videoDecoder';
 import { loadImagesAsFrames, isVideoFile, isImageFile } from '@/lib/imageLoader';
+import { sliceSpritesheetByGrid, sliceSpritesheetByDimensions } from '@/lib/spritesheetSlicer';
 import { 
   FrameState, 
   createFrameState, 
@@ -30,7 +31,8 @@ import {
   addFramesToFolder,
   reorderFolders,
   reorderFramesInFolder,
-  deleteSelectedFrames
+  deleteSelectedFrames,
+  appendSourceFrames
 } from '@/lib/frameStore';
 import { FrameData, ExtractionProgress, SourceInfo, SOURCE_COLORS, Folder, ProjectLayer } from '@/types';
 import { BrushTool } from '@/contexts/EditorContext';
@@ -124,6 +126,34 @@ export default function EditorPage() {
   const [projectId, setProjectId] = useState<string>('');
   const [projectName, setProjectName] = useState<string>('Untitled Spritesheet Project');
 
+  // Active Real-Time Pixelator State Hooks
+  const [pixelatorEnabled, setPixelatorEnabled] = useState(true);
+  const [pixelSize, setPixelSize] = useState(8);
+  const [pixelatorPalette, setPixelatorPalette] = useState<any>('none');
+  const [pixelatorDitherType, setPixelatorDitherType] = useState<any>('none');
+  const [pixelatorDitherAmount, setPixelatorDitherAmount] = useState(50);
+  const [pixelatorPixelShape, setPixelatorPixelShape] = useState<any>('square');
+  const [pixelatorOutlineEnabled, setPixelatorOutlineEnabled] = useState(false);
+  const [pixelatorOutlineColor, setPixelatorOutlineColor] = useState('#000000');
+  const [pixelatorOutlineThickness, setPixelatorOutlineThickness] = useState(1);
+  const [pixelatorContrast, setPixelatorContrast] = useState(0);
+  const [pixelatorSaturation, setPixelatorSaturation] = useState(0);
+  const [pixelatorBrightness, setPixelatorBrightness] = useState(0);
+  
+
+  // Spritesheet import stays independent from the loaded document: choosing
+  // a new source must never wipe or reinitialize existing frames.
+  const [sheetFile, setSheetFile] = useState<File | null>(null);
+  const [sheetPreviewUrl, setSheetPreviewUrl] = useState<string | null>(null);
+  const [sheetDimensions, setSheetDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [sliceType, setSliceType] = useState<'grid' | 'dimensions'>('grid');
+  const [sliceCols, setSliceCols] = useState(4);
+  const [sliceRows, setSliceRows] = useState(4);
+  const [sliceCellWidth, setSliceCellWidth] = useState(64);
+  const [sliceCellHeight, setSliceCellHeight] = useState(64);
+  const [isSlicingSheet, setIsSlicingSheet] = useState(false);
+
+
   useEffect(() => {
     if (!projectId) {
       setProjectId(`spritesheet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
@@ -146,6 +176,27 @@ export default function EditorPage() {
     loopMode,
     previewBgMode,
     previewBgColor,
+    pixelatorOptions: {
+      enabled: pixelatorEnabled,
+      pixelSize,
+      palette: pixelatorPalette,
+      ditherType: pixelatorDitherType,
+      ditherAmount: pixelatorDitherAmount,
+      pixelShape: pixelatorPixelShape,
+      outlineEnabled: pixelatorOutlineEnabled,
+      outlineColor: pixelatorOutlineColor,
+      outlineThickness: pixelatorOutlineThickness,
+      contrast: pixelatorContrast,
+      saturation: pixelatorSaturation,
+      brightness: pixelatorBrightness,
+    },
+    slicerOptions: {
+      sliceType,
+      cols: sliceCols,
+      rows: sliceRows,
+      cellWidth: sliceCellWidth,
+      cellHeight: sliceCellHeight,
+    },
     isDirty,
     markSaved,
     globalLayers,
@@ -176,6 +227,31 @@ export default function EditorPage() {
         setLoopMode((project.metadata.loopMode as any) || 'normal');
         setPreviewBgMode((project.metadata.previewBgMode as any) || 'none');
         setPreviewBgColor(project.metadata.previewBgColor || '#1a1a2e');
+        // Preserve both video and pixelator controls in the unified editor.
+        const slicer = project.metadata.slicerOptions;
+        if (slicer) {
+          setSliceType(slicer.sliceType);
+          setSliceCols(slicer.cols);
+          setSliceRows(slicer.rows);
+          setSliceCellWidth(slicer.cellWidth);
+          setSliceCellHeight(slicer.cellHeight);
+        }
+        const pixels = project.metadata.pixelatorOptions;
+        if (pixels) {
+          setPixelatorEnabled(pixels.enabled ?? true);
+          setPixelSize(pixels.pixelSize ?? 8);
+          setPixelatorPalette(pixels.palette ?? 'none');
+          setPixelatorDitherType(pixels.ditherType ?? 'none');
+          setPixelatorDitherAmount(pixels.ditherAmount ?? 50);
+          setPixelatorPixelShape(pixels.pixelShape ?? 'square');
+          setPixelatorOutlineEnabled(pixels.outlineEnabled ?? false);
+          setPixelatorOutlineColor(pixels.outlineColor ?? '#000000');
+          setPixelatorOutlineThickness(pixels.outlineThickness ?? 1);
+          setPixelatorContrast(pixels.contrast ?? 0);
+          setPixelatorSaturation(pixels.saturation ?? 0);
+          setPixelatorBrightness(pixels.brightness ?? 0);
+        }
+
         
         // Restore global layers config
         if (project.metadata.globalLayers) {
@@ -253,20 +329,6 @@ export default function EditorPage() {
     });
   }, [resetHistory]);
 
-  // Active Real-Time Pixelator State Hooks
-  const [pixelatorEnabled, setPixelatorEnabled] = useState(true);
-  const [pixelSize, setPixelSize] = useState(8);
-  const [pixelatorPalette, setPixelatorPalette] = useState<any>('none');
-  const [pixelatorDitherType, setPixelatorDitherType] = useState<any>('none');
-  const [pixelatorDitherAmount, setPixelatorDitherAmount] = useState(50);
-  const [pixelatorPixelShape, setPixelatorPixelShape] = useState<any>('square');
-  const [pixelatorOutlineEnabled, setPixelatorOutlineEnabled] = useState(false);
-  const [pixelatorOutlineColor, setPixelatorOutlineColor] = useState('#000000');
-  const [pixelatorOutlineThickness, setPixelatorOutlineThickness] = useState(1);
-  const [pixelatorContrast, setPixelatorContrast] = useState(0);
-  const [pixelatorSaturation, setPixelatorSaturation] = useState(0);
-  const [pixelatorBrightness, setPixelatorBrightness] = useState(0);
-  
   // Panel visibility tracking
   const [visiblePanels, setVisiblePanels] = useState<Set<string>>(new Set([
     'media-loader', 'frame-grid', 'preview', 'timeline',
@@ -284,6 +346,115 @@ export default function EditorPage() {
   
   // Store original bitmaps for revert functionality
   const originalFramesRef = useRef<Map<string, ImageBitmap>>(new Map());
+
+  // The importer previews a single source sheet while the document (and
+  // history) remain intact. A new image is only added after slicing succeeds.
+  const loadNewSheetFile = useCallback(async (file: File) => {
+    if (!isImageFile(file) || file.type === 'image/gif' || /\.gif$/i.test(file.name)) {
+      alert('Select a static PNG, WebP, or JPEG spritesheet. Animated GIF import is a separate upcoming format.');
+      return;
+    }
+    try {
+      const bitmap = await createImageBitmap(file);
+      const width = bitmap.width;
+      const height = bitmap.height;
+      bitmap.close();
+      if (width === 0 || height === 0) throw new Error('Image has no pixels');
+      setSheetFile(file);
+      setSheetPreviewUrl(URL.createObjectURL(file));
+      setSheetDimensions({ width, height });
+      if (width >= 4 && height >= 4) {
+        setSliceCols(4);
+        setSliceRows(4);
+        setSliceCellWidth(Math.max(1, Math.floor(width / 4)));
+        setSliceCellHeight(Math.max(1, Math.floor(height / 4)));
+      }
+    } catch (error) {
+      console.error('Failed to inspect spritesheet:', error);
+      alert('This image could not be opened as a spritesheet.');
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (sheetPreviewUrl) URL.revokeObjectURL(sheetPreviewUrl);
+    };
+  }, [sheetPreviewUrl]);
+
+  const resetSheetFile = useCallback(() => {
+    // Clear the import form, never the document that was already edited.
+    setSheetFile(null);
+    setSheetPreviewUrl(null);
+    setSheetDimensions(null);
+  }, []);
+
+  const handleSliceSheet = useCallback(async () => {
+    if (!sheetFile || !sheetDimensions || isSlicingSheet) return;
+    const count = sliceType === 'grid'
+      ? sliceCols * sliceRows
+      : Math.floor(sheetDimensions.width / sliceCellWidth) *
+        Math.floor(sheetDimensions.height / sliceCellHeight);
+    if (!Number.isFinite(count) || count < 1 || count > 1024) {
+      alert('Select a grid containing between 1 and 1024 frames.');
+      return;
+    }
+    setIsSlicingSheet(true);
+    let imported: FrameData[] = [];
+    try {
+      const sourceId = `source-sheet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const sourceColor = SOURCE_COLORS[sourceColorIndexRef.current % SOURCE_COLORS.length];
+      sourceColorIndexRef.current += 1;
+      const result = sliceType === 'grid'
+        ? await sliceSpritesheetByGrid(sheetFile, sliceCols, sliceRows, sourceId, sourceColor)
+        : await sliceSpritesheetByDimensions(sheetFile, sliceCellWidth, sliceCellHeight, sourceId, sourceColor);
+      imported = result.frames;
+      if (imported.length === 0) throw new Error('No sprites were found in the selected grid');
+
+      // Each imported frame participates in the same paint-layer document as
+      // video frames. Future edits can then composite/undo normally.
+      for (const frame of imported) {
+        const layerContents: Record<string, ImageBitmap | null> = {};
+        for (const layer of globalLayers) {
+          layerContents[layer.id] = layer.id === 'layer-base'
+            ? await createImageBitmap(frame.bitmap)
+            : null;
+        }
+        frame.layerContents = layerContents;
+      }
+
+      const folder: Folder = {
+        id: `folder-sheet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        name: sheetFile.name.replace(/\.[^.]+$/, ''),
+        frameIds: imported.map(frame => frame.id),
+        visible: true,
+        collapsed: false,
+        color: sourceColor,
+      };
+      setFrameState(previous => appendSourceFrames(previous, imported, folder));
+      setLoadedSources(previous => [...previous, {
+        id: sourceId,
+        name: sheetFile.name,
+        type: 'image',
+        frameCount: imported.length,
+        color: sourceColor,
+      }]);
+      setCurrentFrame(0);
+      setEditorState('ready');
+      setShowFrameWarning(previous => previous || (frameState?.frames.length || 0) + imported.length > FRAME_WARNING_THRESHOLD);
+    } catch (error) {
+      console.error('Spritesheet slicing failed:', error);
+      for (const frame of imported) {
+        try { frame.bitmap.close(); } catch {}
+        Object.values(frame.layerContents || {}).forEach(bitmap => {
+          try { bitmap?.close(); } catch {}
+        });
+      }
+      alert('Failed to slice spritesheet. Check the selected grid and image.');
+    } finally {
+      setIsSlicingSheet(false);
+    }
+  }, [sheetFile, sheetDimensions, isSlicingSheet, sliceType, sliceCols, sliceRows,
+      sliceCellWidth, sliceCellHeight, globalLayers, frameState?.frames.length, setFrameState]);
 
   // --- PAINT LAYERS OPERATIONS ---
   const addGlobalLayer = useCallback((name?: string) => {
@@ -873,8 +1044,9 @@ export default function EditorPage() {
   const resetLayout = useCallback(() => {
     dockLayoutRef.current?.resetLayout();
     setVisiblePanels(new Set([
-      'video-loader', 'frame-grid', 'preview', 'timeline',
-      'media-loader', 'bg-removal', 'outline', 'watermark', 'export'
+      'media-loader', 'spritesheet-slicer', 'frame-grid', 'preview', 'timeline',
+      'frame-editor', 'frame-layers', 'bg-removal', 'outline',
+      'pixelate', 'watermark', 'export'
     ]));
   }, []);
 
@@ -959,7 +1131,28 @@ export default function EditorPage() {
     visiblePanels,
     togglePanel,
     resetLayout,
-    
+
+    pixelatorSlicer: {
+      appendToWorkspace: true,
+      file: sheetFile,
+      originalImgSrc: sheetPreviewUrl,
+      imgDimensions: sheetDimensions,
+      sliceType,
+      cols: sliceCols,
+      rows: sliceRows,
+      cellWidth: sliceCellWidth,
+      cellHeight: sliceCellHeight,
+      isSlicing: isSlicingSheet,
+      setSliceType,
+      setCols: setSliceCols,
+      setRows: setSliceRows,
+      setCellWidth: setSliceCellWidth,
+      setCellHeight: setSliceCellHeight,
+      handleSliceSpritesheet: handleSliceSheet,
+      loadNewFile: loadNewSheetFile,
+      handleResetImage: resetSheetFile,
+    },
+
     undo,
     redo,
     canUndo,
@@ -1069,6 +1262,18 @@ export default function EditorPage() {
     visiblePanels,
     togglePanel,
     resetLayout,
+    sheetFile,
+    sheetPreviewUrl,
+    sheetDimensions,
+    sliceType,
+    sliceCols,
+    sliceRows,
+    sliceCellWidth,
+    sliceCellHeight,
+    isSlicingSheet,
+    loadNewSheetFile,
+    handleSliceSheet,
+    resetSheetFile,
     pixelatorEnabled,
     pixelSize,
     pixelatorPalette,

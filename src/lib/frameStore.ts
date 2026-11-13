@@ -31,6 +31,23 @@ export function createFrameState(frames: FrameData[]): FrameState {
 }
 
 /**
+ * Append frames from a new media source without replacing the current document.
+ * The new batch becomes the selection, preserving all earlier folders and frames
+ * for Undo, subsequent processing, and export.
+ */
+export function appendSourceFrames(
+  state: FrameState | null,
+  newFrames: FrameData[],
+  folder: Folder
+): FrameState {
+  return {
+    frames: [...(state?.frames ?? []), ...newFrames],
+    folders: [...(state?.folders ?? []), folder],
+    selectedIds: new Set(newFrames.map(frame => frame.id)),
+  };
+}
+
+/**
  * Get frames in active (visible) folders in their current order
  */
 export function getOrderedFrames(state: FrameState): FrameData[] {
