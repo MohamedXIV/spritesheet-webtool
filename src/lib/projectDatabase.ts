@@ -149,25 +149,34 @@ export async function saveProject(project: DbProject): Promise<void> {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
-    
-    // Convert folders set back to array if any sets exist in metadata
-    const cleanProject = {
-      ...project,
-      updatedAt: Date.now(),
-      metadata: {
-        ...project.metadata,
-        selectedIds: Array.from(project.metadata.selectedIds || []),
-      }
+
+    // A successful put request is NOT a committed transaction.
+    transaction.oncomplete = () => { db.close(); resolve(); };
+    transaction.onerror = () => {
+      const error = transaction.error;
+      db.close();
+      reject(new Error(`Failed to save project: ${error?.message || 'transaction error'}`));
+    };
+    transaction.onabort = () => {
+      const error = transaction.error;
+      db.close();
+      reject(new Error(`Project save aborted: ${error?.message || 'transaction aborted'}`));
     };
 
-    const request = store.put(cleanProject);
-
-    request.onsuccess = () => {
-      resolve();
-    };
-
-    request.onerror = () => {
-      reject(new Error(`Failed to save project: ${request.error?.message}`));
+    // Keep the original creation date for successive saves of the same project.
+    // Read and write in the same transaction to avoid an interleaving update.
+    const existingRequest = store.get(project.id);
+    existingRequest.onsuccess = () => {
+      const existing = existingRequest.result as DbProject | undefined;
+      store.put({
+        ...project,
+        createdAt: existing?.createdAt ?? project.createdAt,
+        updatedAt: Date.now(),
+        metadata: {
+          ...project.metadata,
+          selectedIds: Array.from(project.metadata.selectedIds || []),
+        },
+      });
     };
   });
 }
@@ -179,15 +188,18 @@ export async function getProject(id: string): Promise<DbProject | null> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.get(id);
-
-    request.onsuccess = () => {
-      resolve(request.result || null);
+    const request = transaction.objectStore(STORE_NAME).get(id);
+    let result: DbProject | null = null;
+    request.onsuccess = () => { result = request.result || null; };
+    transaction.oncomplete = () => { db.close(); resolve(result); };
+    transaction.onerror = () => {
+      const error = transaction.error;
+      db.close();
+      reject(new Error(`Failed to fetch project: ${error?.message || 'transaction error'}`));
     };
-
-    request.onerror = () => {
-      reject(new Error(`Failed to fetch project: ${request.error?.message}`));
+    transaction.onabort = () => {
+      db.close();
+      reject(new Error('Project read aborted'));
     };
   });
 }
@@ -199,32 +211,36 @@ export async function getAllProjectsSummary(): Promise<ProjectSummary[]> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.openCursor();
+    const request = transaction.objectStore(STORE_NAME).openCursor();
     const summaries: ProjectSummary[] = [];
 
     request.onsuccess = () => {
       const cursor = request.result;
-      if (cursor) {
-        const val = cursor.value as DbProject;
-        summaries.push({
-          id: val.id,
-          name: val.name,
-          type: val.type,
-          createdAt: val.createdAt,
-          updatedAt: val.updatedAt,
-          frameCount: val.frames?.length || 0,
-        });
-        cursor.continue();
-      } else {
-        // Sort summaries by updatedAt descending (newest first)
-        summaries.sort((a, b) => b.updatedAt - a.updatedAt);
-        resolve(summaries);
-      }
+      if (!cursor) return;
+      const val = cursor.value as DbProject;
+      summaries.push({
+        id: val.id,
+        name: val.name,
+        type: val.type,
+        createdAt: val.createdAt,
+        updatedAt: val.updatedAt,
+        frameCount: val.frames?.length || 0,
+      });
+      cursor.continue();
     };
-
-    request.onerror = () => {
-      reject(new Error(`Failed to list projects: ${request.error?.message}`));
+    transaction.oncomplete = () => {
+      db.close();
+      summaries.sort((a, b) => b.updatedAt - a.updatedAt);
+      resolve(summaries);
+    };
+    transaction.onerror = () => {
+      const error = transaction.error;
+      db.close();
+      reject(new Error(`Failed to list projects: ${error?.message || 'transaction error'}`));
+    };
+    transaction.onabort = () => {
+      db.close();
+      reject(new Error('Project list read aborted'));
     };
   });
 }
@@ -236,15 +252,16 @@ export async function deleteProject(id: string): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.delete(id);
-
-    request.onsuccess = () => {
-      resolve();
+    transaction.objectStore(STORE_NAME).delete(id);
+    transaction.oncomplete = () => { db.close(); resolve(); };
+    transaction.onerror = () => {
+      const error = transaction.error;
+      db.close();
+      reject(new Error(`Failed to delete project: ${error?.message || 'transaction error'}`));
     };
-
-    request.onerror = () => {
-      reject(new Error(`Failed to delete project: ${request.error?.message}`));
+    transaction.onabort = () => {
+      db.close();
+      reject(new Error('Project deletion aborted'));
     };
   });
 }
