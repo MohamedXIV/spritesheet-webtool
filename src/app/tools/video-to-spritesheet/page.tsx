@@ -798,7 +798,7 @@ export default function EditorPage() {
           });
           incomingFolders.push({
             id: `folder-gif-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-            name: file.name.replace(/\\.[^.]+$/, ''),
+            name: file.name.replace(/\.[^.]+$/, ''),
             frameIds: gifFrames.map(frame => frame.id),
             visible: true,
             collapsed: false,

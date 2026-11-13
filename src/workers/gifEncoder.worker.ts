@@ -1,4 +1,5 @@
-import { GIFEncoder, quantize, applyPalette } from 'gifenc';
+import gifenc from 'gifenc';
+const { GIFEncoder, quantize, applyPalette } = gifenc;
 import { gifCentisecondDelay } from '../lib/gifTiming';
 
 type Message =

@@ -30,4 +30,10 @@ declare module 'gifenc' {
     palette: GifPalette,
     format?: 'rgb565' | 'rgb444' | 'rgba4444'
   ): Uint8Array;
-}
+  const gifenc: {
+    GIFEncoder: typeof GIFEncoder;
+    quantize: typeof quantize;
+    applyPalette: typeof applyPalette;
+  };
+  export default gifenc;
+

@@ -1,4 +1,5 @@
-import { parseGIF, decompressFrames } from 'gifuct-js';
+import gifuct from 'gifuct-js';
+const { parseGIF, decompressFrames } = gifuct;
 import type { FrameData } from '@/types';
 import { compositeGifPatches } from './gifDisposal';
 
@@ -23,6 +24,11 @@ export async function importGifFrames(
   const parsed = parseGIF(await file.arrayBuffer());
   const width = parsed.lsd.width;
   const height = parsed.lsd.height;
+  // Check the logical screen and raw frame count before allocating patches.
+  if (!width || !height || width > 4096 || height > 4096 ||
+      parsed.frames.length > 650 || width * height * parsed.frames.length > 200_000_000) {
+    throw new Error('GIF exceeds the browser decoding budget');
+  }
   const patches = decompressFrames(parsed, true);
 
   if (!patches.length || patches.length > 600 ||

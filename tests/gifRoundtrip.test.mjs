@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { GIFEncoder, quantize, applyPalette } from 'gifenc';
-import { parseGIF, decompressFrames } from 'gifuct-js';
+import gifenc from 'gifenc';
+import gifuct from 'gifuct-js';
+const { GIFEncoder, quantize, applyPalette } = gifenc;
+const { parseGIF, decompressFrames } = gifuct;
 
 test('gifenc and gifuct-js round-trip a two-frame animation with distinct delays', () => {
   const encoder = GIFEncoder();
