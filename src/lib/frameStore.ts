@@ -358,6 +358,7 @@ export interface SerializedFrame {
   id: string;
   index: number;
   timestamp: number;
+  durationMs?: number;
   sourceId: string;
   sourceColor: string;
   blob: Blob;
@@ -423,6 +424,7 @@ export async function serializeProject(
         id: frame.id,
         index: frame.index,
         timestamp: frame.timestamp,
+        durationMs: frame.durationMs,
         sourceId: frame.sourceId,
         sourceColor: frame.sourceColor,
         blob,
