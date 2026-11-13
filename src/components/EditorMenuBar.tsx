@@ -14,13 +14,16 @@ import styles from './EditorMenuBar.module.css';
 
 // Panel definitions for the View menu
 const PANELS = [
-  { id: 'video-loader', name: 'Load Video' },
+  { id: 'media-loader', name: 'Load Media' },
+  { id: 'spritesheet-slicer', name: 'Slice Spritesheet' },
   { id: 'frame-grid', name: 'Frames' },
   { id: 'preview', name: 'Preview' },
   { id: 'timeline', name: 'Timeline' },
   { id: 'bg-removal', name: 'Background Removal' },
   { id: 'outline', name: 'Outline' },
   { id: 'pixelate', name: 'Pixelation' },
+  { id: 'frame-editor', name: 'Frame Editor' },
+  { id: 'frame-layers', name: 'Paint Layers' },
   { id: 'watermark', name: 'Watermark' },
   { id: 'export', name: 'Export' },
 ] as const;
