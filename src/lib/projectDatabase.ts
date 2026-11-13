@@ -3,10 +3,12 @@
  */
 
 import type { StylizerOptions } from '@/lib/stylizer';
+import type { SourceInfo } from '@/types';
 
 export interface ProjectMetadata {
   folders: any[];
   selectedIds: string[];
+  sources?: SourceInfo[]; // Rebuild source list after Save/Restore
   fps: number;
   loopMode: string;
   previewBgMode?: string;
