@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { saveProject, DbProject, ProjectMetadata, DbProjectFrame } from '@/lib/projectDatabase';
 import { serializeProject } from '@/lib/frameStore';
 import { FrameState } from '@/lib/frameStore';
+import { createSaveQueue } from '@/lib/saveQueue';
 
 export function useProjectSave(options: {
   projectId: string;
@@ -26,176 +27,147 @@ export function useProjectSave(options: {
   pixelatorOptions?: any;
   slicerOptions?: any;
   isDirty: boolean;
-  markSaved?: () => void;
+  markSaved?: (savedState?: FrameState | null) => void;
   globalLayers?: any[];
 }) {
-  const {
-    projectId,
-    projectName,
-    markSaved
-  } = options;
-
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [autosaveEnabled, setAutosaveEnabled] = useState(true);
   const [autosaveNotification, setAutosaveNotification] = useState<string | null>(null);
 
-  // Keep options in a ref to avoid resetting the autosave interval when states change
+  // Each request captures its state at invocation time. Queuing prevents an
+  // older, slower PNG serialization from overwriting a newer save.
   const optionsRef = useRef(options);
   useEffect(() => {
     optionsRef.current = options;
   }, [options]);
+  const saveQueueRef = useRef(createSaveQueue());
+  const pendingSavesRef = useRef(0);
+  const noticeSequenceRef = useRef(0);
 
-  const triggerSave = useCallback(async (customName?: string) => {
-    const currentOpts = optionsRef.current;
-    if (!currentOpts.frameState && !currentOpts.customFrames) return;
-
-    setIsSaving(true);
-    try {
-      // 1. Serialize frames
-      let dbFrames: DbProjectFrame[] = [];
-      if (currentOpts.customFrames) {
-        dbFrames = await currentOpts.customFrames();
-      } else if (currentOpts.frameState) {
-        const serialized = await serializeProject(currentOpts.frameState, currentOpts.fps, currentOpts.globalLayers);
-        dbFrames = serialized.frames;
-      }
-
-      // 2. Build the project metadata structure
-      const metadata: ProjectMetadata = {
-        folders: currentOpts.frameState ? currentOpts.frameState.folders : [],
-        selectedIds: currentOpts.frameState ? Array.from(currentOpts.frameState.selectedIds) : [],
-        fps: currentOpts.fps,
-        loopMode: currentOpts.loopMode,
-        previewBgMode: currentOpts.previewBgMode,
-        previewBgColor: currentOpts.previewBgColor,
-        pixelatorOptions: currentOpts.pixelatorOptions,
-        slicerOptions: currentOpts.slicerOptions,
-        threePainterOptions: currentOpts.threePainterOptions,
-        trimsheetOptions: currentOpts.trimsheetOptions,
-        stylizerOptions: currentOpts.stylizerOptions,
-        stylizerMapSlots: currentOpts.stylizerMapSlots,
-        previewShape: currentOpts.previewShape,
-        customModelName: currentOpts.customModelName,
-        globalLayers: currentOpts.globalLayers,
-      };
-
-      // 3. Construct DbProject record
-      const finalName = customName || currentOpts.projectName || 'Untitled Project';
-      const dbProject: DbProject = {
-        id: currentOpts.projectId,
-        name: finalName,
-        type: currentOpts.type,
-        createdAt: Date.now(), // IndexedDB will overwrite the record if the ID matches
-        updatedAt: Date.now(),
-        metadata,
-        frames: dbFrames,
-      };
-
-      // 4. Save to IndexedDB
-      await saveProject(dbProject);
-      
-      // 5. Update UI states
-      setLastSavedAt(Date.now());
-      currentOpts.markSaved?.();
-    } catch (error) {
-      console.error('Project save failed:', error);
-      alert('Failed to save project locally');
-    } finally {
-      setIsSaving(false);
-    }
+  const notify = useCallback((message: string) => {
+    const sequence = ++noticeSequenceRef.current;
+    setAutosaveNotification(message);
+    setTimeout(() => {
+      if (noticeSequenceRef.current === sequence) setAutosaveNotification(null);
+    }, 3000);
   }, []);
 
-  const triggerSaveAs = useCallback(async (newName: string) => {
-    const currentOpts = optionsRef.current;
-    if (!currentOpts.frameState && !currentOpts.customFrames) return;
+  const queueSave = useCallback((
+    mode: 'save' | 'copy',
+    customName?: string,
+    automatic = false
+  ): Promise<boolean> => {
+    const snapshot = optionsRef.current;
+    if (!snapshot.frameState && !snapshot.customFrames) return Promise.resolve(false);
 
+    pendingSavesRef.current += 1;
     setIsSaving(true);
-    try {
-      // 1. Generate a brand new unique project ID
-      const newId = `${currentOpts.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-      // 2. Serialize frames
-      let dbFrames: DbProjectFrame[] = [];
-      if (currentOpts.customFrames) {
-        dbFrames = await currentOpts.customFrames();
-      } else if (currentOpts.frameState) {
-        const serialized = await serializeProject(currentOpts.frameState, currentOpts.fps, currentOpts.globalLayers);
-        dbFrames = serialized.frames;
+    const perform = async (): Promise<boolean> => {
+      try {
+        const generatedId = () =>
+          `${snapshot.type}-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+        const targetId = mode === 'copy' || !snapshot.projectId
+          ? generatedId()
+          : snapshot.projectId;
+        const name = customName?.trim() || snapshot.projectName || 'Untitled Project';
+
+        const frames: DbProjectFrame[] = snapshot.customFrames
+          ? await snapshot.customFrames()
+          : snapshot.frameState
+            ? (await serializeProject(snapshot.frameState, snapshot.fps, snapshot.globalLayers)).frames
+            : [];
+
+        const metadata: ProjectMetadata = {
+          folders: snapshot.frameState?.folders || [],
+          selectedIds: snapshot.frameState
+            ? Array.from(snapshot.frameState.selectedIds)
+            : [],
+          fps: snapshot.fps,
+          loopMode: snapshot.loopMode,
+          previewBgMode: snapshot.previewBgMode,
+          previewBgColor: snapshot.previewBgColor,
+          pixelatorOptions: snapshot.pixelatorOptions,
+          slicerOptions: snapshot.slicerOptions,
+          threePainterOptions: snapshot.threePainterOptions,
+          trimsheetOptions: snapshot.trimsheetOptions,
+          stylizerOptions: snapshot.stylizerOptions,
+          stylizerMapSlots: snapshot.stylizerMapSlots,
+          previewShape: snapshot.previewShape,
+          customModelName: snapshot.customModelName,
+          globalLayers: snapshot.globalLayers,
+        };
+
+        const now = Date.now();
+        const project: DbProject = {
+          id: targetId,
+          name,
+          type: snapshot.type,
+          createdAt: now,
+          updatedAt: now,
+          metadata,
+          frames,
+        };
+
+        // saveProject resolves only after IndexedDB transaction.oncomplete.
+        await saveProject(project);
+
+        if (mode === 'copy' || !snapshot.projectId) {
+          snapshot.setProjectId(targetId);
+          const url = new URL(window.location.href);
+          url.searchParams.set('project', targetId);
+          window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+        }
+        if (customName?.trim()) snapshot.setProjectName(name);
+
+        setLastSavedAt(Date.now());
+        // Never clear the dirty flag of edits made while this save was running.
+        snapshot.markSaved?.(snapshot.frameState);
+        if (mode === 'copy' && !automatic) notify('Project copy saved');
+        return true;
+      } catch (error) {
+        console.error('Project save failed:', error);
+        if (automatic) notify('Autosave failed');
+        else alert('Failed to save project locally. Your current work has not been marked as saved.');
+        return false;
+      } finally {
+        pendingSavesRef.current -= 1;
+        setIsSaving(pendingSavesRef.current > 0);
       }
+    };
 
-      // 3. Build the project metadata structure
-      const metadata: ProjectMetadata = {
-        folders: currentOpts.frameState ? currentOpts.frameState.folders : [],
-        selectedIds: currentOpts.frameState ? Array.from(currentOpts.frameState.selectedIds) : [],
-        fps: currentOpts.fps,
-        loopMode: currentOpts.loopMode,
-        previewBgMode: currentOpts.previewBgMode,
-        previewBgColor: currentOpts.previewBgColor,
-        pixelatorOptions: currentOpts.pixelatorOptions,
-        slicerOptions: currentOpts.slicerOptions,
-        threePainterOptions: currentOpts.threePainterOptions,
-        trimsheetOptions: currentOpts.trimsheetOptions,
-        stylizerOptions: currentOpts.stylizerOptions,
-        stylizerMapSlots: currentOpts.stylizerMapSlots,
-        previewShape: currentOpts.previewShape,
-        customModelName: currentOpts.customModelName,
-        globalLayers: currentOpts.globalLayers,
-      };
+    return saveQueueRef.current(perform);
+  }, [notify]);
 
-      // 4. Construct DbProject record
-      const dbProject: DbProject = {
-        id: newId,
-        name: newName,
-        type: currentOpts.type,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        metadata,
-        frames: dbFrames,
-      };
+  // Preserve the existing Promise<void> context contract. The autosave timer
+  // uses queueSave directly to inspect its explicit success result.
+  const triggerSave = useCallback(
+    async (customName?: string): Promise<void> => {
+      await queueSave('save', customName);
+    },
+    [queueSave]
+  );
+  const triggerSaveAs = useCallback(
+    async (newName: string): Promise<void> => {
+      await queueSave('copy', newName);
+    },
+    [queueSave]
+  );
 
-      // 5. Save to IndexedDB
-      await saveProject(dbProject);
-      
-      // 6. Update ID and Name inside parent component state
-      currentOpts.setProjectId(newId);
-      currentOpts.setProjectName(newName);
-      
-      // 7. Update browser URL query parameter dynamically without page reload
-      const newUrl = `${window.location.pathname}?project=${newId}`;
-      window.history.replaceState({ ...window.history.state, as: newUrl, url: newUrl }, '', newUrl);
-
-      // 8. Update UI states
-      setLastSavedAt(Date.now());
-      currentOpts.markSaved?.();
-      
-      alert(`Project successfully cloned as "${newName}"! Future changes (Ctrl+S) will save into this new version.`);
-    } catch (error) {
-      console.error('Project Save As failed:', error);
-      alert('Failed to clone project locally');
-    } finally {
-      setIsSaving(false);
-    }
-  }, []);
-
-  // Autosave loop (every 30 seconds)
   useEffect(() => {
     if (!autosaveEnabled) return;
-
     const timer = setInterval(() => {
-      const currentOpts = optionsRef.current;
-      // Only autosave if there are frames loaded/customFrames exists and the workspace is dirty!
-      const hasContent = currentOpts.customFrames || (currentOpts.frameState && currentOpts.frameState.frames.length > 0);
-      if (hasContent && currentOpts.isDirty) {
-        triggerSave().then(() => {
-          setAutosaveNotification('Autosaved');
-          setTimeout(() => setAutosaveNotification(null), 3000);
-        });
-      }
+      const current = optionsRef.current;
+      const hasContent = !!current.customFrames ||
+        !!(current.frameState && current.frameState.frames.length > 0);
+      if (!current.isDirty || !hasContent || pendingSavesRef.current > 0) return;
+      void queueSave('save', undefined, true).then((success) => {
+        if (success) notify('Autosaved');
+      });
     }, 30000);
-
     return () => clearInterval(timer);
-  }, [autosaveEnabled, triggerSave]);
+  }, [autosaveEnabled, queueSave, notify]);
 
   return {
     triggerSave,

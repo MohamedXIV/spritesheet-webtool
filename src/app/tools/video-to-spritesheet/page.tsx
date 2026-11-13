@@ -306,13 +306,14 @@ export default function EditorPage() {
     
     setFrameState(prev => {
       if (!prev) return prev;
-      prev.frames.forEach(f => {
-        if (f.layerContents && f.layerContents[id]) {
-          try { f.layerContents[id]?.close(); } catch {}
-          delete f.layerContents[id];
-        }
+      // Preserve previous layer bitmaps for Undo; never mutate a history snapshot.
+      const frames = prev.frames.map(frame => {
+        if (!frame.layerContents || !(id in frame.layerContents)) return frame;
+        const layerContents = { ...frame.layerContents };
+        delete layerContents[id];
+        return { ...frame, layerContents };
       });
-      return { ...prev };
+      return { ...prev, frames };
     });
     
     setGlobalLayers(prev => prev.filter(l => l.id !== id));

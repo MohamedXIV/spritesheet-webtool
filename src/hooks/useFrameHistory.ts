@@ -13,7 +13,7 @@ export interface UseFrameHistoryReturn {
   canUndo: boolean;
   canRedo: boolean;
   isDirty: boolean;
-  markSaved: () => void;
+  markSaved: (savedState?: FrameState | null) => void;
   resetHistory: (initialState: FrameState | null) => void;
   clearHistory: () => void;
 }
@@ -24,6 +24,11 @@ export interface UseFrameHistoryReturn {
  */
 export function useFrameHistory(maxDepth: number = 8): UseFrameHistoryReturn {
   const [activeState, setActiveState] = useState<FrameState | null>(null);
+  // Keep a stable way to inspect the active state from restore/save callbacks.
+  const activeStateRef = useRef<FrameState | null>(null);
+  useEffect(() => {
+    activeStateRef.current = activeState;
+  }, [activeState]);
   
   // Stacks managed via mutable refs to prevent unnecessary re-renders
   const pastRef = useRef<FrameState[]>([]);
@@ -103,24 +108,23 @@ export function useFrameHistory(maxDepth: number = 8): UseFrameHistoryReturn {
   }, []);
 
   const resetHistory = useCallback((initialState: FrameState | null) => {
-    // Collect garbage on all current states before wiping
-    pastRef.current.forEach(state => collectGarbage(state, null, [], []));
-    futureRef.current.forEach(state => collectGarbage(state, null, [], []));
-    if (activeState) {
-      collectGarbage(activeState, null, [], []);
-    }
+    // Release resources from discarded history, but never close bitmaps
+    // shared with the state being installed.
+    const abandoned = [...pastRef.current, ...futureRef.current];
+    if (activeStateRef.current) abandoned.push(activeStateRef.current);
+    abandoned.forEach(state => collectGarbage(state, initialState, [], []));
 
     pastRef.current = [];
     futureRef.current = [];
+    activeStateRef.current = initialState;
     savedIndexRef.current = 0;
     currentIndexRef.current = 0;
-    
+
     setActiveState(initialState);
-    
     setCanUndo(false);
     setCanRedo(false);
     setIsDirty(false);
-  }, [activeState, collectGarbage]);
+  }, [collectGarbage]);
 
   const clearHistory = useCallback(() => {
     pastRef.current = [];
@@ -218,7 +222,9 @@ export function useFrameHistory(maxDepth: number = 8): UseFrameHistoryReturn {
     });
   }, [activeState, updateUIFlags]);
 
-  const markSaved = useCallback(() => {
+  const markSaved = useCallback((savedState?: FrameState | null) => {
+    // A save may finish after a newer edit. Do not mark those new edits saved.
+    if (savedState !== undefined && savedState !== activeStateRef.current) return;
     savedIndexRef.current = currentIndexRef.current;
     setIsDirty(false);
   }, []);
