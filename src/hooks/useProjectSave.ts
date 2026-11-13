@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { saveProject, DbProject, ProjectMetadata, DbProjectFrame } from '@/lib/projectDatabase';
 import { serializeProject } from '@/lib/frameStore';
 import { FrameState } from '@/lib/frameStore';
+import { createSaveQueue } from '@/lib/saveQueue';
 
 export function useProjectSave(options: {
   projectId: string;
@@ -38,7 +39,7 @@ export function useProjectSave(options: {
   // older, slower PNG serialization from overwriting a newer save.
   const optionsRef = useRef(options);
   optionsRef.current = options;
-  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const saveQueueRef = useRef(createSaveQueue());
   const pendingSavesRef = useRef(0);
   const noticeSequenceRef = useRef(0);
 
@@ -134,10 +135,7 @@ export function useProjectSave(options: {
       }
     };
 
-    const result = saveQueueRef.current.then(perform, perform);
-    // A failed job must never poison future queued saves.
-    saveQueueRef.current = result.then(() => undefined, () => undefined);
-    return result;
+    return saveQueueRef.current(perform);
   }, [notify]);
 
   const triggerSave = useCallback(
