@@ -48,7 +48,9 @@ export async function importGifFrames(
   try {
     let index = 0;
     for (const { rgba, durationMs } of compositeGifPatches(patches, width, height, background)) {
-      context.putImageData(new ImageData(rgba, width, height), 0, 0);
+      const imageData = context.createImageData(width, height);
+      imageData.data.set(rgba);
+      context.putImageData(imageData, 0, 0);
       const bitmap = await createImageBitmap(canvas);
       decoded.push({
         id: `frame-gif-${crypto.randomUUID()}`,
