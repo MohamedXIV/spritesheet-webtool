@@ -187,6 +187,7 @@ export default function StandalonePixelatorPage() {
             id: f.id,
             index: f.index,
             timestamp: f.timestamp,
+            durationMs: f.durationMs,
             bitmap,
             sourceId: f.sourceId,
             sourceColor: f.sourceColor
