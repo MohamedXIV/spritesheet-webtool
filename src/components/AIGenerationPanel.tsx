@@ -70,7 +70,7 @@ export function AIGenerationPanel() {
       if (savedEndpoint) setCustomEndpoint(savedEndpoint);
       if (savedHeaders) setCustomHeadersRaw(savedHeaders);
       if (savedPayload) setCustomPayloadRaw(savedPayload);
-      if (savedProvider) setProvider(savedProvider as any);
+      if (savedProvider === 'openai' || savedProvider === 'google') setProvider(savedProvider);
       if (savedCliCommand) setCliCommand(savedCliCommand);
       if (savedCliOutputMethod) setCliOutputMethod(savedCliOutputMethod as any);
       if (savedCliOutputPath) setCliOutputPath(savedCliOutputPath);
@@ -341,9 +341,10 @@ export function AIGenerationPanel() {
           >
             <option value="openai">OpenAI (DALL-E 2 / 3)</option>
             <option value="google">Google Nanobanana (Gemini/Imagen)</option>
-            <option value="custom">Custom JSON REST Endpoint</option>
-            <option value="local-cli">Local CLI Command (Shell)</option>
+            <option value="custom" disabled>Custom Endpoint (disabled on hosted server)</option>
+            <option value="local-cli" disabled>Local CLI (disabled on hosted server)</option>
           </select>
+          <p className={styles.label}>For security, this public endpoint only supports fixed OpenAI/Google APIs. Arbitrary server commands and custom URL proxies are disabled.</p>
         </div>
 
         {/* Credentials based on provider */}
