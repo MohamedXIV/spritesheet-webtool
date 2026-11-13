@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
 
       if (isGeminiImageModel) {
         // Codenamed "Nano Banana" - First-class image generation via Google AI Studio
-        googleUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
+        googleUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
         reqBody = {
           contents: [
             {
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
         };
       } else {
         // Legacy Imagen prediction endpoints (deprecating June 24, 2026)
-        googleUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:predict?key=${apiKey}`;
+        googleUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:predict?key=${encodeURIComponent(apiKey)}`;
         reqBody = {
           instances: [
             {
