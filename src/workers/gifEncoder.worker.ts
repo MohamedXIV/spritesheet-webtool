@@ -1,5 +1,6 @@
 import gifenc from 'gifenc';
-const { GIFEncoder, quantize, applyPalette } = gifenc;
+const { GIFEncoder } = gifenc;
+import { toIndexedGifFrame } from '../lib/gifPalette';
 import { gifCentisecondDelay } from '../lib/gifTiming';
 
 type Message =
@@ -39,45 +40,14 @@ scope.onmessage = (event) => {
       const rgba = data.pixels;
       if (rgba.length !== width * height * 4) throw new Error('Invalid frame dimensions');
 
-      let opaqueCount = 0;
-      let transparent = false;
-      for (let p = 3; p < rgba.length; p += 4) {
-        if (rgba[p] < 128) transparent = true;
-        else opaqueCount++;
-      }
-
-      // Excluding transparent pixels from quantization keeps their RGB values
-      // from overwhelming the palette (especially on transparent sprites).
-      const opaque = new Uint8Array(opaqueCount * 4);
-      let offset = 0;
-      for (let p = 0; p < rgba.length; p += 4) {
-        if (rgba[p + 3] < 128) continue;
-        opaque[offset++] = rgba[p];
-        opaque[offset++] = rgba[p + 1];
-        opaque[offset++] = rgba[p + 2];
-        opaque[offset++] = 255;
-      }
-
-      const palette: number[][] = opaqueCount
-        ? quantize(opaque, transparent ? colors - 1 : colors, { format: 'rgb565' })
-        : [[0, 0, 0]];
-      const transparentIndex = transparent ? palette.length : 0;
-      if (transparent) palette.push([0, 0, 0]);
-
-      const indexes = applyPalette(rgba, palette);
-      if (transparent) {
-        for (let p = 3; p < rgba.length; p += 4) {
-          if (rgba[p] < 128) indexes[p >> 2] = transparentIndex;
-        }
-      }
-
-      encoder.writeFrame(indexes, width, height, {
+      const { palette, index } = toIndexedGifFrame(rgba, colors);
+      encoder.writeFrame(index, width, height, {
         palette,
-        transparent,
-        transparentIndex,
+        transparent: true,
+        transparentIndex: 0,
         delay: gifCentisecondDelay(data.delay),
         repeat,
-        dispose: 2, // Every encoded frame is full-size, avoiding stale pixel trails
+        dispose: 2, // Full canvas: restore transparent background every frame
       });
       written++;
       scope.postMessage({ type: 'progress', completed: written, total });

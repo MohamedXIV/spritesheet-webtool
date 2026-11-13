@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import gifenc from 'gifenc';
 import gifuct from 'gifuct-js';
+import { toIndexedGifFrame } from '../src/lib/gifPalette.ts';
 const { GIFEncoder, quantize, applyPalette } = gifenc;
 const { parseGIF, decompressFrames } = gifuct;
 
@@ -40,4 +41,26 @@ test('gifenc exports 1-bit transparency for the selected palette index', () => {
   assert.equal(decoded.length, 1);
   assert.equal(decoded[0].patch[3], 0);
   assert.equal(decoded[0].patch[7], 255);
+});
+
+test('worker palette reserves transparent index and never makes opaque black transparent', () => {
+  const rgba = new Uint8ClampedArray([
+    0,0,0,255,    // solid black
+    0,0,0,0,      // transparent
+    255,0,0,255,  // solid red
+  ]);
+  const { palette, index } = toIndexedGifFrame(rgba, 16);
+  assert.equal(index[1], 0);
+  assert.ok(index[0] > 0);
+  assert.ok(index[2] > 0);
+  assert.equal(palette.length <= 16, true);
+  const encoder = GIFEncoder();
+  encoder.writeFrame(index, 3, 1, {
+    palette, transparent:true, transparentIndex:0, dispose:2, delay:60, repeat:0
+  });
+  encoder.finish();
+  const decoded = decompressFrames(parseGIF(new Uint8Array(encoder.bytes()).buffer), true);
+  assert.deepEqual(Array.from(decoded[0].patch.slice(0,4)), [0,0,0,255]);
+  assert.equal(decoded[0].patch[7], 0);
+  assert.equal(decoded[0].patch[11], 255);
 });
