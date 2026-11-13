@@ -26,7 +26,9 @@ export function useFrameHistory(maxDepth: number = 8): UseFrameHistoryReturn {
   const [activeState, setActiveState] = useState<FrameState | null>(null);
   // Keep a stable way to inspect the active state from restore/save callbacks.
   const activeStateRef = useRef<FrameState | null>(null);
-  activeStateRef.current = activeState;
+  useEffect(() => {
+    activeStateRef.current = activeState;
+  }, [activeState]);
   
   // Stacks managed via mutable refs to prevent unnecessary re-renders
   const pastRef = useRef<FrameState[]>([]);
