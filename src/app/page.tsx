@@ -94,11 +94,8 @@ export default function Home() {
               <Layout size={16} />
               <span>Dashboard</span>
             </Link>
-            <Link href="/tools/video-to-spritesheet" className={styles.navItem}>
-              🎬 Video Spritesheet
-            </Link>
-            <Link href="/tools/pixelator" className={styles.navItem}>
-              👾 Sprite Pixelator
+            <Link href="/tools/sprite-editor" className={styles.navItem}>
+              🎨 Sprite Editor
             </Link>
             <Link href="/tools/3d-pixelator" className={styles.navItem}>
               📦 3D Pixel-Painter
@@ -148,10 +145,10 @@ export default function Home() {
           <div className={styles.toolCard}>
             <div className={styles.toolHeader}>
               <div className={styles.toolIcon}>🎬</div>
-              <span className={styles.toolBadge}>v0.8.2-beta</span>
+              <span className={styles.toolBadge}>Unified 2D Workspace</span>
             </div>
             <div className={styles.toolTitleRow}>
-              <h2 className={styles.toolTitle}>Video to Spritesheet</h2>
+              <h2 className={styles.toolTitle}>Sprite Editor</h2>
               <button 
                 onClick={() => openChangelog('spritesheet')}
                 className={styles.toolChangelogBtn}
@@ -161,47 +158,18 @@ export default function Home() {
               </button>
             </div>
             <p className={styles.toolDesc}>
-              Load video files (MP4, WebM) or individual images, extract precise frames, 
-              remove backgrounds, and compile them into a game-ready spritesheet with JSON metadata.
+              Import videos, images, and packed spritesheets into a single frame and layer editor.
+              Slice grids, pixelate artwork, preview animations, remove backgrounds,
+              and export game-ready PNG spritesheets with JSON metadata.
             </p>
             <ul className={styles.toolFeatures}>
-              <li>► FPS-controlled custom frame extraction</li>
-              <li>► AI background & watermark removals</li>
-              <li>► Sprite outline stroke customizations</li>
-              <li>► Modern dockable tabbed workspace layout</li>
+              <li>► Import images, video frames, or sliced spritesheets</li>
+              <li>► Pixelation, palettes, dithering, and background removal</li>
+              <li>► Frame painting, layers, timeline, and preview</li>
+              <li>► Export sprite atlases and JSON metadata</li>
             </ul>
-            <Link href="/tools/video-to-spritesheet" className={styles.toolCta}>
-              Launch Spritesheet Editor
-            </Link>
-          </div>
-
-          <div className={styles.toolCard}>
-            <div className={styles.toolHeader}>
-              <div className={styles.toolIcon}>👾</div>
-              <span className={styles.toolBadge}>v0.5.0-alpha</span>
-            </div>
-            <div className={styles.toolTitleRow}>
-              <h2 className={styles.toolTitle}>Sprite Pixelator</h2>
-              <button 
-                onClick={() => openChangelog('pixelator')}
-                className={styles.toolChangelogBtn}
-                title="View tool updates history"
-              >
-                <Clock size={12} />
-              </button>
-            </div>
-            <p className={styles.toolDesc}>
-              Convert packed spritesheets, high-res images, or video clips into retro pixel art. 
-              Specify slicing dimensions, apply classic palettes, and dither grids.
-            </p>
-            <ul className={styles.toolFeatures}>
-              <li>► Grid-based or dimension-based sprite slicing</li>
-              <li>► Presets: NES, PICO-8, Commodore 64, GameBoy</li>
-              <li>► Bayer and Floyd-Steinberg dither models</li>
-              <li>► Custom pixel layouts (Blocks, Circles, Diamonds)</li>
-            </ul>
-            <Link href="/tools/pixelator" className={styles.toolCta}>
-              Launch Sprite Pixelator
+            <Link href="/tools/sprite-editor" className={styles.toolCta}>
+              Open Sprite Editor
             </Link>
           </div>
 
