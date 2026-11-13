@@ -42,7 +42,7 @@ import { FrameEditorPanel } from '@/components/FrameEditorPanel';
 import styles from './page.module.css';
 import { useFrameHistory } from '@/hooks/useFrameHistory';
 import { useProjectSave } from '@/hooks/useProjectSave';
-import { prepareSpriteProjectRestore, type SpriteProjectType } from '@/lib/spriteProjectCompatibility';
+import { prepareSpriteProjectRestore, restoreSpriteSources, type SpriteProjectType } from '@/lib/spriteProjectCompatibility';
 
 type EditorState = 'idle' | 'extracting' | 'ready';
 
@@ -129,6 +129,7 @@ export default function EditorPage() {
   const [projectName, setProjectName] = useState<string>('Untitled Spritesheet Project');
   // Keep legacy Pixelator IDs and record types stable when saving from the unified editor.
   const [projectType, setProjectType] = useState<SpriteProjectType>('spritesheet');
+  const [loadedSources, setLoadedSources] = useState<SourceInfo[]>([]);
 
   // Active Real-Time Pixelator State Hooks
   const [pixelatorEnabled, setPixelatorEnabled] = useState(true);
@@ -204,6 +205,7 @@ export default function EditorPage() {
     isDirty,
     markSaved,
     globalLayers,
+    sources: loadedSources,
   });
 
   // URL project deep-linking restore effect
@@ -318,6 +320,7 @@ export default function EditorPage() {
           originalFramesRef.current.set(frame.id, clone);
         }
 
+        setLoadedSources(restoreSpriteSources(project, restorePlan.folders));
         resetHistory(restoredState);
         setEditorState('ready');
       } catch (err) {
@@ -335,8 +338,7 @@ export default function EditorPage() {
   ]));
   const dockLayoutRef = useRef<DockLayoutRef>(null);
   
-  // Loaded media sources
-  const [loadedSources, setLoadedSources] = useState<SourceInfo[]>([]);
+  // Media sources are declared before the persistence hook for reliable Save snapshots.
   const sourceColorIndexRef = useRef(0);
   
   // Keep a ref to frameState for cleanup on unmount only
