@@ -36,4 +36,4 @@ declare module 'gifenc' {
     applyPalette: typeof applyPalette;
   };
   export default gifenc;
-
+}
