@@ -294,6 +294,7 @@ export default function EditorPage() {
             id: f.id,
             index: f.index,
             timestamp: f.timestamp,
+            durationMs: f.durationMs,
             layerContents,
             bitmap,
             sourceId: f.sourceId,
