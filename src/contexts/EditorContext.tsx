@@ -77,6 +77,9 @@ interface EditorContextValue {
   // Standalone Pixelator slicing state (optional)
   pixelatorSlicer?: {
     appendToWorkspace?: boolean;
+    savedSheets?: Array<{ id: string; name: string }>;
+    editingSourceId?: string | null;
+    selectSavedSheet?: (id: string) => void;
     file: File | null;
     originalImgSrc: string | null;
     imgDimensions: { width: number; height: number } | null;
