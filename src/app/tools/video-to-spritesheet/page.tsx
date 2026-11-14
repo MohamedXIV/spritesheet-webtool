@@ -1028,7 +1028,8 @@ export default function EditorPage() {
         ),
       });
     } else {
-      resetHistory(null);
+      // Empty project is still an Undoable state. Do NOT erase history.
+      setFrameState({ frames: [], folders: [], selectedIds: new Set() });
       setEditorState('idle');
     }
 
@@ -1190,6 +1191,13 @@ export default function EditorPage() {
     { id: 'redo', key: 'y', mod: true, run: redo },
     { id: 'redo-shift', key: 'z', mod: true, shift: true, run: redo },
   ]);
+
+  // Undo/Redo may turn an empty document back into a populated workspace.
+  useEffect(() => {
+    if (editorState === 'extracting') return;
+    const next: EditorState = frameState?.frames.length ? 'ready' : 'idle';
+    if (next !== editorState) setEditorState(next);
+  }, [editorState, frameState?.frames.length]);
 
   // 7. Warn before tab close with unsaved modifications
   useEffect(() => {
