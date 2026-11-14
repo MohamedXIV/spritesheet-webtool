@@ -185,12 +185,14 @@ export async function decodeProjectBackup(data: Uint8Array): Promise<DbProject> 
   let totalBytes = 0;
   let entryCount = 0;
   let rejectArchive = false;
+  const seenArchivePaths = new Set<string>();
 
   // Check sizes from the central directory before allocating decompressed data.
   const extracted = await new Promise<Record<string, Uint8Array>>((resolve, reject) => {
     unzip(data, {
       filter: info => {
         if (++entryCount > MAX_ENTRIES + 1 ||
+            seenArchivePaths.has(info.name) ||
             !Number.isSafeInteger(info.originalSize) || info.originalSize < 0 ||
             !Number.isSafeInteger(info.size) || info.size < 0 ||
             (info.name !== MANIFEST && !/^blobs\/[0-9]{6}\.bin$/.test(info.name)) ||
@@ -200,6 +202,7 @@ export async function decodeProjectBackup(data: Uint8Array): Promise<DbProject> 
           return false;
         }
         totalBytes += info.originalSize;
+        seenArchivePaths.add(info.name);
         return true;
       },
     }, (error, files) => {
