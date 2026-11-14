@@ -9,6 +9,7 @@ import { FrameData, SpritesheetConfig } from '@/types';
 import { packFrames, calculateOptimalColumns } from '@/lib/spritesheetPacker';
 import { exportSpritesheetPng, exportMetadataJson, exportAll, downloadBlob } from '@/lib/exporter';
 import { exportAnimatedGif } from '@/lib/gifExporter';
+import { useAppDialog } from '@/components/AppDialogProvider';
 import { LoopMode } from './Timeline';
 import styles from './ExportPanel.module.css';
 
@@ -23,6 +24,7 @@ export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: E
   const [columns, setColumns] = useState(0); // 0 = auto
   const [padding, setPadding] = useState(0);
   const [backgroundColor, setBackgroundColor] = useState('transparent');
+  const { alert: showMessage } = useAppDialog();
   const [isExporting, setIsExporting] = useState(false);
   const [applyLoopToExport, setApplyLoopToExport] = useState(false);
   const [gifColors, setGifColors] = useState(256);
@@ -93,7 +95,7 @@ export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: E
       await exportSpritesheetPng(canvas);
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Failed to export spritesheet');
+      void showMessage({ title: 'Export failed', message: 'Failed to export spritesheet.' });
     } finally {
       setIsExporting(false);
     }
@@ -108,7 +110,7 @@ export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: E
       exportMetadataJson(metadata);
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Failed to export metadata');
+      void showMessage({ title: 'Export failed', message: 'Failed to export metadata.' });
     }
   };
 
@@ -122,7 +124,7 @@ export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: E
       await exportAll(canvas, metadata);
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Failed to export files');
+      void showMessage({ title: 'Export failed', message: 'Failed to export files.' });
     } finally {
       setIsExporting(false);
     }
@@ -144,7 +146,7 @@ export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: E
       downloadBlob(gifBlob, 'sprite-animation.gif');
     } catch (error) {
       console.error('Animated GIF export failed:', error);
-      alert(error instanceof Error ? error.message : 'Unable to export GIF');
+      void showMessage({ title: 'GIF export failed', message: error instanceof Error ? error.message : 'Unable to export GIF.' });
     } finally {
       setIsExportingGif(false);
       setGifProgress(null);
