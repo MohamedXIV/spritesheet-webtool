@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useProjectSave } from '@/hooks/useProjectSave';
+import { useWorkspaceShortcuts } from '@/hooks/useWorkspaceShortcuts';
 import { DbProjectFrame } from '@/lib/projectDatabase';
 import { PixelatorOptions, DEFAULT_PIXELATOR_OPTIONS, pixelateImage, hexToRgb } from '@/lib/pixelator';
 import { ThreePainterProvider, PaintingLayer, BrushTool } from '@/contexts/ThreePainterContext';
@@ -479,6 +480,10 @@ export default function ThreePainterPage() {
     },
     fps: 12, loopMode: 'normal', isDirty, markSaved: () => setIsDirty(false),
   });
+
+  useWorkspaceShortcuts([
+    { id: 'save', key: 's', mod: true, allowWhenEditing: true, run: () => { void triggerSave(); } },
+  ]);
 
   const loadNewModel = async (file: File) => {
     setIsLoadingModel(true); setLoadProgress(0);
