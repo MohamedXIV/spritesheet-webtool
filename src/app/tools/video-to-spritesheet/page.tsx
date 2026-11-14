@@ -42,6 +42,8 @@ import { FrameEditorPanel } from '@/components/FrameEditorPanel';
 import styles from './page.module.css';
 import { useFrameHistory } from '@/hooks/useFrameHistory';
 import { useProjectSave } from '@/hooks/useProjectSave';
+import { useWorkspaceShortcuts } from '@/hooks/useWorkspaceShortcuts';
+import { useAppDialog } from '@/components/AppDialogProvider';
 import { updateFrameDurations as withFrameDurations } from '@/lib/timelineFrameTiming';
 import { prepareSpriteProjectRestore, restoreSpriteSources, type SpriteProjectType } from '@/lib/spriteProjectCompatibility';
 import { replaceSourceSheetFrames, restoreSourceSheetAssets, type SourceSheetAsset } from '@/lib/sourceSheetAssets';
@@ -80,6 +82,7 @@ const compositeFrameLayers = async (
 };
 
 export default function EditorPage() {
+  const { confirm: confirmAction, alert: showMessage } = useAppDialog();
   const [editorState, setEditorState] = useState<EditorState>('idle');
   // 2. Heavyweight Bounded History Frame State (Memory-safe VRAM Garbage Collector)
   const {
@@ -226,7 +229,7 @@ export default function EditorPage() {
       try {
         const project = await getProject(id);
         if (!project) {
-          alert('Project not found locally.');
+          void showMessage({ title: 'Project unavailable', message: 'Project not found locally.' });
           setEditorState('idle');
           return;
         }
@@ -350,7 +353,7 @@ export default function EditorPage() {
         setEditorState('ready');
       } catch (err) {
         console.error('Failed to restore project:', err);
-        alert('Failed to load project.');
+        void showMessage({ title: 'Cannot restore project', message: 'Failed to load project.' });
         setEditorState('idle');
       }
     });
@@ -377,7 +380,7 @@ export default function EditorPage() {
   // history) remain intact. A new image is only added after slicing succeeds.
   const loadNewSheetFile = useCallback(async (file: File) => {
     if (!isImageFile(file) || file.type === 'image/gif' || /\.gif$/i.test(file.name)) {
-      alert('Use Media Loader for animated GIFs. The Slicer accepts static PNG, WebP, or JPEG spritesheets.');
+      void showMessage({ title: 'Unsupported spritesheet', message: 'Use Media Loader for animated GIFs. The Slicer accepts static PNG, WebP, or JPEG spritesheets.' });
       return;
     }
     try {
@@ -398,7 +401,7 @@ export default function EditorPage() {
       }
     } catch (error) {
       console.error('Failed to inspect spritesheet:', error);
-      alert('This image could not be opened as a spritesheet.');
+      void showMessage({ title: 'Image could not be opened', message: 'This image could not be opened as a spritesheet.' });
     }
   }, []);
 
@@ -437,7 +440,7 @@ export default function EditorPage() {
       : Math.floor(sheetDimensions.width / sliceCellWidth) *
         Math.floor(sheetDimensions.height / sliceCellHeight);
     if (!Number.isFinite(count) || count < 1 || count > 1024) {
-      alert('Select a grid containing between 1 and 1024 frames.');
+      void showMessage({ title: 'Invalid grid', message: 'Select a grid containing between 1 and 1024 frames.' });
       return;
     }
 
@@ -446,9 +449,12 @@ export default function EditorPage() {
     const affectedCount = replacing
       ? (frameState?.frames.filter(frame => frame.sourceId === previousAsset.sourceId).length ?? 0)
       : 0;
-    if (affectedCount > 0 && !window.confirm(
-      `Re-slice and replace ${affectedCount} frames from "${previousAsset!.name}"? This replaces edits and paint layers on those frames; Undo can restore them. Other sources will not change.`
-    )) return;
+    if (affectedCount > 0 && !(await confirmAction({
+      title: 'Replace existing slices?',
+      message: `Re-slice ${affectedCount} frames from "${previousAsset!.name}"? This replaces edits and paint layers on those frames. Undo can restore them; other sources are untouched.`,
+      confirmLabel: 'Re-slice frames',
+      danger: true,
+    }))) return;
 
     setIsSlicingSheet(true);
     let imported: FrameData[] = [];
@@ -524,7 +530,7 @@ export default function EditorPage() {
           try { bitmap?.close(); } catch {}
         });
       }
-      alert('Failed to slice spritesheet. Check the selected grid and image.');
+      void showMessage({ title: 'Slicing failed', message: 'Failed to slice spritesheet. Check the selected grid and image.' });
     } finally {
       setIsSlicingSheet(false);
     }
@@ -670,12 +676,18 @@ export default function EditorPage() {
     });
   }, []);
 
-  const handleDeleteFolder = useCallback((folderId: string) => {
-    setFrameState(prev => {
-      if (!prev) return prev;
-      return deleteFolder(prev, folderId);
+  const handleDeleteFolder = useCallback(async (folderId: string) => {
+    const folder = frameState?.folders.find(item => item.id === folderId);
+    if (!folder) return;
+    const confirmed = await confirmAction({
+      title: 'Delete folder?',
+      message: `Delete "${folder.name}" and its ${folder.frameIds.length} frames? You can undo this action.`,
+      confirmLabel: 'Delete folder',
+      danger: true,
     });
-  }, []);
+    if (!confirmed) return;
+    setFrameState(prev => prev ? deleteFolder(prev, folderId) : prev);
+  }, [frameState, setFrameState, confirmAction]);
 
   const handleRenameFolder = useCallback((folderId: string, name: string) => {
     setFrameState(prev => {
@@ -743,7 +755,7 @@ export default function EditorPage() {
       });
     } catch (e) {
       console.error('Failed to copy frames:', e);
-      alert('Failed to copy frames due to an image cloning error.');
+      void showMessage({ title: 'Copy failed', message: 'Failed to copy frames due to an image cloning error.' });
     }
   }, []);
 
@@ -963,7 +975,7 @@ export default function EditorPage() {
       }
     } catch (error) {
       console.error('Extraction failed:', error);
-      alert('Failed to load media. Please try different files.');
+      void showMessage({ title: 'Media import failed', message: 'Failed to load media. Please try different files.' });
       setEditorState(loadedSources.length > 0 ? 'ready' : 'idle');
     }
 
@@ -1049,16 +1061,25 @@ export default function EditorPage() {
     setFrameState({ ...frameState, folders: newFolders });
   }, [frameState]);
 
-  const handleDeleteSelected = useCallback(() => {
-    if (!frameState) return;
-    
-    const nextState = deleteSelectedFrames(frameState);
-    setFrameState(nextState);
-    
-    if (currentFrame >= nextState.frames.length) {
-      setCurrentFrame(Math.max(0, nextState.frames.length - 1));
-    }
-  }, [frameState, currentFrame]);
+  const handleDeleteSelected = useCallback(async (requestedIds?: ReadonlySet<string>) => {
+    const ids = new Set(requestedIds ?? frameState?.selectedIds ?? []);
+    const amount = frameState?.frames.filter(frame => ids.has(frame.id)).length ?? 0;
+    if (!amount) return;
+    const confirmed = await confirmAction({
+      title: amount === 1 ? 'Delete frame?' : `Delete ${amount} frames?`,
+      message: 'The selected frames will be removed from the project. You can use Undo to restore them.',
+      confirmLabel: 'Delete frames',
+      danger: true,
+    });
+    if (!confirmed) return;
+    setFrameState(prev => {
+      if (!prev) return prev;
+      const currentIds = new Set(prev.frames.filter(frame => ids.has(frame.id)).map(frame => frame.id));
+      if (!currentIds.size) return prev;
+      return deleteSelectedFrames({ ...prev, selectedIds: currentIds });
+    });
+    setCurrentFrame(value => Math.max(0, Math.min(value, Math.max(0, (frameState?.frames.length ?? 0) - amount - 1))));
+  }, [frameState, setFrameState, confirmAction]);
 
   const handleFramesProcessed = useCallback((processedFrames: Map<string, ImageBitmap>) => {
     if (!frameState) return;
@@ -1116,7 +1137,7 @@ export default function EditorPage() {
     }
     
     if (revertedFrames.size === 0) {
-      alert('No original frames to revert to.');
+      void showMessage({ title: 'Nothing to revert', message: 'No original frames to revert to.' });
       return;
     }
     
@@ -1161,29 +1182,14 @@ export default function EditorPage() {
     ]));
   }, []);
 
-  // 6. Keyboard Shortcuts (Ctrl+Z / Ctrl+Y / Ctrl+S)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey) {
-        if (e.key === 'z' || e.key === 'Z') {
-          e.preventDefault();
-          undo();
-        } else if (e.key === 'y' || e.key === 'Y') {
-          e.preventDefault();
-          redo();
-        } else if (e.key === 's' || e.key === 'S') {
-          e.preventDefault();
-          triggerSave();
-        }
-      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
-        e.preventDefault();
-        redo(); // Support Ctrl+Shift+Z for redo
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, triggerSave]);
+  // Register editor-specific commands through the shared capture-phase service.
+  // Ctrl/Cmd+S works even when an input or docked panel has focus.
+  useWorkspaceShortcuts([
+    { id: 'save-project', key: 's', mod: true, allowWhenEditing: true, run: () => { void triggerSave(); } },
+    { id: 'undo', key: 'z', mod: true, run: undo },
+    { id: 'redo', key: 'y', mod: true, run: redo },
+    { id: 'redo-shift', key: 'z', mod: true, shift: true, run: redo },
+  ]);
 
   // 7. Warn before tab close with unsaved modifications
   useEffect(() => {
