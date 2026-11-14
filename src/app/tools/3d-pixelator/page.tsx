@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useProjectSave } from '@/hooks/useProjectSave';
 import { useWorkspaceShortcuts } from '@/hooks/useWorkspaceShortcuts';
+import { useAppDialog } from '@/components/AppDialogProvider';
 import { DbProjectFrame } from '@/lib/projectDatabase';
 import { PixelatorOptions, DEFAULT_PIXELATOR_OPTIONS, pixelateImage, hexToRgb } from '@/lib/pixelator';
 import { ThreePainterProvider, PaintingLayer, BrushTool } from '@/contexts/ThreePainterContext';
@@ -14,6 +15,7 @@ import { TextureSourceSlot } from '@/types';
 import styles from './page.module.css';
 
 export default function ThreePainterPage() {
+  const { alert: showMessage } = useAppDialog();
   const [projectId,   setProjectId]   = useState<string>('');
   const [projectName, setProjectName] = useState<string>('Untitled 3D Paint Project');
   const [isDirty,     setIsDirty]     = useState(false);
@@ -516,7 +518,7 @@ export default function ThreePainterPage() {
       setIsLoadingModel(false);
     } catch (e) {
       console.error(e);
-      alert('Failed to parse 3D model.');
+      void showMessage({ title: '3D model error', message: 'Failed to parse the 3D model.' });
       resetWorkspace();
       setIsLoadingModel(false);
     }
@@ -684,7 +686,7 @@ export default function ThreePainterPage() {
       }
     } catch (e: any) {
       console.error(e);
-      alert(e.message || 'Failed to repack and apply texture atlas.');
+      void showMessage({ title: 'Texture atlas error', message: e.message || 'Failed to repack and apply the texture atlas.' });
     }
   }, [painter, textureSlots, layers, compositeAndPixelate]);
 
@@ -696,7 +698,7 @@ export default function ThreePainterPage() {
     import('@/lib/projectDatabase').then(async ({ getProject }) => {
       try {
         const project = await getProject(id);
-        if (!project) { alert('Local project not found.'); setIsLoadingModel(false); return; }
+        if (!project) { void showMessage({ title: 'Project unavailable', message: 'Local project not found.' }); setIsLoadingModel(false); return; }
         setProjectId(project.id); setProjectName(project.name);
         const opts = project.metadata.threePainterOptions;
         if (opts) {
@@ -760,7 +762,7 @@ export default function ThreePainterPage() {
         if (painter) setTimeout(() => { painter.handleResize(); painter.frameModel(); }, 80);
       } catch (err) {
         console.error('Failed to restore project:', err);
-        alert('Failed to load project.');
+        void showMessage({ title: 'Load failed', message: 'Failed to load project.' });
         setIsLoadingModel(false);
       }
     });
