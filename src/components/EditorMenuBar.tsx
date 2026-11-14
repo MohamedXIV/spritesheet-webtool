@@ -159,7 +159,7 @@ export function EditorMenuBar() {
               closeMenu();
               void dialog.alert({
                 title: 'Keyboard shortcuts',
-                message: 'Ctrl/Cmd + S: Save project\\nCtrl/Cmd + Z: Undo\\nCtrl/Cmd + Y or Ctrl/Cmd + Shift + Z: Redo\\nFocus a frame: Arrow keys move between frames\\nShift + Arrow: Extend selection\\nCtrl/Cmd + A: Select all frames\\nDelete or Backspace: Delete selected frames (with confirmation)\\nEscape: Deselect frames',
+                message: 'Ctrl/Cmd + S: Save project\nCtrl/Cmd + Z: Undo\nCtrl/Cmd + Y or Ctrl/Cmd + Shift + Z: Redo\nFocus a frame: Arrow keys move between frames\nShift + Arrow: Extend selection\nCtrl/Cmd + A: Select all frames\nDelete or Backspace: Delete selected frames (with confirmation)\nEscape: Deselect frames',
               });
             }}>Keyboard Shortcuts…</button>
             <div className={styles.separator} />
