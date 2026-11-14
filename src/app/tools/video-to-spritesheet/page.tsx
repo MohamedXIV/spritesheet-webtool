@@ -43,6 +43,7 @@ import styles from './page.module.css';
 import { useFrameHistory } from '@/hooks/useFrameHistory';
 import { useProjectSave } from '@/hooks/useProjectSave';
 import { prepareSpriteProjectRestore, restoreSpriteSources, type SpriteProjectType } from '@/lib/spriteProjectCompatibility';
+import { replaceSourceSheetFrames, restoreSourceSheetAssets, type SourceSheetAsset } from '@/lib/sourceSheetAssets';
 
 type EditorState = 'idle' | 'extracting' | 'ready';
 
@@ -157,6 +158,8 @@ export default function EditorPage() {
   const [sliceCellWidth, setSliceCellWidth] = useState(64);
   const [sliceCellHeight, setSliceCellHeight] = useState(64);
   const [isSlicingSheet, setIsSlicingSheet] = useState(false);
+  const [sourceSheetAssets, setSourceSheetAssets] = useState<SourceSheetAsset[]>([]);
+  const [editingSheetSourceId, setEditingSheetSourceId] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -206,6 +209,7 @@ export default function EditorPage() {
     markSaved,
     globalLayers,
     sources: loadedSources,
+    sourceSheets: sourceSheetAssets,
   });
 
   // URL project deep-linking restore effect
@@ -321,6 +325,26 @@ export default function EditorPage() {
         }
 
         setLoadedSources(restoreSpriteSources(project, restorePlan.folders));
+        const persistedSheets = restoreSourceSheetAssets(project.metadata.sourceSheets);
+        setSourceSheetAssets(persistedSheets);
+        const firstSheet = persistedSheets[0];
+        if (firstSheet) {
+          // Blob URLs are ephemeral; recreate one after each refresh.
+          setSheetFile(new File([firstSheet.blob], firstSheet.name, { type: firstSheet.blob.type }));
+          setSheetPreviewUrl(URL.createObjectURL(firstSheet.blob));
+          setSheetDimensions({ width: firstSheet.width, height: firstSheet.height });
+          setEditingSheetSourceId(firstSheet.sourceId);
+          setSliceType(firstSheet.slice.sliceType);
+          setSliceCols(firstSheet.slice.cols);
+          setSliceRows(firstSheet.slice.rows);
+          setSliceCellWidth(firstSheet.slice.cellWidth);
+          setSliceCellHeight(firstSheet.slice.cellHeight);
+        } else {
+          setSheetFile(null);
+          setSheetPreviewUrl(null);
+          setSheetDimensions(null);
+          setEditingSheetSourceId(null);
+        }
         resetHistory(restoredState);
         setEditorState('ready');
       } catch (err) {
@@ -362,6 +386,7 @@ export default function EditorPage() {
       bitmap.close();
       if (width === 0 || height === 0) throw new Error('Image has no pixels');
       setSheetFile(file);
+      setEditingSheetSourceId(null);
       setSheetPreviewUrl(URL.createObjectURL(file));
       setSheetDimensions({ width, height });
       if (width >= 4 && height >= 4) {
@@ -387,7 +412,22 @@ export default function EditorPage() {
     setSheetFile(null);
     setSheetPreviewUrl(null);
     setSheetDimensions(null);
+    setEditingSheetSourceId(null);
   }, []);
+
+  const selectSavedSheet = useCallback((sourceId: string) => {
+    const asset = sourceSheetAssets.find(item => item.sourceId === sourceId);
+    if (!asset) return;
+    setSheetFile(new File([asset.blob], asset.name, { type: asset.blob.type }));
+    setSheetPreviewUrl(URL.createObjectURL(asset.blob));
+    setSheetDimensions({ width: asset.width, height: asset.height });
+    setEditingSheetSourceId(asset.sourceId);
+    setSliceType(asset.slice.sliceType);
+    setSliceCols(asset.slice.cols);
+    setSliceRows(asset.slice.rows);
+    setSliceCellWidth(asset.slice.cellWidth);
+    setSliceCellHeight(asset.slice.cellHeight);
+  }, [sourceSheetAssets]);
 
   const handleSliceSheet = useCallback(async () => {
     if (!sheetFile || !sheetDimensions || isSlicingSheet) return;
@@ -399,49 +439,82 @@ export default function EditorPage() {
       alert('Select a grid containing between 1 and 1024 frames.');
       return;
     }
+
+    const previousAsset = sourceSheetAssets.find(item => item.sourceId === editingSheetSourceId);
+    const replacing = !!previousAsset;
+    const affectedCount = replacing
+      ? (frameState?.frames.filter(frame => frame.sourceId === previousAsset.sourceId).length ?? 0)
+      : 0;
+    if (affectedCount > 0 && !window.confirm(
+      `Re-slice and replace ${affectedCount} frames from "${previousAsset!.name}"? This replaces edits and paint layers on those frames; Undo can restore them. Other sources will not change.`
+    )) return;
+
     setIsSlicingSheet(true);
     let imported: FrameData[] = [];
     try {
-      const sourceId = `source-sheet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      const sourceColor = SOURCE_COLORS[sourceColorIndexRef.current % SOURCE_COLORS.length];
-      sourceColorIndexRef.current += 1;
+      const sourceId = previousAsset?.sourceId ??
+        `source-sheet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const sourceColor = loadedSources.find(source => source.id === sourceId)?.color ??
+        SOURCE_COLORS[sourceColorIndexRef.current++ % SOURCE_COLORS.length];
       const result = sliceType === 'grid'
         ? await sliceSpritesheetByGrid(sheetFile, sliceCols, sliceRows, sourceId, sourceColor)
         : await sliceSpritesheetByDimensions(sheetFile, sliceCellWidth, sliceCellHeight, sourceId, sourceColor);
       imported = result.frames;
       if (imported.length === 0) throw new Error('No sprites were found in the selected grid');
 
-      // Each imported frame participates in the same paint-layer document as
-      // video frames. Future edits can then composite/undo normally.
       for (const frame of imported) {
         const layerContents: Record<string, ImageBitmap | null> = {};
         for (const layer of globalLayers) {
           layerContents[layer.id] = layer.id === 'layer-base'
-            ? await createImageBitmap(frame.bitmap)
-            : null;
+            ? await createImageBitmap(frame.bitmap) : null;
         }
         frame.layerContents = layerContents;
       }
 
+      const folderId = previousAsset?.folderId ??
+        `folder-sheet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       const folder: Folder = {
-        id: `folder-sheet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        id: folderId,
         name: sheetFile.name.replace(/\.[^.]+$/, ''),
         frameIds: imported.map(frame => frame.id),
         visible: true,
         collapsed: false,
         color: sourceColor,
       };
-      setFrameState(previous => appendSourceFrames(previous, imported, folder));
-      setLoadedSources(previous => [...previous, {
-        id: sourceId,
+
+      setFrameState(previous => previous && replacing
+        ? replaceSourceSheetFrames(previous, sourceId, folder, imported)
+        : appendSourceFrames(previous, imported, folder));
+
+      setLoadedSources(previous => {
+        const next: SourceInfo = {
+          id: sourceId, name: sheetFile.name, type: 'image',
+          frameCount: imported.length, color: sourceColor,
+        };
+        return previous.some(item => item.id === sourceId)
+          ? previous.map(item => item.id === sourceId ? next : item)
+          : [...previous, next];
+      });
+
+      const asset: SourceSheetAsset = {
+        sourceId,
+        folderId,
         name: sheetFile.name,
-        type: 'image',
-        frameCount: imported.length,
-        color: sourceColor,
-      }]);
+        blob: sheetFile,
+        width: sheetDimensions.width,
+        height: sheetDimensions.height,
+        slice: {
+          sliceType, cols: sliceCols, rows: sliceRows,
+          cellWidth: sliceCellWidth, cellHeight: sliceCellHeight,
+        },
+      };
+      setSourceSheetAssets(previous =>
+        [...previous.filter(item => item.sourceId !== sourceId), asset]);
+      setEditingSheetSourceId(sourceId);
       setCurrentFrame(0);
       setEditorState('ready');
-      setShowFrameWarning(previous => previous || (frameState?.frames.length || 0) + imported.length > FRAME_WARNING_THRESHOLD);
+      setShowFrameWarning(previous =>
+        previous || (frameState?.frames.length || 0) + imported.length > FRAME_WARNING_THRESHOLD);
     } catch (error) {
       console.error('Spritesheet slicing failed:', error);
       for (const frame of imported) {
@@ -455,7 +528,8 @@ export default function EditorPage() {
       setIsSlicingSheet(false);
     }
   }, [sheetFile, sheetDimensions, isSlicingSheet, sliceType, sliceCols, sliceRows,
-      sliceCellWidth, sliceCellHeight, globalLayers, frameState?.frames.length, setFrameState]);
+      sliceCellWidth, sliceCellHeight, sourceSheetAssets, editingSheetSourceId,
+      frameState?.frames, loadedSources, globalLayers, setFrameState]);
 
   // --- PAINT LAYERS OPERATIONS ---
   const addGlobalLayer = useCallback((name?: string) => {
@@ -1159,6 +1233,9 @@ export default function EditorPage() {
 
     pixelatorSlicer: {
       appendToWorkspace: true,
+      savedSheets: sourceSheetAssets.map(asset => ({ id: asset.sourceId, name: asset.name })),
+      editingSourceId: editingSheetSourceId,
+      selectSavedSheet,
       file: sheetFile,
       originalImgSrc: sheetPreviewUrl,
       imgDimensions: sheetDimensions,
@@ -1299,6 +1376,9 @@ export default function EditorPage() {
     loadNewSheetFile,
     handleSliceSheet,
     resetSheetFile,
+    sourceSheetAssets,
+    editingSheetSourceId,
+    selectSavedSheet,
     pixelatorEnabled,
     pixelSize,
     pixelatorPalette,
