@@ -84,10 +84,6 @@ export function AppDialogProvider({ children }: { children: React.ReactNode }) {
           event.preventDefault();
           finish(active?.kind === 'alert' ? true : null);
         }}
-        onClose={() => {
-          // Also handle external/platform close events.
-          if (activeRef.current) finish(activeRef.current.kind === 'alert' ? true : null);
-        }}
       >
         {active && (
           <form className={styles.body} onSubmit={event => {
