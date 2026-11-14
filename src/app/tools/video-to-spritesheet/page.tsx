@@ -1176,7 +1176,7 @@ export default function EditorPage() {
   const resetLayout = useCallback(() => {
     dockLayoutRef.current?.resetLayout();
     setVisiblePanels(new Set([
-      'media-loader', 'spritesheet-slicer', 'frame-grid', 'preview', 'timeline',
+      'media-loader', 'frame-grid', 'preview', 'timeline',
       'frame-editor', 'frame-layers', 'bg-removal', 'outline',
       'pixelate', 'watermark', 'export'
     ]));
