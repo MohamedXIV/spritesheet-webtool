@@ -6,7 +6,7 @@
  */
 import type { FrameState } from './frameStore';
 import type { FrameData } from '@/types';
-import { resolveFrameDurationMs } from './gifTiming';
+import { resolveFrameDurationMs } from './gifTiming.ts';
 
 export const MIN_FRAME_DURATION_MS = 10;
 export const MAX_FRAME_DURATION_MS = 60_000;
