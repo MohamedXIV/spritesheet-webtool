@@ -554,3 +554,24 @@
     transform: rotate(360deg);
   }
 }
+
+/* Selection is represented by our frame state, not browser text highlighting. */
+.folderList, .folderSection, .frame, .grid {
+  -webkit-user-select: none;
+  user-select: none;
+}
+.folderList input, .folderList textarea, .renameInput, .folderInput {
+  -webkit-user-select: text;
+  user-select: text;
+}
+.frame:focus-visible {
+  outline: 3px solid var(--primary-color);
+  outline-offset: 2px;
+}
+.createFolderBtn::after {
+  content: none !important; /* Remove dotted decorative pseudo-border (looks disabled). */
+  background-image: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .frame, .folderSection { transition: none; }
+}
