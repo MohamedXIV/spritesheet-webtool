@@ -600,7 +600,9 @@ export function FrameGrid({
 
     setLastClickedId(frameId);
     onSelectionChange(newSelection);
-  }, [frames, selectedIds, lastClickedId, onSelectionChange]);
+    const visibleSelection = frames.filter(frame => newSelection.has(frame.id));
+    ctx?.setCurrentFrame(Math.max(0, visibleSelection.findIndex(frame => frame.id === frameId)));
+  }, [frames, selectedIds, lastClickedId, onSelectionChange, ctx]);
 
   const handleFrameKeyboard = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!(event.target instanceof Element)) return;
@@ -646,12 +648,14 @@ export function FrameGrid({
     const next = event.shiftKey ? new Set(selectedIds) : new Set<string>();
     next.add(targetId);
     onSelectionChange(next);
+    const visibleSelection = frames.filter(frame => next.has(frame.id));
+    ctx?.setCurrentFrame(Math.max(0, visibleSelection.findIndex(frame => frame.id === targetId)));
     setLastClickedId(targetId);
     requestAnimationFrame(() => {
       const items = folderListRef.current?.querySelectorAll<HTMLElement>('[data-frame-id]');
       Array.from(items || []).find(el => el.dataset.frameId === targetId)?.focus();
     });
-  }, [frames, selectedIds, onSelectionChange, onDeleteSelected]);
+  }, [frames, selectedIds, onSelectionChange, onDeleteSelected, ctx]);
 
   const handleSelectAll = useCallback(() => {
     onSelectionChange(new Set(frames.map((f: FrameData) => f.id)));
