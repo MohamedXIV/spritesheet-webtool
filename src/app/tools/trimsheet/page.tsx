@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useProjectSave } from '@/hooks/useProjectSave';
+import { useWorkspaceShortcuts } from '@/hooks/useWorkspaceShortcuts';
 import { getProject } from '@/lib/projectDatabase';
 import {
   Region, TrimMaterial, TrimResolution, MapChannel, MAP_CHANNELS,
@@ -393,6 +394,10 @@ export default function TrimsheetPage() {
     fps: 0, loopMode: 'loop', isDirty,
     markSaved: () => setIsDirty(false),
   });
+
+  useWorkspaceShortcuts([
+    { id: 'save', key: 's', mod: true, allowWhenEditing: true, run: () => { void triggerSave(); } },
+  ]);
 
   // Save wrapper. Persisted contract is { resolution, regions } via the
   // trimsheetOptions memo; full material persistence is deferred.
