@@ -26,7 +26,7 @@ export function PixelationPanel({
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Local fallback states
-  const [localEnabled, setLocalEnabled] = useState(true);
+  const [localEnabled, setLocalEnabled] = useState(false);
   const [localPixelSize, setLocalPixelSize] = useState(8);
   const [localPalette, setLocalPalette] = useState<PixelatorOptions['palette']>('none');
   const [localDitherType, setLocalDitherType] = useState<PixelatorOptions['ditherType']>('none');
