@@ -767,7 +767,7 @@ export function FrameGrid({
             </button>
           )}
           <button
-            onClick={onDeleteSelected}
+            onClick={() => onDeleteSelected()}
             className={`${styles.button} ${styles.deleteButton}`}
             disabled={selectedIds.size === 0}
             id="btn-delete-selected"
