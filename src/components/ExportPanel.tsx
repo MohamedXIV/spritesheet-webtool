@@ -298,7 +298,7 @@ export function ExportPanel({ frames, fps, loopMode, previewBackgroundColor }: E
             checked={gifSourceTiming}
             onChange={event => setGifSourceTiming(event.target.checked)} />
           <label htmlFor="gif-source-timing" className={styles.checkboxLabel}>
-            Preserve imported GIF frame timings (otherwise use {fps} FPS)
+            Use per-frame timing overrides (otherwise use {fps} FPS)
           </label>
         </div>
 
