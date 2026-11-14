@@ -42,6 +42,7 @@ import { FrameEditorPanel } from '@/components/FrameEditorPanel';
 import styles from './page.module.css';
 import { useFrameHistory } from '@/hooks/useFrameHistory';
 import { useProjectSave } from '@/hooks/useProjectSave';
+import { updateFrameDurations as withFrameDurations } from '@/lib/timelineFrameTiming';
 import { prepareSpriteProjectRestore, restoreSpriteSources, type SpriteProjectType } from '@/lib/spriteProjectCompatibility';
 import { replaceSourceSheetFrames, restoreSourceSheetAssets, type SourceSheetAsset } from '@/lib/sourceSheetAssets';
 
@@ -1023,6 +1024,17 @@ export default function EditorPage() {
     setShowFrameWarning(remainingFrames.length > FRAME_WARNING_THRESHOLD);
   }, [frameState, loadedSources]);
 
+  // Explicit duration overrides are document edits (Undo/Redo, autosave and
+  // restored projects already work through the normal FrameState pipeline).
+  const handleUpdateFrameDurations = useCallback((
+    frameIds: ReadonlySet<string>,
+    durationMs: number | null
+  ) => {
+    setFrameState(previous => previous
+      ? withFrameDurations(previous, frameIds, durationMs)
+      : previous);
+  }, [setFrameState]);
+
   const handleSelectionChange = useCallback((selectedIds: Set<string>) => {
     if (!frameState) return;
     setFrameState({ ...frameState, selectedIds });
@@ -1223,6 +1235,7 @@ export default function EditorPage() {
     handleOrderChange,
     handleDeleteSelected,
     handleRevertSelected,
+    updateFrameDurations: handleUpdateFrameDurations,
     canRevert,
     handleMediaLoad,
     handleRemoveSource,
@@ -1357,6 +1370,7 @@ export default function EditorPage() {
     handleOrderChange,
     handleDeleteSelected,
     handleRevertSelected,
+    handleUpdateFrameDurations,
     canRevert,
     handleMediaLoad,
     handleRemoveSource,
