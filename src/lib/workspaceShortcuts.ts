@@ -4,6 +4,8 @@
  */
 export interface ShortcutKeys {
   key: string;
+  /** Physical key: stable when keyboard layout is Arabic or another language. */
+  code?: string;
   ctrlKey: boolean;
   metaKey: boolean;
   shiftKey: boolean;
@@ -25,9 +27,10 @@ export function findWorkspaceShortcut(
   isEditingText: boolean
 ): ShortcutBinding | null {
   const key = event.key.toLowerCase();
+  const physicalKey = event.code?.toLowerCase();
   const modifier = event.ctrlKey || event.metaKey;
   return bindings.find(binding =>
-    binding.key.toLowerCase() === key &&
+    (binding.key.toLowerCase() === key || physicalKey === `key${binding.key.toLowerCase()}`) &&
     Boolean(binding.mod) === modifier &&
     Boolean(binding.shift) === event.shiftKey &&
     Boolean(binding.alt) === event.altKey &&
