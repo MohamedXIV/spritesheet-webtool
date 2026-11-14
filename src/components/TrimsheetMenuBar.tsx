@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, LayoutDashboard, ChevronDown, Check, RotateCcw, Save, Download } from 'lucide-react';
 import { useTrimsheetContext } from '@/contexts/TrimsheetContext';
 import { ThemeToggle } from './ThemeToggle';
+import { useAppDialog } from '@/components/AppDialogProvider';
 import styles from './TrimsheetMenuBar.module.css';
 
 const VIEW_PANELS = [
@@ -18,6 +19,7 @@ const VIEW_PANELS = [
 
 export function TrimsheetMenuBar() {
   const ctx = useTrimsheetContext();
+  const dialog = useAppDialog();
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(ctx.projectName);
@@ -43,8 +45,8 @@ export function TrimsheetMenuBar() {
     setIsEditingName(false);
   };
 
-  const handleSaveAs = () => {
-    const name = prompt('Save trimsheet as:', ctx.projectName);
+  const handleSaveAs = async () => {
+    const name = await dialog.prompt({ title: 'Save trimsheet as', message: 'Choose a new project name:', initialValue: ctx.projectName, confirmLabel: 'Save copy' });
     if (name && name.trim()) ctx.triggerSaveAs(name.trim());
   };
 

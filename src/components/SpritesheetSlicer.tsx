@@ -2,10 +2,12 @@
 
 import React, { useRef, useCallback } from 'react';
 import { useEditorContext } from '@/contexts/EditorContext';
+import { useAppDialog } from '@/components/AppDialogProvider';
 import styles from './SpritesheetSlicer.module.css';
 
 export function SpritesheetSlicer() {
   const ctx = useEditorContext();
+  const { alert: showMessage } = useAppDialog();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!ctx.pixelatorSlicer) {
@@ -52,9 +54,9 @@ export function SpritesheetSlicer() {
     if (droppedFile && droppedFile.type.startsWith('image/')) {
       loadNewFile(droppedFile);
     } else {
-      alert('Please upload a valid image spritesheet.');
+      void showMessage({ title: 'Invalid spritesheet', message: 'Please upload a static PNG, WebP or JPEG image.' });
     }
-  }, [loadNewFile]);
+  }, [loadNewFile, showMessage]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];

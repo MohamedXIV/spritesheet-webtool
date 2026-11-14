@@ -14,6 +14,7 @@ import {
 } from '@/lib/stylizer';
 import { LIGHTING_PRESETS, LightingSettings, DEFAULT_LIGHTING_PRESET_ID, ShadingMode } from '@/lib/lightingPresets';
 import { useProjectSave } from '@/hooks/useProjectSave';
+import { useWorkspaceShortcuts } from '@/hooks/useWorkspaceShortcuts';
 import styles from './page.module.css';
 
 const EMPTY_MATERIAL: StylizerMaterial = { maps: {}, resolution: null };
@@ -310,16 +311,9 @@ export default function StylizerPage() {
     setVisiblePanels(new Set(['material-loader', 'style', 'map-output', 'preview-2d', 'preview-3d', 'export']));
   }, []);
 
-  // Ctrl+S
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
-        e.preventDefault(); triggerSave();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [triggerSave]);
+  useWorkspaceShortcuts([
+    { id: 'save', key: 's', mod: true, allowWhenEditing: true, run: () => { void triggerSave(); } },
+  ]);
 
   const ctxValue: StylizerContextValue = useMemo(() => ({
     material,

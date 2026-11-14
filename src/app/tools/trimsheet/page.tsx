@@ -5,6 +5,8 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useProjectSave } from '@/hooks/useProjectSave';
+import { useWorkspaceShortcuts } from '@/hooks/useWorkspaceShortcuts';
+import { useAppDialog } from '@/components/AppDialogProvider';
 import { getProject } from '@/lib/projectDatabase';
 import {
   Region, TrimMaterial, TrimResolution, MapChannel, MAP_CHANNELS,
@@ -20,6 +22,7 @@ import { TrimsheetMenuBar } from '@/components/TrimsheetMenuBar';
 import styles from './page.module.css';
 
 export default function TrimsheetPage() {
+  const { alert: showMessage } = useAppDialog();
   const [projectId, setProjectId] = useState<string>('');
   const [projectName, setProjectName] = useState<string>('Untitled Trimsheet');
   const [isDirty, setIsDirty] = useState(false);
@@ -360,7 +363,7 @@ export default function TrimsheetPage() {
     const baker = bakerRef.current;
     if (!baker) return;
     const ordered = MAP_CHANNELS.filter((c) => enabledChannels.includes(c));
-    if (ordered.length === 0) { alert('Enable at least one map channel to export.'); return; }
+    if (ordered.length === 0) { void showMessage({ title: 'Select export channels', message: 'Enable at least one map channel to export.' }); return; }
     try {
       const blob = await baker.export(regions, ordered, projectName);
       const url = URL.createObjectURL(blob);
@@ -371,7 +374,7 @@ export default function TrimsheetPage() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Trimsheet export failed:', err);
-      alert('Export failed. See console for details.');
+      void showMessage({ title: 'Export failed', message: 'The export failed. See console for details.' });
     }
   }, [regions, enabledChannels, projectName]);
 
@@ -393,6 +396,10 @@ export default function TrimsheetPage() {
     fps: 0, loopMode: 'loop', isDirty,
     markSaved: () => setIsDirty(false),
   });
+
+  useWorkspaceShortcuts([
+    { id: 'save', key: 's', mod: true, allowWhenEditing: true, run: () => { void triggerSave(); } },
+  ]);
 
   // Save wrapper. Persisted contract is { resolution, regions } via the
   // trimsheetOptions memo; full material persistence is deferred.

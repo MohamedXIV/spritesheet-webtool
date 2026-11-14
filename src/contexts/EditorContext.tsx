@@ -60,7 +60,7 @@ interface EditorContextValue {
   handleFramesProcessed: (processedFrames: Map<string, ImageBitmap>) => void;
   handleSelectionChange: (ids: Set<string>) => void;
   handleOrderChange: (ids: string[]) => void;
-  handleDeleteSelected: () => void;
+  handleDeleteSelected: (ids?: ReadonlySet<string>) => Promise<void>;
   handleRevertSelected: () => void;
   /** Apply a timing change to frame IDs; null clears overrides (uses FPS). */
   updateFrameDurations: (frameIds: ReadonlySet<string>, durationMs: number | null) => void;

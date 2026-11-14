@@ -10,12 +10,12 @@ import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { useEditorContext } from '@/contexts/EditorContext';
 import { ThemeToggle } from './ThemeToggle';
+import { useAppDialog } from '@/components/AppDialogProvider';
 import styles from './EditorMenuBar.module.css';
 
 // Panel definitions for the View menu
 const PANELS = [
-  { id: 'media-loader', name: 'Load Media' },
-  { id: 'spritesheet-slicer', name: 'Slice Spritesheet' },
+  { id: 'media-loader', name: 'Import Assets' },
   { id: 'frame-grid', name: 'Frames' },
   { id: 'preview', name: 'Preview' },
   { id: 'timeline', name: 'Timeline' },
@@ -29,6 +29,7 @@ const PANELS = [
 ] as const;
 
 export function EditorMenuBar() {
+  const dialog = useAppDialog();
   const {
     visiblePanels,
     togglePanel,
@@ -122,12 +123,15 @@ export function EditorMenuBar() {
             </button>
             <button 
               className={styles.item} 
-              onClick={() => {
-                const newName = prompt("Enter a name for the new version/copy:", `${projectName || 'Project'} (Copy)`);
-                if (newName && newName.trim()) {
-                  triggerSaveAs?.(newName.trim());
-                }
+              onClick={async () => {
                 closeMenu();
+                const newName = await dialog.prompt({
+                  title: 'Save a project copy',
+                  message: 'Give the new copy a distinct name:',
+                  initialValue: `${projectName || 'Project'} (Copy)`,
+                  confirmLabel: 'Save copy',
+                });
+                if (newName?.trim()) await triggerSaveAs?.(newName.trim());
               }}
             >
               <span>Save Copy As...</span>
@@ -151,6 +155,14 @@ export function EditorMenuBar() {
         </div>
         {activeMenu === 'edit' && (
           <div className={styles.dropdown}>
+            <button className={styles.item} onClick={() => {
+              closeMenu();
+              void dialog.alert({
+                title: 'Keyboard shortcuts',
+                message: 'Ctrl/Cmd + S: Save project\nCtrl/Cmd + Z: Undo\nCtrl/Cmd + Y or Ctrl/Cmd + Shift + Z: Redo\nFocus a frame: Arrow keys move between frames\nShift + Arrow: Extend selection\nCtrl/Cmd + A: Select all frames\nDelete or Backspace: Delete selected frames (with confirmation)\nEscape: Deselect frames',
+              });
+            }}>Keyboard Shortcuts…</button>
+            <div className={styles.separator} />
             <button 
               className={styles.item} 
               disabled={!canUndo}

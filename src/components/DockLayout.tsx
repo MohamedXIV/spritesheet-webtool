@@ -10,8 +10,7 @@ import 'flexlayout-react/style/dark.css';
 import { useEditorContext } from '@/contexts/EditorContext';
 
 // Panel components (lazy imported via factory)
-import { MediaLoader } from '@/components/MediaLoader';
-import { SpritesheetSlicer } from '@/components/SpritesheetSlicer';
+import { AssetImportPanel } from '@/components/AssetImportPanel';
 import { FrameGrid } from '@/components/FrameGrid';
 import { PreviewPlayer } from '@/components/PreviewPlayer';
 import { Timeline } from '@/components/Timeline';
@@ -29,8 +28,7 @@ const STORAGE_KEY = 'editor-dock-layout';
 
 // Panel info for adding tabs dynamically
 const PANEL_INFO: Record<string, { name: string }> = {
-  'media-loader': { name: 'Load Media' },
-  'spritesheet-slicer': { name: 'Slice Spritesheet' },
+  'media-loader': { name: 'Import Assets' },
   'frame-grid': { name: 'Frames' },
   'preview': { name: 'Preview' },
   'timeline': { name: 'Timeline' },
@@ -70,8 +68,7 @@ const defaultLayout = {
         type: 'tabset',
         weight: 25,
         children: [
-          { type: 'tab', name: 'Load Media', component: 'media-loader' },
-          { type: 'tab', name: 'Slice Spritesheet', component: 'spritesheet-slicer' },
+          { type: 'tab', name: 'Import Assets', component: 'media-loader' },
           { type: 'tab', name: 'Frames', component: 'frame-grid' },
         ],
       },
@@ -134,25 +131,27 @@ export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function Do
     }
     
     const restoredModel = Model.fromJson(layoutJson);
-    // Add the new slicer to previously saved dock layouts without discarding
-    // personal tab arrangements.
-    let hasSlicer = false;
+    // Migrate older personal dock layouts without resetting any other tabs:
+    // a standalone slicer is now a mode within Import Assets.
+    const oldSlicerTabs: string[] = [];
+    let hasImporter = false;
     let firstTabsetId: string | null = null;
-    restoredModel.visitNodes((node) => {
-      if (node.getType() === 'tab' && (node as TabNode).getComponent() === 'spritesheet-slicer') {
-        hasSlicer = true;
+    restoredModel.visitNodes(node => {
+      if (node.getType() === 'tab') {
+        const component = (node as TabNode).getComponent();
+        if (component === 'spritesheet-slicer') oldSlicerTabs.push(node.getId());
+        if (component === 'media-loader') hasImporter = true;
       }
       if (!firstTabsetId && node.getType() === 'tabset') firstTabsetId = node.getId();
     });
-    if (!hasSlicer && firstTabsetId) {
+    // Ensure the unified import tab exists BEFORE removing the legacy slicer.
+    if (!hasImporter && firstTabsetId) {
       restoredModel.doAction(Actions.addNode(
-        { type: 'tab', name: 'Slice Spritesheet', component: 'spritesheet-slicer' },
-        firstTabsetId,
-        DockLocation.CENTER,
-        -1,
-        false
+        { type: 'tab', name: 'Import Assets', component: 'media-loader' },
+        firstTabsetId, DockLocation.CENTER, -1, false
       ));
     }
+    for (const tabId of oldSlicerTabs) restoredModel.doAction(Actions.deleteTab(tabId));
     setModel(restoredModel);
   }, []);
 
@@ -182,13 +181,6 @@ export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function Do
     const component = node.getComponent();
     
     switch (component) {
-      case 'spritesheet-slicer':
-        return (
-          <div className={styles.panelContent}>
-            <SpritesheetSlicer />
-          </div>
-        );
-
       case 'frame-editor':
         return (
           <div className={styles.panelContent}>
@@ -204,33 +196,8 @@ export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function Do
         );
 
       case 'media-loader':
-        return (
-          <div className={styles.panelContent}>
-            <MediaLoader 
-              onFilesSelected={ctx.handleMediaLoad}
-              loadedSources={ctx.loadedSources}
-              onRemoveSource={ctx.handleRemoveSource}
-              disabled={ctx.editorState === 'extracting'}
-            />
-            {ctx.editorState === 'extracting' && ctx.extractionProgress && (
-              <div className={styles.extractionOverlay}>
-                <div className={styles.extractionContent}>
-                  <div className={styles.spinner}></div>
-                  <div className={styles.extractionText}>
-                    Extracting frame {ctx.extractionProgress.current} of {ctx.extractionProgress.total}
-                  </div>
-                  <div className={styles.progressBar}>
-                    <div 
-                      className={styles.progressFill} 
-                      style={{ width: `${ctx.extractionProgress.percentage}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-        
+        return <div className={styles.panelContent}><AssetImportPanel /></div>;
+
       case 'frame-grid':
         return (
           <div className={styles.panelContent}>

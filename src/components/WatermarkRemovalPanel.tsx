@@ -7,6 +7,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { FrameData } from '@/types';
 import { inpaintRegion, fillRegionWithNearbyColor, getWatermarkPreset, InpaintRegion } from '@/lib/inpaint';
+import { useAppDialog } from '@/components/AppDialogProvider';
 import styles from './WatermarkRemovalPanel.module.css';
 
 type WatermarkPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'custom';
@@ -26,6 +27,7 @@ export function WatermarkRemovalPanel({
   onFramesProcessed,
 }: WatermarkRemovalPanelProps) {
   const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const { alert: showMessage } = useAppDialog();
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [hasCheckedStorage, setHasCheckedStorage] = useState(false);
   
@@ -113,7 +115,7 @@ export function WatermarkRemovalPanel({
       onFramesProcessed(processedFrames);
     } catch (error) {
       console.error('Watermark removal failed:', error);
-      alert('Failed to remove watermark');
+      void showMessage({ title: 'Removal failed', message: 'Failed to remove watermark.' });
     } finally {
       setIsProcessing(false);
     }

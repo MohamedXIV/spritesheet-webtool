@@ -10,6 +10,7 @@ import styles from './MediaLoader.module.css';
 import { SourceInfo } from '@/types';
 import { isImageFile, isVideoFile } from '@/lib/imageLoader';
 import { isGifFile } from '@/lib/gifImporter';
+import { useAppDialog } from '@/components/AppDialogProvider';
 import { X, Film, Image as ImageIcon, Plus } from 'lucide-react';
 
 interface MediaLoaderProps {
@@ -25,6 +26,7 @@ export function MediaLoader({
   onRemoveSource,
   disabled = false 
 }: MediaLoaderProps) {
+  const { alert: showMessage, confirm: confirmAction } = useAppDialog();
   const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -33,12 +35,12 @@ export function MediaLoader({
     const validFiles = fileArray.filter(f => isVideoFile(f) || isImageFile(f) || isGifFile(f));
     
     if (validFiles.length === 0) {
-      alert('Please select video or image files');
+      void showMessage({ title: 'Unsupported file', message: 'Please select a video, GIF or image file.' });
       return;
     }
     
     onFilesSelected(validFiles);
-  }, [onFilesSelected]);
+  }, [onFilesSelected, showMessage]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -101,7 +103,14 @@ export function MediaLoader({
               </div>
               <button 
                 className={styles.removeBtn}
-                onClick={() => onRemoveSource(source.id)}
+                onClick={async () => {
+                  const confirmed = await confirmAction({
+                    title: 'Remove imported source?',
+                    message: `Remove ${source.name} and its ${source.frameCount} frames? You can undo the edit.`,
+                    confirmLabel: 'Remove source', danger: true,
+                  });
+                  if (confirmed) onRemoveSource(source.id);
+                }}
                 title="Remove source"
               >
                 <X size={14} />

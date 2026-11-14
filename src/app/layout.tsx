@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Geist } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
+import { AppDialogProvider } from '@/components/AppDialogProvider';
 
 const inter = Inter({
   subsets: ["latin"],
@@ -43,7 +44,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} ${geist.variable} antialiased`}>
-        {children}
+        <AppDialogProvider>{children}</AppDialogProvider>
         <SpeedInsights />
       </body>
     </html>
