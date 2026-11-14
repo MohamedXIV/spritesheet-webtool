@@ -110,9 +110,13 @@ function SortableFrame({ frame, isSelected, isProcessing, onClick, onContextMenu
       style={style}
       className={`${styles.frame} ${isSelected ? styles.selected : ''} ${isProcessing ? styles.processing : ''}`}
       onClick={onClick}
+      onMouseDown={e => { if (e.shiftKey) e.preventDefault(); }}
       onContextMenu={onContextMenu}
       {...attributes}
       {...listeners}
+      data-frame-id={frame.id}
+      aria-selected={isSelected}
+      aria-label={`Frame ${frame.index + 1}${isSelected ? ', selected' : ''}`}
     >
       <canvas ref={canvasRef} className={styles.thumbnail} />
       {frame.sourceColor && (
@@ -386,12 +390,8 @@ function FolderSection({
             {folder.visible ? <Eye size={14} /> : <EyeOff size={14} />}
           </button>
 
-          <button 
-            onClick={() => {
-              if (confirm(`Are you sure you want to delete folder "${folder.name}" and all its frames?`)) {
-                deleteFolder(folder.id);
-              }
-            }} 
+          <button
+            onClick={() => { void deleteFolder(folder.id); }} 
             className={`${styles.headerButton} ${styles.deleteFolderButton}`}
             title="Delete Folder"
           >
@@ -459,7 +459,7 @@ interface FrameGridProps {
   processingIds?: Set<string>;
   onSelectionChange: (selectedIds: Set<string>) => void;
   onReorder: (newOrder: string[]) => void;
-  onDeleteSelected: () => void;
+  onDeleteSelected: (ids?: ReadonlySet<string>) => void;
   onDuplicateSelected: () => void;
   onRevertSelected?: () => void;
   canRevert?: boolean;
@@ -484,6 +484,7 @@ export function FrameGrid({
   const frameState = ctx?.frameState || null;
 
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
+  const folderListRef = useRef<HTMLDivElement>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   
@@ -565,7 +566,9 @@ export function FrameGrid({
 
   const handleFrameClick = useCallback((frameId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    
+    (e.currentTarget as HTMLElement).focus();
+    if (e.shiftKey) window.getSelection()?.removeAllRanges();
+
     const newSelection = new Set(selectedIds);
 
     if (e.shiftKey && lastClickedId) {
@@ -598,6 +601,57 @@ export function FrameGrid({
     setLastClickedId(frameId);
     onSelectionChange(newSelection);
   }, [frames, selectedIds, lastClickedId, onSelectionChange]);
+
+  const handleFrameKeyboard = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!(event.target instanceof Element)) return;
+    if (event.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+    const active = event.target.closest<HTMLElement>('[data-frame-id]');
+    if (!active) return;
+    // Allow keyboard dragging/reordering to retain its own controls.
+    if (active.getAttribute('aria-pressed') === 'true') return;
+    if (event.target !== active && event.target.closest('button, [role="menuitem"]')) return;
+    const activeId = active.dataset.frameId;
+    const order = frames.map(frame => frame.id);
+    const index = order.indexOf(activeId || '');
+    if (index < 0) return;
+
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+      event.preventDefault();
+      event.stopPropagation();
+      onSelectionChange(new Set(order));
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      onSelectionChange(new Set());
+      return;
+    }
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      event.preventDefault();
+      event.stopPropagation();
+      const target = selectedIds.has(activeId!) && selectedIds.size > 0
+        ? selectedIds : new Set([activeId!]);
+      onDeleteSelected(target);
+      return;
+    }
+
+    const delta = (event.key === 'ArrowRight' || event.key === 'ArrowDown') ? 1
+      : (event.key === 'ArrowLeft' || event.key === 'ArrowUp') ? -1 : 0;
+    if (!delta || event.altKey || event.ctrlKey || event.metaKey) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const targetId = order[Math.max(0, Math.min(order.length - 1, index + delta))];
+    if (!targetId) return;
+    const next = event.shiftKey ? new Set(selectedIds) : new Set<string>();
+    next.add(targetId);
+    onSelectionChange(next);
+    setLastClickedId(targetId);
+    requestAnimationFrame(() => {
+      const items = folderListRef.current?.querySelectorAll<HTMLElement>('[data-frame-id]');
+      Array.from(items || []).find(el => el.dataset.frameId === targetId)?.focus();
+    });
+  }, [frames, selectedIds, onSelectionChange, onDeleteSelected]);
 
   const handleSelectAll = useCallback(() => {
     onSelectionChange(new Set(frames.map((f: FrameData) => f.id)));
@@ -696,7 +750,7 @@ export function FrameGrid({
               </button>
             </form>
           ) : (
-            <button onClick={() => setIsCreatingFolder(true)} className={`${styles.button} ${styles.createFolderBtn}`}>
+            <button onClick={() => setIsCreatingFolder(true)} className={`${styles.button} ${styles.createFolderBtn}`} title="Create a new folder">
               <FolderPlus size={14} style={{ marginRight: '4px' }} />
               New Folder
             </button>
@@ -724,7 +778,9 @@ export function FrameGrid({
       </div>
 
       {/* Folders List with Drag and Drop */}
-      <div className={styles.folderList}>
+      <div ref={folderListRef} className={styles.folderList}
+        onKeyDownCapture={handleFrameKeyboard}
+        aria-label="Frames. Arrow keys navigate, Shift+Arrow selects, Delete removes, Ctrl+A selects all.">
         {folders.length === 0 ? (
           <DndContext
             sensors={sensors}
