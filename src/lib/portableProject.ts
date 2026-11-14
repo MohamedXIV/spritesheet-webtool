@@ -253,7 +253,7 @@ export async function decodeProjectBackup(data: Uint8Array): Promise<DbProject> 
         owned.set(bytes);
         return new Blob([owned.buffer], { type: record.mime });
       }
-      const result: Record<string, unknown> = Object.create(null);
+      const result: Record<string, unknown> = {};
       for (const [key, child] of Object.entries(record)) {
         assertSafeKey(key);
         result[key] = await decode(child, depth + 1);
