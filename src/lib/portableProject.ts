@@ -68,7 +68,7 @@ function checkedProject(value: unknown): DbProject {
     if (typeof f.id !== 'string' || !f.id || typeof f.sourceId !== 'string' ||
         typeof f.sourceColor !== 'string' || !Number.isFinite(f.index) ||
         !Number.isFinite(f.timestamp) || !(f.blob instanceof Blob) ||
-        (f.durationMs !== undefined && (!Number.isFinite(f.durationMs) || f.durationMs <= 0)) ||
+        (f.durationMs !== undefined && (typeof f.durationMs !== 'number' || !Number.isFinite(f.durationMs) || f.durationMs <= 0)) ||
         (f.layers !== undefined && !Array.isArray(f.layers))) {
       throw new Error('Backup contains an invalid frame');
     }
