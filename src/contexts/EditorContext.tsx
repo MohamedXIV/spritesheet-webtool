@@ -62,6 +62,8 @@ interface EditorContextValue {
   handleOrderChange: (ids: string[]) => void;
   handleDeleteSelected: () => void;
   handleRevertSelected: () => void;
+  /** Apply a timing change to frame IDs; null clears overrides (uses FPS). */
+  updateFrameDurations: (frameIds: ReadonlySet<string>, durationMs: number | null) => void;
   canRevert: boolean;
   
   // Media loading

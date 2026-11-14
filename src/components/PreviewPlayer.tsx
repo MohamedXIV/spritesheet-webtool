@@ -249,6 +249,10 @@ export function PreviewPlayer({
     drawFrame();
   }, [frames, currentFrame, outlineOptions, backgroundMode, backgroundColor, pixelatorOptions, livePreviewEnabled, isAsleep]);
 
+  // Re-arm the playback timer when a frame's custom hold time changes, even
+  // when frame count and current-frame index remain exactly the same.
+  const playingFrameDurationMs = resolveFrameDurationMs(frames[currentFrame], fps);
+
   // Animation loop with loop mode support
   useEffect(() => {
     if (!isPlaying || frames.length === 0) {
@@ -260,7 +264,7 @@ export function PreviewPlayer({
     }
 
     // Respect GIF frame hold times; video/image frames still follow workspace FPS.
-    const frameInterval = resolveFrameDurationMs(frames[currentFrame], fps);
+    const frameInterval = playingFrameDurationMs;
 
     const animate = (timestamp: number) => {
       const elapsed = timestamp - lastFrameTimeRef.current;
@@ -309,7 +313,7 @@ export function PreviewPlayer({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [isPlaying, fps, frames.length, currentFrame, onFrameChange, loopMode]);
+  }, [isPlaying, fps, frames.length, currentFrame, onFrameChange, loopMode, playingFrameDurationMs]);
 
   const togglePlay = () => setIsPlaying(!isPlaying);
   const stepBack = () => onFrameChange(Math.max(0, currentFrame - 1));
