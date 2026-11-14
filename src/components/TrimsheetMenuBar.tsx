@@ -45,7 +45,7 @@ export function TrimsheetMenuBar() {
     setIsEditingName(false);
   };
 
-  const handleSaveAs = () => {
+  const handleSaveAs = async () => {
     const name = await dialog.prompt({ title: 'Save trimsheet as', message: 'Choose a new project name:', initialValue: ctx.projectName, confirmLabel: 'Save copy' });
     if (name && name.trim()) ctx.triggerSaveAs(name.trim());
   };
