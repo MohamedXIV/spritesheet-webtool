@@ -4,11 +4,13 @@
 
 import type { StylizerOptions } from '@/lib/stylizer';
 import type { SourceInfo } from '@/types';
+import type { SourceSheetAsset } from '@/lib/sourceSheetAssets';
 
 export interface ProjectMetadata {
   folders: any[];
   selectedIds: string[];
   sources?: SourceInfo[]; // Rebuild source list after Save/Restore
+  sourceSheets?: SourceSheetAsset[]; // Original, lossless input Blobs for re-slicing
   fps: number;
   loopMode: string;
   previewBgMode?: string;
