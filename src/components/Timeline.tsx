@@ -8,6 +8,8 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useOptionalEditorContext } from '@/contexts/EditorContext';
 import { FrameData, Folder } from '@/types';
+import { resolveFrameDurationMs } from '@/lib/gifTiming';
+import { MAX_FRAME_DURATION_MS, MIN_FRAME_DURATION_MS, sequenceDurationMs } from '@/lib/timelineFrameTiming';
 import styles from './Timeline.module.css';
 
 export type LoopMode = 'normal' | 'pingpong' | 'reverse';
@@ -70,6 +72,9 @@ export function Timeline({
   const [hoverPercent, setHoverPercent] = useState<number | null>(null);
   const [hoveredFrame, setHoveredFrame] = useState<FrameData | null>(null);
   const [hoveredFolder, setHoveredFolder] = useState<Folder | null>(null);
+  const [durationDraft, setDurationDraft] = useState('');
+  const [applyToSelection, setApplyToSelection] = useState(false);
+  const [durationError, setDurationError] = useState('');
 
   const totalFrames = useMemo(() => {
     if (!ctx) return orderedFrames.length;
@@ -91,6 +96,41 @@ export function Timeline({
 
   // Current active frame ID and its global index
   const activeFrame = orderedFrames[currentFrame];
+  const activeDuration = activeFrame ? resolveFrameDurationMs(activeFrame, fps) : 0;
+  const activeFrameId = activeFrame?.id;
+  const activeOverrideMs = activeFrame?.durationMs;
+  const selectedCount = frameState?.selectedIds.size ?? 0;
+  const displayedDuration = useMemo(
+    () => sequenceDurationMs(orderedFrames, fps),
+    [orderedFrames, fps]
+  );
+
+  // A draft isn't an edit until Apply or Enter is pressed. This prevents each
+  // typed digit creating another Undo snapshot or triggering an autosave.
+  useEffect(() => {
+    setDurationDraft(activeFrame ? String(Math.round(activeDuration)) : '');
+    setDurationError('');
+  }, [activeFrameId, activeOverrideMs, fps]);
+
+  const changeFrameDuration = (durationMs: number | null) => {
+    if (!ctx || !activeFrame) return;
+    const ids = applyToSelection && selectedCount > 0
+      ? new Set(frameState!.selectedIds)
+      : new Set([activeFrame.id]);
+    ctx.updateFrameDurations(ids, durationMs);
+    setDurationError('');
+    if (durationMs === null) setDurationDraft(String(Math.round(1000 / fps)));
+  };
+
+  const applyDraftDuration = () => {
+    const parsed = Number(durationDraft);
+    if (!Number.isSafeInteger(parsed) ||
+        parsed < MIN_FRAME_DURATION_MS || parsed > MAX_FRAME_DURATION_MS) {
+      setDurationError(`Enter a whole number between ${MIN_FRAME_DURATION_MS} and ${MAX_FRAME_DURATION_MS} ms.`);
+      return;
+    }
+    changeFrameDuration(parsed);
+  };
   const activeGlobalIndex = useMemo(() => {
     if (!ctx) return currentFrame;
     if (!activeFrame) return -1;
@@ -239,9 +279,11 @@ export function Timeline({
       <div className={styles.header}>
         <h3 className={styles.title}>Timeline</h3>
         
-        {activeFrame?.durationMs != null && (
-          <span className={styles.badge} title="GIF frame timings are preserved; FPS controls non-GIF frames">
-            Frame: {activeFrame.durationMs} ms
+        {activeFrame && (
+          <span className={styles.badge} title={activeFrame.durationMs != null
+            ? 'This frame has a custom hold duration'
+            : 'This frame follows the workspace FPS'}>
+            Frame: {Math.round(activeDuration)} ms {activeFrame.durationMs != null ? '(custom)' : '(FPS)'}
           </span>
         )}
         {/* Folder Stats mini display */}
@@ -379,7 +421,7 @@ export function Timeline({
                   Frame {hoveredFrame.index + 1}
                 </div>
                 <div className={styles.tooltipTimestamp}>
-                  {(hoveredFrame.timestamp).toFixed(3)}s
+                  {(hoveredFrame.timestamp).toFixed(3)}s · {Math.round(resolveFrameDurationMs(hoveredFrame, fps))} ms
                 </div>
                 {ctx && !hoveredFolder?.visible && (
                   <div className={styles.tooltipMutedBadge}>
@@ -408,6 +450,59 @@ export function Timeline({
         </div>
       </div>
 
+      {ctx && (
+        <div className={styles.frameTimingRow}>
+          <label htmlFor="frame-duration-ms" className={styles.loopLabel}>
+            Frame Hold
+          </label>
+          <input
+            id="frame-duration-ms"
+            type="number"
+            min={MIN_FRAME_DURATION_MS}
+            max={MAX_FRAME_DURATION_MS}
+            step="1"
+            className={styles.durationInput}
+            value={durationDraft}
+            onChange={event => { setDurationDraft(event.target.value); setDurationError(''); }}
+            onKeyDown={event => {
+              if (event.key === 'Enter') applyDraftDuration();
+              if (event.key === 'Escape') {
+                setDurationDraft(String(Math.round(activeDuration)));
+                setDurationError('');
+              }
+            }}
+            disabled={!activeFrame}
+            aria-label="Current frame duration in milliseconds"
+          />
+          <span className={styles.durationUnit}>ms</span>
+          <button type="button" className={styles.durationAction}
+            onClick={applyDraftDuration} disabled={!activeFrame}>
+            Apply
+          </button>
+          <button type="button" className={styles.durationAction}
+            onClick={() => changeFrameDuration(null)}
+            disabled={!activeFrame || (applyToSelection
+              ? !frameState?.frames.some(frame => frameState.selectedIds.has(frame.id) && frame.durationMs != null)
+              : activeFrame.durationMs == null)}
+            title="Clear custom timing; selected frames follow FPS again">
+            Use FPS
+          </button>
+          {selectedCount > 0 && (
+            <label className={styles.durationSelection}>
+              <input
+                type="checkbox"
+                checked={applyToSelection}
+                onChange={event => setApplyToSelection(event.target.checked)}
+              />
+              Apply to selected ({selectedCount})
+            </label>
+          )}
+          {durationError && (
+            <span className={styles.durationError} role="alert">{durationError}</span>
+          )}
+        </div>
+      )}
+
       <div className={styles.bottomBar}>
         <div className={styles.loopControl}>
           <label htmlFor="loop-mode" className={styles.loopLabel}>
@@ -429,7 +524,7 @@ export function Timeline({
           <div className={styles.stat}>
             <span className={styles.statLabel}>Duration</span>
             <span className={styles.statValue}>
-              {frameCount > 0 ? (frameCount / fps).toFixed(2) : '0.00'}s
+              {(displayedDuration / 1000).toFixed(2)}s
             </span>
           </div>
           <div className={styles.stat}>
