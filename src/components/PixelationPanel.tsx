@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useOptionalEditorContext } from '@/contexts/EditorContext';
 import { FrameData } from '@/types';
 import { pixelateImage, PixelatorOptions, DEFAULT_PIXELATOR_OPTIONS } from '@/lib/pixelator';
+import { useAppDialog } from '@/components/AppDialogProvider';
 import styles from './PixelationPanel.module.css';
 
 interface PixelationPanelProps {
@@ -20,6 +21,7 @@ export function PixelationPanel({
   onFramesProcessed,
 }: PixelationPanelProps) {
   const ctx = useOptionalEditorContext();
+  const { alert: showMessage } = useAppDialog();
   const [isApplying, setIsApplying] = useState(false);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -245,7 +247,7 @@ export function PixelationPanel({
       onFramesProcessed(processedFrames);
     } catch (error) {
       console.error('Pixelation process failed:', error);
-      alert('Failed to apply pixelation to frames.');
+      void showMessage({ title: 'Pixelation failed', message: 'Failed to apply pixelation to frames.' });
     } finally {
       setIsApplying(false);
     }
