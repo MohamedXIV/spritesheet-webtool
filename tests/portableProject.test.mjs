@@ -128,3 +128,22 @@ test('Blob checksum, MIME type, and typed raw bytes survive archive ZIP encrypti
   assert.equal(imported.frames[0].blob.type,'application/octet-stream');
   assert.deepEqual(await bytes(imported.frames[0].blob),[0,255,34,128,42]);
 });
+
+test('rejects duplicate ZIP member names before unpacking or importing', async () => {
+  const encoded = await encodeProjectBackup(makeProject());
+  // A ZIP filename appears in both local headers and the central directory.
+  // Rename the second attachment to the first (equal-length ASCII paths).
+  const manipulated = new Uint8Array(encoded);
+  const oldName = new TextEncoder().encode('blobs/000002.bin');
+  const duplicate = new TextEncoder().encode('blobs/000001.bin');
+  let substitutions = 0;
+  for (let offset = 0; offset <= manipulated.length - oldName.length; offset++) {
+    if (oldName.every((byte, index) => manipulated[offset + index] === byte)) {
+      manipulated.set(duplicate, offset);
+      substitutions += 1;
+      offset += oldName.length - 1;
+    }
+  }
+  assert.ok(substitutions >= 2, 'archive should have matching local and central directory names');
+  await assert.rejects(decodeProjectBackup(manipulated), /unsafe or oversized entries/);
+});
