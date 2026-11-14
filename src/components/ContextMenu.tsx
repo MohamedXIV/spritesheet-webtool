@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useEditorContext } from '@/contexts/EditorContext';
+import { useAppDialog } from '@/components/AppDialogProvider';
 import styles from './ContextMenu.module.css';
 
 interface ContextMenuProps {
@@ -13,6 +14,7 @@ interface ContextMenuProps {
 }
 
 export function ContextMenu({ x, y, targetType, targetId, onClose }: ContextMenuProps) {
+  const dialog = useAppDialog();
   const {
     folders,
     frameState,
@@ -99,34 +101,30 @@ export function ContextMenu({ x, y, targetType, targetId, onClose }: ContextMenu
     : null;
 
   // Operation Handlers
-  const handleRename = () => {
+  const handleRename = async () => {
     if (!targetFolder) return;
-    const newName = prompt('Enter a new folder name:', targetFolder.name);
-    if (newName && newName.trim()) {
-      renameFolder(targetFolder.id, newName.trim());
-    }
     onClose();
+    const newName = await dialog.prompt({
+      title: 'Rename folder', message: 'Enter the new folder name:',
+      initialValue: targetFolder.name, confirmLabel: 'Rename',
+    });
+    if (newName?.trim()) renameFolder(targetFolder.id, newName.trim());
   };
 
   const handleDeleteFolderClick = () => {
     if (!targetFolder) return;
-    const frameCount = targetFolder.frameIds.length;
-    const message = frameCount > 0
-      ? `Are you sure you want to delete "${targetFolder.name}" and all its ${frameCount} frames?`
-      : `Are you sure you want to delete the folder "${targetFolder.name}"?`;
-      
-    if (confirm(message)) {
-      deleteFolder(targetFolder.id);
-    }
     onClose();
+    // Central editor action owns the single confirmation and Undo logic.
+    void deleteFolder(targetFolder.id);
   };
 
-  const handleCreateNewFolder = () => {
-    const name = prompt('Enter a folder name:');
-    if (name && name.trim()) {
-      createFolder(name.trim());
-    }
+  const handleCreateNewFolder = async () => {
     onClose();
+    const name = await dialog.prompt({
+      title: 'New folder', message: 'Choose a name for the folder:',
+      confirmLabel: 'Create',
+    });
+    if (name?.trim()) createFolder(name.trim());
   };
 
   const handleSingleMove = (destFolderId: string) => {
@@ -150,23 +148,12 @@ export function ContextMenu({ x, y, targetType, targetId, onClose }: ContextMenu
   };
 
   const handleDeleteSelected = () => {
-    if (frameState) {
-      const { selectedIds: currentSelected } = frameState;
-      if (currentSelected.has(targetId)) {
-        if (confirm(`Are you sure you want to delete the ${currentSelected.size} selected frames?`)) {
-          handleDeleteSelectedContext();
-        }
-      } else {
-        if (confirm('Are you sure you want to delete this frame?')) {
-          handleSelectionChange(new Set([targetId]));
-          // Wait for state updates to settle, then call delete
-          setTimeout(() => {
-            handleDeleteSelectedContext();
-          }, 0);
-        }
-      }
-    }
+    if (!frameState) return;
+    const ids = frameState.selectedIds.has(targetId)
+      ? new Set(frameState.selectedIds)
+      : new Set([targetId]);
     onClose();
+    void handleDeleteSelectedContext(ids);
   };
 
   return (
