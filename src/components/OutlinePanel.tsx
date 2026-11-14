@@ -7,6 +7,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { FrameData } from '@/types';
 import { addOutline, OutlineOptions, DEFAULT_OUTLINE_OPTIONS } from '@/lib/outlineGenerator';
+import { useAppDialog } from '@/components/AppDialogProvider';
 import styles from './OutlinePanel.module.css';
 
 interface OutlinePanelProps {
@@ -25,6 +26,7 @@ export function OutlinePanel({
   onSettingsChange,
 }: OutlinePanelProps) {
   const [isApplying, setIsApplying] = useState(false);
+  const { alert: showMessage } = useAppDialog();
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   
   // Outline settings
@@ -128,7 +130,7 @@ export function OutlinePanel({
       onFramesProcessed(processedFrames);
     } catch (error) {
       console.error('Outline application failed:', error);
-      alert('Failed to apply outline');
+      void showMessage({ title: 'Outline failed', message: 'Failed to apply outline.' });
     } finally {
       setIsApplying(false);
     }
