@@ -42,6 +42,7 @@ import { FrameEditorPanel } from '@/components/FrameEditorPanel';
 import styles from './page.module.css';
 import { useFrameHistory } from '@/hooks/useFrameHistory';
 import { useProjectSave } from '@/hooks/useProjectSave';
+import { prepareSpriteProjectRestore, restoreSpriteSources, type SpriteProjectType } from '@/lib/spriteProjectCompatibility';
 
 type EditorState = 'idle' | 'extracting' | 'ready';
 
@@ -126,6 +127,9 @@ export default function EditorPage() {
   // Save Subsystem states
   const [projectId, setProjectId] = useState<string>('');
   const [projectName, setProjectName] = useState<string>('Untitled Spritesheet Project');
+  // Keep legacy Pixelator IDs and record types stable when saving from the unified editor.
+  const [projectType, setProjectType] = useState<SpriteProjectType>('spritesheet');
+  const [loadedSources, setLoadedSources] = useState<SourceInfo[]>([]);
 
   // Active Real-Time Pixelator State Hooks
   const [pixelatorEnabled, setPixelatorEnabled] = useState(true);
@@ -171,7 +175,7 @@ export default function EditorPage() {
     setProjectId,
     projectName,
     setProjectName,
-    type: 'spritesheet',
+    type: projectType,
     frameState,
     fps,
     loopMode,
@@ -201,6 +205,7 @@ export default function EditorPage() {
     isDirty,
     markSaved,
     globalLayers,
+    sources: loadedSources,
   });
 
   // URL project deep-linking restore effect
@@ -220,6 +225,10 @@ export default function EditorPage() {
           setEditorState('idle');
           return;
         }
+
+        // Validate before touching editor state. Non-2D projects cannot be opened here.
+        const restorePlan = prepareSpriteProjectRestore(project);
+        setProjectType(restorePlan.type);
 
         // Restore project info
         setProjectId(project.id);
@@ -254,22 +263,14 @@ export default function EditorPage() {
         }
 
         
-        // Restore global layers config
-        if (project.metadata.globalLayers) {
-          setGlobalLayers(project.metadata.globalLayers);
-          if (project.metadata.globalLayers.length > 0) {
-            setActiveLayerId(project.metadata.globalLayers[0].id);
-          }
-        } else {
-          setGlobalLayers([
-            { id: 'layer-base', name: 'Base Frame', visible: true, opacity: 1, blendMode: 'normal' }
-          ]);
-          setActiveLayerId('layer-base');
-        }
+        // Old Pixelator projects had no paint layer metadata. Install a base
+        // layer in memory without modifying the saved IndexedDB record.
+        setGlobalLayers(restorePlan.globalLayers);
+        setActiveLayerId(restorePlan.globalLayers[0].id);
 
         // Re-construct FrameState from Blob frames
         const restoredFrames: FrameData[] = [];
-        for (const f of project.frames) {
+        for (const f of restorePlan.frames) {
           const bitmap = await createImageBitmap(f.blob);
           const layerContents: Record<string, ImageBitmap | null> = {};
           
@@ -281,14 +282,12 @@ export default function EditorPage() {
                 layerContents[layer.layerId] = null;
               }
             }
-          } else {
-            // Default base frame layer setup
-            const canvas = document.createElement('canvas');
-            canvas.width = bitmap.width;
-            canvas.height = bitmap.height;
-            const ctx = canvas.getContext('2d')!;
-            ctx.drawImage(bitmap, 0, 0);
-            layerContents['layer-base'] = await createImageBitmap(canvas);
+          }
+
+          // Old pixelator records store only composited PNGs. Reconstruct the
+          // base paint layer so brushes and layer editing work immediately.
+          if (!layerContents['layer-base']) {
+            layerContents['layer-base'] = await createImageBitmap(bitmap);
           }
 
           restoredFrames.push({
@@ -305,8 +304,8 @@ export default function EditorPage() {
 
         const restoredState = {
           frames: restoredFrames,
-          folders: project.metadata.folders || [],
-          selectedIds: new Set(project.metadata.selectedIds || [])
+          folders: restorePlan.folders,
+          selectedIds: restorePlan.selectedIds
         };
 
         // Populate frames backup for Reverts
@@ -321,6 +320,7 @@ export default function EditorPage() {
           originalFramesRef.current.set(frame.id, clone);
         }
 
+        setLoadedSources(restoreSpriteSources(project, restorePlan.folders));
         resetHistory(restoredState);
         setEditorState('ready');
       } catch (err) {
@@ -338,8 +338,7 @@ export default function EditorPage() {
   ]));
   const dockLayoutRef = useRef<DockLayoutRef>(null);
   
-  // Loaded media sources
-  const [loadedSources, setLoadedSources] = useState<SourceInfo[]>([]);
+  // Media sources are declared before the persistence hook for reliable Save snapshots.
   const sourceColorIndexRef = useRef(0);
   
   // Keep a ref to frameState for cleanup on unmount only
