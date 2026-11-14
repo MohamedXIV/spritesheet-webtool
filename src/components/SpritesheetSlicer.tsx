@@ -34,6 +34,9 @@ export function SpritesheetSlicer() {
     handleSliceSpritesheet,
     loadNewFile,
     handleResetImage,
+    savedSheets = [],
+    editingSourceId = null,
+    selectSavedSheet,
   } = ctx.pixelatorSlicer;
 
   const totalFramesCount = ctx.orderedFrames.length;
@@ -62,6 +65,32 @@ export function SpritesheetSlicer() {
 
   return (
     <div className={styles.container}>
+      {appendMode && savedSheets.length > 0 && (
+        <div className={styles.slicerBox}>
+          <label className={styles.inputLabel} htmlFor="saved-spritesheet-source">
+            Original spritesheets saved with this project
+          </label>
+          <select
+            id="saved-spritesheet-source"
+            className={styles.inputControl}
+            value={editingSourceId ?? ''}
+            onChange={(event) => event.target.value
+              ? selectSavedSheet?.(event.target.value)
+              : handleResetImage()}
+            disabled={isSlicing}
+          >
+            <option value="">Upload a new spritesheet</option>
+            {savedSheets.map(source => (
+              <option key={source.id} value={source.id}>{source.name}</option>
+            ))}
+          </select>
+          <p className={styles.description}>
+            Choose a saved original to adjust its grid and replace only its own extracted frames.
+            Other sources stay untouched; Undo can restore the previous slices.
+          </p>
+        </div>
+      )}
+
       {/* 1. File Upload Dragzone */}
       {!file && (
         <div className={styles.uploaderBox}>
@@ -89,7 +118,7 @@ export function SpritesheetSlicer() {
               type="file" 
               ref={fileInputRef} 
               onChange={handleFileSelect} 
-              accept="image/*" 
+              accept="image/png,image/webp,image/jpeg,image/bmp" 
               className={styles.fileInput} 
             />
           </div>
@@ -101,7 +130,9 @@ export function SpritesheetSlicer() {
         <div className={styles.slicerBox}>
           <h3 className={styles.title}>Slice Your Spritesheet</h3>
           <p className={styles.description}>
-            Choose the grid before importing. In Sprite Editor, slices are added to your current frames without replacing them.
+            {editingSourceId
+              ? 'Re-slicing replaces the previous frames from this saved source (including their edits), while keeping the rest of the project. You can Undo the change.'
+              : 'New slices are added to your current frames without replacing existing work. The original image will be kept locally for later re-slicing.'}
           </p>
 
           {originalImgSrc && (
@@ -179,7 +210,7 @@ export function SpritesheetSlicer() {
 
           <div className={styles.actionsRow}>
             <button onClick={handleResetImage} className={styles.cancelBtn}>
-              Upload Another
+              Choose New Image
             </button>
             <button onClick={handleSliceSpritesheet} className={styles.sliceBtn} disabled={isSlicing}>
               {isSlicing ? (
@@ -187,7 +218,7 @@ export function SpritesheetSlicer() {
                   <div className={styles.spinner} />
                   <span>Slicing grid...</span>
                 </div>
-              ) : appendMode ? 'Slice & Add Frames' : 'Slice & Load Workspace'}
+              ) : editingSourceId ? 'Re-slice & Replace Frames' : appendMode ? 'Slice & Add Frames' : 'Slice & Load Workspace'}
             </button>
           </div>
         </div>
