@@ -105,7 +105,9 @@ test('rejects unsupported versions, malformed data and malicious metadata keys',
   await assert.rejects(decodeProjectBackup(zipSync(altered)), /Unsupported/);
 
   const prototypePayload = JSON.parse(strFromU8(contents['manifest.json']));
-  prototypePayload.project.metadata['__proto__'] = { compromised: true };
+  Object.defineProperty(prototypePayload.project.metadata, '__proto__', {
+    value: { compromised: true }, enumerable: true, configurable: true,
+  });
   const risky = { ...contents, 'manifest.json': strToU8(JSON.stringify(prototypePayload)) };
   await assert.rejects(decodeProjectBackup(zipSync(risky)), /unsafe data property/);
   assert.equal({}.compromised, undefined);
