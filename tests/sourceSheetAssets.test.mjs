@@ -47,6 +47,10 @@ test('restore original Blob attachments for multiple sheets without cloning or l
   assert.equal(restored.length,2);
   assert.equal(restored[0].blob,blobA);
   assert.equal(await restored[1].blob.text(),'webp-binary');
+  const idbLikeClone = structuredClone({ sourceSheets: restored });
+  assert.equal(idbLikeClone.sourceSheets[0].blob instanceof Blob, true);
+  assert.equal(await idbLikeClone.sourceSheets[0].blob.text(), 'original-png-binary');
+  assert.equal(idbLikeClone.sourceSheets[1].sourceId, 'b');
   assert.equal(restoreSourceSheetAssets(undefined).length,0);
   assert.equal(restoreSourceSheetAssets([...values,values[0]]).length,2);
   assert.equal(restoreSourceSheetAssets([{...values[0],blob:null}]).length,0);

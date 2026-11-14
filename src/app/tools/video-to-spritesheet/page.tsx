@@ -376,7 +376,7 @@ export default function EditorPage() {
   // history) remain intact. A new image is only added after slicing succeeds.
   const loadNewSheetFile = useCallback(async (file: File) => {
     if (!isImageFile(file) || file.type === 'image/gif' || /\.gif$/i.test(file.name)) {
-      alert('Select a static PNG, WebP, or JPEG spritesheet. Animated GIF import is a separate upcoming format.');
+      alert('Use Media Loader for animated GIFs. The Slicer accepts static PNG, WebP, or JPEG spritesheets.');
       return;
     }
     try {
