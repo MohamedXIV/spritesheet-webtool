@@ -133,6 +133,9 @@ export function EditorMenuBar() {
               <span>Save Copy As...</span>
             </button>
             <div className={styles.separator} />
+            <Link href="/" className={styles.item} onClick={closeMenu} title="Save your project first; portable backups are exported from local saved projects">
+              Project Backups… (Dashboard)
+            </Link>
             <Link href="/" className={styles.item} onClick={closeMenu}>
               Exit to Portal Hub
             </Link>
