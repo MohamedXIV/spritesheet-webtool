@@ -31,7 +31,7 @@ export interface PixelatorOptions {
 }
 
 export const DEFAULT_PIXELATOR_OPTIONS: PixelatorOptions = {
-  enabled: true,
+  enabled: false,
   pixelSize: 8,
   palette: 'none',
   ditherType: 'none',

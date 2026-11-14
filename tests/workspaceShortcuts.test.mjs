@@ -26,3 +26,10 @@ test('shift redo, alt combinations and keys without modifiers are explicit', () 
   assert.equal(findWorkspaceShortcut({...e,altKey:true},bindings,false),null);
   assert.equal(findWorkspaceShortcut({...e,ctrlKey:false,shiftKey:false},bindings,false),null);
 });
+
+test('physical Ctrl+KeyS saves even when Arabic keyboard emits س', () => {
+  const event = { key: 'س', code: 'KeyS', ctrlKey: true, metaKey: false, shiftKey: false, altKey: false };
+  assert.equal(findWorkspaceShortcut(event, bindings, true)?.id, 'save');
+  assert.equal(findWorkspaceShortcut({ ...event, ctrlKey: false }, bindings, true), null);
+  assert.equal(findWorkspaceShortcut({ ...event, code: 'KeyA' }, bindings, true), null);
+});

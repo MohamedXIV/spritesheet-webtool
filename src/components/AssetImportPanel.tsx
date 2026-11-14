@@ -10,6 +10,19 @@ import styles from './AssetImportPanel.module.css';
 export function AssetImportPanel() {
   const ctx = useEditorContext();
   const [mode, setMode] = useState<'media' | 'spritesheet'>('media');
+  const importingMedia = ctx.editorState === 'extracting';
+  const slicingSheet = ctx.pixelatorSlicer?.isSlicing === true;
+  const busy = importingMedia || slicingSheet;
+  const progress = ctx.extractionProgress;
+  const hasFrameEstimate = importingMedia && !!progress && progress.total > 0;
+  const percent = hasFrameEstimate
+    ? Math.max(0, Math.min(100, Math.round(progress.percentage)))
+    : null;
+  const progressTitle = slicingSheet ? 'Slicing spritesheet…'
+    : hasFrameEstimate
+      ? percent === 100 ? 'Finishing imported frames…' : 'Importing frames…'
+      : 'Preparing media…';
+
 
   const handleTabKeys = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' &&
@@ -39,7 +52,28 @@ export function AssetImportPanel() {
           Slice Spritesheet
         </button>
       </div>
-      <div id="asset-import-content" role="tabpanel"
+      {busy && (
+        <div className={styles.progressCard} role="status" aria-live="polite">
+          <span className={styles.spinner} aria-hidden="true" />
+          <div className={styles.progressBody}>
+            <div className={styles.progressTitle}>{progressTitle}</div>
+            <progress
+              className={styles.progressBar}
+              max={100}
+              value={percent ?? undefined}
+              aria-label={slicingSheet ? 'Spritesheet slicing' : 'Media import'}
+            />
+            <span className={styles.progressDetail} aria-live="off">
+              {hasFrameEstimate
+                ? `${progress!.current.toLocaleString()} / ${progress!.total.toLocaleString()} frames · ${percent}%`
+                : slicingSheet
+                  ? 'Preparing extracted frames and layers'
+                  : 'Reading files and calculating frame counts'}
+            </span>
+          </div>
+        </div>
+      )}
+      <div id="asset-import-content" role="tabpanel" aria-busy={busy}
         aria-labelledby={mode === 'media' ? 'asset-import-media' : 'asset-import-sheet'}
         className={styles.panel}>
         {mode === 'media'
@@ -51,12 +85,7 @@ export function AssetImportPanel() {
             />
           : <SpritesheetSlicer />}
       </div>
-      {ctx.editorState === 'extracting' && ctx.extractionProgress && (
-        <div role="status" aria-live="polite" className={styles.progress}>
-          Extracting frame {ctx.extractionProgress.current} of {ctx.extractionProgress.total}
-          <progress max={100} value={ctx.extractionProgress.percentage} />
-        </div>
-      )}
+
     </div>
   );
 }

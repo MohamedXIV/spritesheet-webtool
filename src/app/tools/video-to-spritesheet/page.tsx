@@ -137,7 +137,7 @@ export default function EditorPage() {
   const [loadedSources, setLoadedSources] = useState<SourceInfo[]>([]);
 
   // Active Real-Time Pixelator State Hooks
-  const [pixelatorEnabled, setPixelatorEnabled] = useState(true);
+  const [pixelatorEnabled, setPixelatorEnabled] = useState(false);
   const [pixelSize, setPixelSize] = useState(8);
   const [pixelatorPalette, setPixelatorPalette] = useState<any>('none');
   const [pixelatorDitherType, setPixelatorDitherType] = useState<any>('none');
@@ -256,7 +256,7 @@ export default function EditorPage() {
         }
         const pixels = project.metadata.pixelatorOptions;
         if (pixels) {
-          setPixelatorEnabled(pixels.enabled ?? true);
+          setPixelatorEnabled(pixels.enabled ?? false);
           setPixelSize(pixels.pixelSize ?? 8);
           setPixelatorPalette(pixels.palette ?? 'none');
           setPixelatorDitherType(pixels.ditherType ?? 'none');
