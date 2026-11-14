@@ -240,25 +240,8 @@ export function EditorMenuBar() {
           value={projectName || ''}
           onChange={(e) => setProjectName?.(e.target.value)}
           placeholder="Untitled Project"
-          style={{
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '4px',
-            color: '#e2e8f0',
-            fontSize: '0.78rem',
-            padding: '4px 10px',
-            width: '180px',
-            outline: 'none',
-            transition: 'all 0.15s ease'
-          }}
-          onFocus={(e) => {
-            e.target.style.borderColor = 'rgba(139, 92, 246, 0.4)';
-            e.target.style.background = 'rgba(0, 0, 0, 0.2)';
-          }}
-          onBlur={(e) => {
-            e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-            e.target.style.background = 'rgba(255, 255, 255, 0.03)';
-          }}
+          aria-label="Project name"
+          className={styles.projectNameInput}
         />
       </div>
 
@@ -280,7 +263,7 @@ export function EditorMenuBar() {
         </span>
       )}
       {isSaving && (
-        <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: '12px' }}>
+        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginLeft: '12px' }}>
           Saving...
         </span>
       )}
