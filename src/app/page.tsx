@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Trash2, Edit2, FolderOpen, Clock, Layout } from 'lucide-react';
-import { getAllProjectsSummary, deleteProject, renameProject, ProjectSummary } from '@/lib/projectDatabase';
+import { Trash2, Edit2, FolderOpen, Clock, Layout, Download, Upload } from 'lucide-react';
+import { getAllProjectsSummary, getProject, saveProject, deleteProject, renameProject, ProjectSummary } from '@/lib/projectDatabase';
+import { encodeProjectBackup, decodeProjectBackup } from '@/lib/portableProject';
 import { projectToolHref } from '@/lib/spriteProjectCompatibility';
 import ChangelogDrawer from '@/components/ChangelogDrawer';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -14,6 +15,9 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const importPickerRef = useRef<HTMLInputElement>(null);
+  const [backupBusy, setBackupBusy] = useState<string | null>(null);
+  const [backupNotice, setBackupNotice] = useState<string | null>(null);
   
   // Interactive Changelog Drawer States
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
@@ -64,6 +68,70 @@ export default function Home() {
     }
   };
 
+  const handleDownloadBackup = async (project: ProjectSummary) => {
+    if (backupBusy) return;
+    setBackupBusy(project.id);
+    setBackupNotice(null);
+    try {
+      const stored = await getProject(project.id);
+      if (!stored) throw new Error('Project no longer exists in local storage');
+      const archive = await encodeProjectBackup(stored);
+      const filename = (stored.name.replace(/[\\/:*?"<>|]+/g, '-').trim().slice(0, 80) || 'spritecraft-project') + '.spritecraft';
+      const bytes = new Uint8Array(archive.length);
+      bytes.set(archive);
+      const url = URL.createObjectURL(new Blob([bytes.buffer], { type: 'application/zip' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
+      setBackupNotice(`Downloaded backup of "${stored.name}". Keep this file somewhere safe.`);
+    } catch (error) {
+      setBackupNotice(`Backup failed: ${error instanceof Error ? error.message : 'Unable to export project'}`);
+    } finally {
+      setBackupBusy(null);
+    }
+  };
+
+  const handleImportBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || backupBusy) return;
+    setBackupBusy('import');
+    setBackupNotice(null);
+    try {
+      if (file.size > 256 * 1024 * 1024) {
+        throw new Error('Project backups must be 256 MB or smaller');
+      }
+      const restored = await decodeProjectBackup(new Uint8Array(await file.arrayBuffer()));
+      // Restoring always creates a new record; never overwrite the original.
+      let newId = '';
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const candidate = `imported-${restored.type}-${crypto.randomUUID()}`;
+        if (!(await getProject(candidate))) {
+          newId = candidate;
+          break;
+        }
+      }
+      if (!newId) throw new Error('Could not allocate a unique project ID');
+      await saveProject({
+        ...restored,
+        id: newId,
+        name: `${restored.name} (Imported)`,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      await loadProjects();
+      setBackupNotice(`Restored "${restored.name}" as a NEW local project. No existing projects were changed.`);
+    } catch (error) {
+      setBackupNotice(`Import failed: ${error instanceof Error ? error.message : 'Unable to import project'}`);
+    } finally {
+      setBackupBusy(null);
+    }
+  };
+
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     return date.toLocaleDateString(undefined, { 
@@ -111,7 +179,7 @@ export default function Home() {
           <div className={styles.disclaimerBox}>
             <p className={styles.warningTitle}>⚠️ LOCAL STORAGE ONLY</p>
             <p className={styles.warningDesc}>
-              Saved projects reside in IndexedDB. Make sure to export your sheets as PNG/JSON before clearing browser data.
+              Projects are stored in this browser's IndexedDB. Download a .spritecraft backup from Recent Projects to preserve saved frames, paint layers, settings, and original sources across devices.
             </p>
           </div>
           
@@ -266,6 +334,31 @@ export default function Home() {
             <FolderOpen size={18} style={{ color: 'var(--primary-color)' }} />
             Recent Local Operations
           </h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <input
+              ref={importPickerRef}
+              type="file"
+              accept=".spritecraft,.zip,application/zip"
+              aria-label="Choose Spritecraft project backup"
+              onChange={handleImportBackup}
+              style={{ display: 'none' }}
+            />
+            <button
+              type="button"
+              className={styles.actionButton}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, width: 'auto', padding: '8px 12px' }}
+              disabled={!!backupBusy}
+              onClick={() => importPickerRef.current?.click()}
+              title="Restore a .spritecraft backup as a new local project"
+            >
+              <Upload size={15} />
+              {backupBusy === 'import' ? 'Restoring backup…' : 'Import Project Backup'}
+            </button>
+            <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>
+              Backup includes saved frames, layers, timings, settings and source attachments.
+            </span>
+          </div>
+          {backupNotice && <p role="status" aria-live="polite" style={{ marginBottom: 12, fontSize: '0.82rem' }}>{backupNotice}</p>}
 
           {isLoading ? (
             <div className={styles.emptyState}>
@@ -301,6 +394,16 @@ export default function Home() {
                         {isSpritesheet ? '🎬 Spritesheet' : isPixelator ? '👾 Pixelator' : isTrimsheet ? '🧱 Trimsheet' : isStylizer ? '🎨 Stylizer' : '📦 3D Painter'}
                       </span>
                       <div className={styles.projectActions}>
+                        <button
+                          type="button"
+                          className={styles.actionButton}
+                          disabled={!!backupBusy}
+                          onClick={() => void handleDownloadBackup(proj)}
+                          title="Download complete portable project backup (.spritecraft)"
+                          aria-label={`Download backup of ${proj.name}`}
+                        >
+                          <Download size={13} />
+                        </button>
                         <button 
                           className={styles.actionButton}
                           onClick={() => startRename(proj.id, proj.name)}
