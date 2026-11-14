@@ -372,3 +372,78 @@
   font-weight: 700;
   color: var(--text-color);
 }
+
+/* Editable frame timing; wraps instead of forcing a wider dock panel. */
+.frameTimingRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  padding: 7px 0;
+  border-top: 1px solid var(--border-color-muted);
+  border-bottom: 1px solid var(--border-color-muted);
+}
+
+.durationInput {
+  width: 76px;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.4);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  padding: 5px 7px;
+}
+
+.durationInput:focus-visible,
+.durationAction:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.durationInput:disabled,
+.durationAction:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.durationUnit {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.durationAction {
+  background: var(--primary-color-alpha);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.durationAction:hover:not(:disabled) {
+  border-color: var(--primary-color);
+}
+
+.durationSelection {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.durationSelection input {
+  accent-color: var(--primary-color);
+}
+
+.durationError {
+  width: 100%;
+  color: var(--warning-color, #f5b85e);
+  font-size: 0.72rem;
+}
