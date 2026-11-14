@@ -5,6 +5,7 @@ import { saveProject, DbProject, ProjectMetadata, DbProjectFrame } from '@/lib/p
 import { serializeProject } from '@/lib/frameStore';
 import { FrameState } from '@/lib/frameStore';
 import type { SourceInfo } from '@/types';
+import type { SourceSheetAsset } from '@/lib/sourceSheetAssets';
 import { createSaveQueue } from '@/lib/saveQueue';
 
 export function useProjectSave(options: {
@@ -31,6 +32,7 @@ export function useProjectSave(options: {
   markSaved?: (savedState?: FrameState | null) => void;
   globalLayers?: any[];
   sources?: SourceInfo[];
+  sourceSheets?: SourceSheetAsset[];
 }) {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -84,6 +86,7 @@ export function useProjectSave(options: {
         const metadata: ProjectMetadata = {
           folders: snapshot.frameState?.folders || [],
           sources: snapshot.sources,
+          sourceSheets: snapshot.sourceSheets,
           selectedIds: snapshot.frameState
             ? Array.from(snapshot.frameState.selectedIds)
             : [],
