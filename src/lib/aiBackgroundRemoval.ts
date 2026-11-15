@@ -2,7 +2,7 @@
 import { applySafeForegroundMask, type MaskRefinement } from './backgroundMask';
 
 export type AiBackend = 'gpu' | 'cpu';
-export type AiStage = 'download' | 'initializing' | 'inference' | 'compositing' | 'fallback';
+export type AiStage = 'download' | 'initializing' | 'inference' | 'retry' | 'compositing' | 'fallback';
 export interface AiProgress {
   stage: AiStage;
   fraction?: number;
@@ -70,6 +70,23 @@ function reportResourceProgress(key: string, current: number, total: number): vo
   });
 }
 
+function hasForegroundPixels(mask: Uint8Array, original: Uint8ClampedArray): boolean {
+  for (let i = 0; i < mask.length; i++) {
+    if (Math.round(mask[i] * original[4 * i + 3] / 255) > 16) return true;
+  }
+  return false;
+}
+
+async function decodeRgbaMask(blob: Blob, width: number, height: number): Promise<Uint8Array> {
+  const raw = new Uint8Array(await blob.arrayBuffer());
+  if (raw.length !== width * height * 4) {
+    throw new Error('The AI model returned an unexpected mask size. No frames were changed.');
+  }
+  const mask = new Uint8Array(width * height);
+  for (let i = 0; i < mask.length; i++) mask[i] = raw[i * 4 + 3];
+  return mask;
+}
+
 /**
  * Returns a new bitmap. The original is never altered; its RGB and alpha are
  * composited at full resolution with the separate model mask.
@@ -113,12 +130,19 @@ export async function removeBackgroundAI(
     abortIfRequested(signal);
 
     progress?.({ stage: 'compositing', detail: 'Preserving original sprite colors' });
-    const raw = new Uint8Array(await result.arrayBuffer());
-    if (raw.length !== source.width * source.height * 4) {
-      throw new Error('The AI model returned an unexpected mask size. No frames were changed.');
+    let mask = await decodeRgbaMask(result, source.width, source.height);
+    // Some browser/runtime combinations may mishandle our raw RGBA transport.
+    // Recheck a blank result with a conventional PNG input *once*, using the
+    // already loaded model, before deciding it is a segmentation failure.
+    if (!hasForegroundPixels(mask, original.data) && original.data.some((value, i) => i % 4 === 3 && value > 16)) {
+      progress?.({ stage: 'retry', detail: 'Empty raw mask; retrying the model with PNG input' });
+      const png = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Could not encode retry input.')), 'image/png');
+      });
+      abortIfRequested(signal);
+      mask = await decodeRgbaMask(await segmentForeground(png, config), source.width, source.height);
+      abortIfRequested(signal);
     }
-    const mask = new Uint8Array(source.width * source.height);
-    for (let i = 0; i < mask.length; i++) mask[i] = raw[i * 4 + 3];
     const { pixels, fallback } = applySafeForegroundMask(original.data, mask, source.width, source.height, refinement);
     if (fallback === 'color-key') {
       progress?.({ stage: 'fallback', detail: 'AI produced an empty mask; recovered with Color Key on a uniform background.' });

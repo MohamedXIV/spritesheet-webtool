@@ -40,7 +40,8 @@ The following is now implemented in the draft:
   updates or changing backend can trigger downloads again. No model is fetched
   merely because the panel was opened.
 - **Empty-mask protection:** a model result that would fully erase a visible
-  frame is not presented as a successful AI preview. On a confidently uniform
+  frame is first retried once through a conventional PNG input (same cached
+  model; no new model download), in case raw RGBA transport failed. On a confidently uniform
   background (including transparent letterboxing), the sprite is recovered via
   Color Key, with an explicit per-batch notice. Otherwise processing fails
   safely and offers another method/backend; no project frame is modified.

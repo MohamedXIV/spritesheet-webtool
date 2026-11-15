@@ -43,6 +43,7 @@ const stageLabels: Record<AiProgress['stage'], string> = {
   initializing: 'Loading AI engine',
   inference: 'Removing background',
   compositing: 'Finishing the sprite',
+  retry: 'Empty AI mask; verifying with a compatibility input',
   fallback: 'AI mask was empty; using Color Key on the flat background',
 };
 
