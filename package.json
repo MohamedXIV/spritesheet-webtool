@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "benchmark:color-key": "node --experimental-strip-types scripts/benchmark-background-pixels.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

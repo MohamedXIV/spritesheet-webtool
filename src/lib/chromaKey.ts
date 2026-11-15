@@ -12,51 +12,122 @@ export interface ChromaKeyOptions {
   spillAmount?: number; // 0-100
 }
 
+export interface PixelImage {
+  data: Uint8ClampedArray;
+  width: number;
+  height: number;
+}
+
 /**
  * Sample the dominant color from corners of an image
  */
 export function sampleCornerColor(
-  imageData: ImageData,
+  imageData: PixelImage,
   sampleSize: number = 10
 ): { r: number; g: number; b: number } {
   const { data, width, height } = imageData;
-  let totalR = 0, totalG = 0, totalB = 0;
-  let count = 0;
-
-  // Sample from all four corners
+  if (width === 0 || height === 0) return { r: 0, g: 255, b: 0 };
+  const size = Math.max(1, Math.min(Math.trunc(sampleSize), width, height));
   const corners = [
-    { x: 0, y: 0 },
-    { x: width - sampleSize, y: 0 },
-    { x: 0, y: height - sampleSize },
-    { x: width - sampleSize, y: height - sampleSize }
+    { x: 0, y: 0 }, { x: width - size, y: 0 },
+    { x: 0, y: height - size }, { x: width - size, y: height - size },
   ];
-
+  const groups = new Map<number, { count: number; r: number; g: number; b: number }>();
   for (const corner of corners) {
-    for (let y = corner.y; y < corner.y + sampleSize && y < height; y++) {
-      for (let x = corner.x; x < corner.x + sampleSize && x < width; x++) {
-        const idx = (y * width + x) * 4;
-        totalR += data[idx];
-        totalG += data[idx + 1];
-        totalB += data[idx + 2];
-        count++;
+    for (let y = corner.y; y < corner.y + size; y++) {
+      for (let x = corner.x; x < corner.x + size; x++) {
+        const i = (y * width + x) * 4;
+        if (data[i + 3] < 32) continue;
+        // Quantization groups close background colors rather than averaging
+        // different-colored corners into a color not present in the image.
+        const key = (data[i] >> 4) * 256 + (data[i + 1] >> 4) * 16 + (data[i + 2] >> 4);
+        const group = groups.get(key) ?? { count: 0, r: 0, g: 0, b: 0 };
+        group.count++;
+        group.r += data[i];
+        group.g += data[i + 1];
+        group.b += data[i + 2];
+        groups.set(key, group);
       }
     }
   }
+  const winner = Array.from(groups.values()).sort((a, b) => b.count - a.count)[0];
+  return winner
+    ? { r: Math.round(winner.r / winner.count), g: Math.round(winner.g / winner.count), b: Math.round(winner.b / winner.count) }
+    : { r: 0, g: 255, b: 0 };
+}
 
-  return {
-    r: Math.round(totalR / count),
-    g: Math.round(totalG / count),
-    b: Math.round(totalB / count)
+/**
+ * Conservative detection for recovery when an AI model produces an empty mask.
+ * A mostly flat backdrop may have compressed/anti-aliased edges and transparent
+ * padding. Select the dominant opaque color across the image, then verify it
+ * covers most of the image AND appears along the opaque content boundary.
+ */
+export function detectSolidBackground(imageData: PixelImage): { r: number; g: number; b: number } | null {
+  const { data, width, height } = imageData;
+  let minX = width, minY = height, maxX = -1, maxY = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (data[(y * width + x) * 4 + 3] < 224) continue;
+      minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+    }
+  }
+  if (maxX - minX < 8 || maxY - minY < 8) return null;
+
+  const bins = new Map<number, { count: number; r: number; g: number; b: number }>();
+  const stride = Math.max(1, Math.floor(Math.sqrt(width * height / 16_384)));
+  for (let y = minY; y <= maxY; y += stride) {
+    for (let x = minX; x <= maxX; x += stride) {
+      const i = (y * width + x) * 4;
+      if (data[i + 3] < 224) continue;
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      const key = (r >> 4) * 256 + (g >> 4) * 16 + (b >> 4);
+      const group = bins.get(key) ?? { count: 0, r: 0, g: 0, b: 0 };
+      group.count++; group.r += r; group.g += g; group.b += b;
+      bins.set(key, group);
+    }
+  }
+  const dominant = Array.from(bins.values()).sort((a, b) => b.count - a.count)[0];
+  if (!dominant) return null;
+  const color = {
+    r: Math.round(dominant.r / dominant.count),
+    g: Math.round(dominant.g / dominant.count),
+    b: Math.round(dominant.b / dominant.count),
   };
+
+  const isBackground = (i: number) =>
+    (data[i] - color.r) ** 2 + (data[i + 1] - color.g) ** 2 + (data[i + 2] - color.b) ** 2 < 45 ** 2;
+
+  let backgroundPixels = 0, subjectPixels = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 224) continue;
+    if (isBackground(i)) backgroundPixels++;
+    else subjectPixels++;
+  }
+  // Reject pictures without a dominant backdrop or distinguishable subject.
+  if (subjectPixels < 16 || backgroundPixels / (backgroundPixels + subjectPixels) < 0.60) return null;
+
+  let borderSamples = 0, borderMatches = 0;
+  const sampleBorder = (x: number, y: number) => {
+    const i = (y * width + x) * 4;
+    if (data[i + 3] < 224) return;
+    borderSamples++;
+    if (isBackground(i)) borderMatches++;
+  };
+  const step = Math.max(1, Math.floor(Math.max(maxX - minX, maxY - minY) / 64));
+  for (let x = minX; x <= maxX; x += step) { sampleBorder(x, minY); sampleBorder(x, maxY); }
+  for (let y = minY; y <= maxY; y += step) { sampleBorder(minX, y); sampleBorder(maxX, y); }
+  if (borderSamples < 12 || borderMatches / borderSamples < 0.45) return null;
+  return color;
 }
 
 /**
  * Remove background by color (chroma key) with pro-grade VFX unmixing spill suppression
  */
-export async function removeBackgroundByColor(
-  bitmap: ImageBitmap,
+export function applyChromaKeyToImageData(
+  imageData: PixelImage,
   options: ChromaKeyOptions
-): Promise<ImageBitmap> {
+): void {
   const { 
     targetColor, 
     tolerance, 
@@ -66,15 +137,6 @@ export async function removeBackgroundByColor(
     spillAmount = 100
   } = options;
   
-  // Create canvas and draw bitmap
-  const canvas = document.createElement('canvas');
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(bitmap, 0, 0);
-  
-  // Get image data
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const data = imageData.data;
   
   // Max possible color distance is sqrt(255^2 * 3) ≈ 441.67
@@ -103,18 +165,15 @@ export async function removeBackgroundByColor(
                    (g - targetColor.g) ** 2 +
                    (b - targetColor.b) ** 2;
     
-    if (distSq <= toleranceThresholdSq) {
-      // Fully transparent
-      data[i + 3] = 0;
-    } else if (softnessRange > 0 && distSq <= softnessThresholdSq) {
-      // Partial transparency for edge softness
-      const distance = Math.sqrt(distSq);
-      const alpha = ((distance - toleranceThreshold) / softnessRange) * 255;
-      data[i + 3] = Math.round(alpha);
-    }
+    const matte = distSq <= toleranceThresholdSq ? 0
+      : softnessRange > 0 && distSq <= softnessThresholdSq
+        ? (Math.sqrt(distSq) - toleranceThreshold) / softnessRange
+        : 1;
+    // Existing transparent/semi-transparent sprites must stay transparent.
+    data[i + 3] = Math.round(data[i + 3] * matte);
     
     // Apply CorridorKey-style Spill Suppression & Color Unmixing if enabled and pixel is not fully transparent
-    if (spillSuppression && data[i + 3] > 0) {
+    if (spillSuppression && data[i + 3] > 0 && matte < 1) {
       const factor = spillAmount / 100;
       if (dominantChannel === 'g') {
         const excess = g - Math.max(r, b);
@@ -150,10 +209,21 @@ export async function removeBackgroundByColor(
     }
   }
   
-  // Put modified data back
+}
+
+export async function removeBackgroundByColor(
+  bitmap: ImageBitmap,
+  options: ChromaKeyOptions,
+): Promise<ImageBitmap> {
+  const canvas = document.createElement('canvas');
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('2D canvas is unavailable.');
+  ctx.drawImage(bitmap, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  applyChromaKeyToImageData(imageData, options);
   ctx.putImageData(imageData, 0, 0);
-  
-  // Create new ImageBitmap
   return createImageBitmap(canvas);
 }
 
