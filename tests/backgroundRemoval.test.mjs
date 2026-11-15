@@ -78,15 +78,34 @@ test('an empty AI mask on solid green recovers the subject rather than erasing e
 
 test('empty AI mask on complex backgrounds fails safely without producing a blank preview', () => {
   const { width, height, data } = solidScreenWithTransparentPadding();
-  for (let x = 2; x < 30; x++) {
-    const i = (6 * width + x) * 4;
-    data.set(x % 2 ? [50, 50, 230, 255] : [230, 70, 50, 255], i);
+  for (let y = 6; y < 26; y++) {
+    for (let x = 2; x < 30; x++) {
+      const i = (y * width + x) * 4;
+      if ((x + y) % 3 !== 0) data.set(x % 2 ? [50, 50, 230, 255] : [230, 70, 50, 255], i);
+    }
   }
   assert.equal(detectSolidBackground({ width, height, data }), null);
   assert.throws(
     () => applySafeForegroundMask(data, new Uint8Array(width * height), width, height, { edgeStyle: 'soft' }),
     /empty foreground mask/,
   );
+});
+
+test('flat green with compressed border pixels and transparent letterboxing is recoverable', () => {
+  const source = solidScreenWithTransparentPadding();
+  for (let y = 6; y < 26; y++) {
+    for (let x = 2; x < 30; x++) {
+      if (x >= 13 && x <= 18 && y >= 10 && y <= 23) continue;
+      const i = (y * source.width + x) * 4;
+      source.data[i] = (x + y) % 23;
+      source.data[i + 1] = 245 - (x % 11);
+      source.data[i + 2] = (y * 3) % 24;
+    }
+  }
+  assert.ok(detectSolidBackground(source), 'minor compression variation should not hide a green backdrop');
+  const result = applySafeForegroundMask(source.data, new Uint8Array(source.width * source.height), source.width, source.height, { edgeStyle: 'soft' });
+  assert.equal(result.fallback, 'color-key');
+  assert.equal(result.pixels[(16 * source.width + 15) * 4 + 3], 255);
 });
 
 test('valid AI masks are applied without triggering Color Key fallback', () => {

@@ -58,9 +58,9 @@ export function sampleCornerColor(
 
 /**
  * Conservative detection for recovery when an AI model produces an empty mask.
- * Unlike global corner sampling, inspect the edges of the *opaque* content
- * bounds so letterboxed sprites with transparent padding are supported.
- * Returns null for complex borders or images without a distinguishable subject.
+ * A mostly flat backdrop may have compressed/anti-aliased edges and transparent
+ * padding. Select the dominant opaque color across the image, then verify it
+ * covers most of the image AND appears along the opaque content boundary.
  */
 export function detectSolidBackground(imageData: PixelImage): { r: number; g: number; b: number } | null {
   const { data, width, height } = imageData;
@@ -75,37 +75,49 @@ export function detectSolidBackground(imageData: PixelImage): { r: number; g: nu
   if (maxX - minX < 8 || maxY - minY < 8) return null;
 
   const bins = new Map<number, { count: number; r: number; g: number; b: number }>();
-  let edgeSamples = 0;
-  const add = (x: number, y: number) => {
-    const i = (y * width + x) * 4;
-    if (data[i + 3] < 224) return;
-    const r = data[i], g = data[i + 1], b = data[i + 2];
-    const key = (r >> 4) * 256 + (g >> 4) * 16 + (b >> 4);
-    const group = bins.get(key) ?? { count: 0, r: 0, g: 0, b: 0 };
-    group.count++; group.r += r; group.g += g; group.b += b;
-    bins.set(key, group);
-    edgeSamples++;
-  };
-  const step = Math.max(1, Math.floor(Math.max(maxX - minX, maxY - minY) / 64));
-  for (let x = minX; x <= maxX; x += step) { add(x, minY); add(x, maxY); }
-  for (let y = minY; y <= maxY; y += step) { add(minX, y); add(maxX, y); }
+  const stride = Math.max(1, Math.floor(Math.sqrt(width * height / 16_384)));
+  for (let y = minY; y <= maxY; y += stride) {
+    for (let x = minX; x <= maxX; x += stride) {
+      const i = (y * width + x) * 4;
+      if (data[i + 3] < 224) continue;
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      const key = (r >> 4) * 256 + (g >> 4) * 16 + (b >> 4);
+      const group = bins.get(key) ?? { count: 0, r: 0, g: 0, b: 0 };
+      group.count++; group.r += r; group.g += g; group.b += b;
+      bins.set(key, group);
+    }
+  }
   const dominant = Array.from(bins.values()).sort((a, b) => b.count - a.count)[0];
-  if (!dominant || edgeSamples < 12 || dominant.count / edgeSamples < 0.85) return null;
+  if (!dominant) return null;
   const color = {
     r: Math.round(dominant.r / dominant.count),
     g: Math.round(dominant.g / dominant.count),
     b: Math.round(dominant.b / dominant.count),
   };
 
+  const isBackground = (i: number) =>
+    (data[i] - color.r) ** 2 + (data[i + 1] - color.g) ** 2 + (data[i + 2] - color.b) ** 2 < 45 ** 2;
+
   let backgroundPixels = 0, subjectPixels = 0;
   for (let i = 0; i < data.length; i += 4) {
     if (data[i + 3] < 224) continue;
-    const distanceSquared = (data[i] - color.r) ** 2 + (data[i + 1] - color.g) ** 2 + (data[i + 2] - color.b) ** 2;
-    if (distanceSquared < 35 ** 2) backgroundPixels++;
+    if (isBackground(i)) backgroundPixels++;
     else subjectPixels++;
   }
-  // A uniform background and a non-trivial differently colored subject.
-  if (backgroundPixels < subjectPixels || subjectPixels < 16) return null;
+  // Reject pictures without a dominant backdrop or distinguishable subject.
+  if (subjectPixels < 16 || backgroundPixels / (backgroundPixels + subjectPixels) < 0.60) return null;
+
+  let borderSamples = 0, borderMatches = 0;
+  const sampleBorder = (x: number, y: number) => {
+    const i = (y * width + x) * 4;
+    if (data[i + 3] < 224) return;
+    borderSamples++;
+    if (isBackground(i)) borderMatches++;
+  };
+  const step = Math.max(1, Math.floor(Math.max(maxX - minX, maxY - minY) / 64));
+  for (let x = minX; x <= maxX; x += step) { sampleBorder(x, minY); sampleBorder(x, maxY); }
+  for (let y = minY; y <= maxY; y += step) { sampleBorder(minX, y); sampleBorder(maxX, y); }
+  if (borderSamples < 12 || borderMatches / borderSamples < 0.45) return null;
   return color;
 }
 

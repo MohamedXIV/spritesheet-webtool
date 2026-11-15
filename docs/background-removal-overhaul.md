@@ -45,6 +45,9 @@ The following is now implemented in the draft:
   background (including transparent letterboxing), the sprite is recovered via
   Color Key, with an explicit per-batch notice. Otherwise processing fails
   safely and offers another method/backend; no project frame is modified.
+  Uniform-background detection now checks the dominant color over all opaque
+  pixels and its presence at the opaque bounds; minor compression, transparent
+  letterboxing and nonuniform border pixels do not necessarily defeat recovery.
 - **Integration:** Apply uses the editor's existing `onFramesProcessed` path.
   No IDs, frame timings, layers, or project schema fields are rebuilt here.
   Existing undo/save/export logic remains the integration point.
