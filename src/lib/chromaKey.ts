@@ -12,11 +12,17 @@ export interface ChromaKeyOptions {
   spillAmount?: number; // 0-100
 }
 
+export interface PixelImage {
+  data: Uint8ClampedArray;
+  width: number;
+  height: number;
+}
+
 /**
  * Sample the dominant color from corners of an image
  */
 export function sampleCornerColor(
-  imageData: ImageData,
+  imageData: PixelImage,
   sampleSize: number = 10
 ): { r: number; g: number; b: number } {
   const { data, width, height } = imageData;
@@ -51,10 +57,63 @@ export function sampleCornerColor(
 }
 
 /**
+ * Conservative detection for recovery when an AI model produces an empty mask.
+ * Unlike global corner sampling, inspect the edges of the *opaque* content
+ * bounds so letterboxed sprites with transparent padding are supported.
+ * Returns null for complex borders or images without a distinguishable subject.
+ */
+export function detectSolidBackground(imageData: PixelImage): { r: number; g: number; b: number } | null {
+  const { data, width, height } = imageData;
+  let minX = width, minY = height, maxX = -1, maxY = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (data[(y * width + x) * 4 + 3] < 224) continue;
+      minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+    }
+  }
+  if (maxX - minX < 8 || maxY - minY < 8) return null;
+
+  const bins = new Map<number, { count: number; r: number; g: number; b: number }>();
+  let edgeSamples = 0;
+  const add = (x: number, y: number) => {
+    const i = (y * width + x) * 4;
+    if (data[i + 3] < 224) return;
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    const key = (r >> 4) * 256 + (g >> 4) * 16 + (b >> 4);
+    const group = bins.get(key) ?? { count: 0, r: 0, g: 0, b: 0 };
+    group.count++; group.r += r; group.g += g; group.b += b;
+    bins.set(key, group);
+    edgeSamples++;
+  };
+  const step = Math.max(1, Math.floor(Math.max(maxX - minX, maxY - minY) / 64));
+  for (let x = minX; x <= maxX; x += step) { add(x, minY); add(x, maxY); }
+  for (let y = minY; y <= maxY; y += step) { add(minX, y); add(maxX, y); }
+  const dominant = Array.from(bins.values()).sort((a, b) => b.count - a.count)[0];
+  if (!dominant || edgeSamples < 12 || dominant.count / edgeSamples < 0.85) return null;
+  const color = {
+    r: Math.round(dominant.r / dominant.count),
+    g: Math.round(dominant.g / dominant.count),
+    b: Math.round(dominant.b / dominant.count),
+  };
+
+  let backgroundPixels = 0, subjectPixels = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 224) continue;
+    const distanceSquared = (data[i] - color.r) ** 2 + (data[i + 1] - color.g) ** 2 + (data[i + 2] - color.b) ** 2;
+    if (distanceSquared < 35 ** 2) backgroundPixels++;
+    else subjectPixels++;
+  }
+  // A uniform background and a non-trivial differently colored subject.
+  if (backgroundPixels < subjectPixels || subjectPixels < 16) return null;
+  return color;
+}
+
+/**
  * Remove background by color (chroma key) with pro-grade VFX unmixing spill suppression
  */
 export function applyChromaKeyToImageData(
-  imageData: ImageData,
+  imageData: PixelImage,
   options: ChromaKeyOptions
 ): void {
   const { 

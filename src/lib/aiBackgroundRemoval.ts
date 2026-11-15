@@ -1,8 +1,8 @@
 /** Browser-only ISNet adapter. Large model resources are loaded only when requested. */
-import { applyForegroundMask, type MaskRefinement } from './backgroundMask';
+import { applySafeForegroundMask, type MaskRefinement } from './backgroundMask';
 
 export type AiBackend = 'gpu' | 'cpu';
-export type AiStage = 'download' | 'initializing' | 'inference' | 'compositing';
+export type AiStage = 'download' | 'initializing' | 'inference' | 'compositing' | 'fallback';
 export interface AiProgress {
   stage: AiStage;
   fraction?: number;
@@ -119,8 +119,11 @@ export async function removeBackgroundAI(
     }
     const mask = new Uint8Array(source.width * source.height);
     for (let i = 0; i < mask.length; i++) mask[i] = raw[i * 4 + 3];
-    const output = applyForegroundMask(original.data, mask, source.width, source.height, refinement);
-    const imageData = new ImageData(new Uint8ClampedArray(output), source.width, source.height);
+    const { pixels, fallback } = applySafeForegroundMask(original.data, mask, source.width, source.height, refinement);
+    if (fallback === 'color-key') {
+      progress?.({ stage: 'fallback', detail: 'AI produced an empty mask; recovered with Color Key on a uniform background.' });
+    }
+    const imageData = new ImageData(new Uint8ClampedArray(pixels), source.width, source.height);
     ctx.putImageData(imageData, 0, 0);
     abortIfRequested(signal);
     return createImageBitmap(canvas);

@@ -33,6 +33,17 @@ The following is now implemented in the draft:
   complete-frame progress. Cancelling stops after the current inference, with
   partial outputs disposed. Preview first, then Apply or Discard. Apply verifies
   that each source bitmap still matches the one used for the preview.
+- **Explicit download confirmation:** the first AI operation for each backend
+  during a page session requires choosing to load/reuse its ~80 MB WebGPU or
+  ~40 MB CPU model. The panel explains why the model is needed, that browser
+  caching normally survives refreshes, and when eviction, site-data clearing,
+  updates or changing backend can trigger downloads again. No model is fetched
+  merely because the panel was opened.
+- **Empty-mask protection:** a model result that would fully erase a visible
+  frame is not presented as a successful AI preview. On a confidently uniform
+  background (including transparent letterboxing), the sprite is recovered via
+  Color Key, with an explicit per-batch notice. Otherwise processing fails
+  safely and offers another method/backend; no project frame is modified.
 - **Integration:** Apply uses the editor's existing `onFramesProcessed` path.
   No IDs, frame timings, layers, or project schema fields are rebuilt here.
   Existing undo/save/export logic remains the integration point.
@@ -126,6 +137,12 @@ overhaul until those tests and baseline measurements exist.**
    failed WebGPU session, choose CPU retry *after* the size warning.
 7. Inspect a faint hair edge, tiny pixel-art outline, transparent shadow, and
    green clothing near green background with soft vs crisp edge modes.
+8. Select AI and verify the download/reuse confirmation appears *before*
+   assets are requested. Reload and confirm the cache policy remains visible.
+   Switch GPU to CPU and confirm the separate model download is disclosed.
+9. Use an illustrated character on green with transparent padding, as well as
+   a complex-background source. Verify an empty AI mask never yields a fully
+   blank applicable preview. On the uniform case, verify the fallback warning.
 
 ## Next decision gate
 

@@ -1,4 +1,5 @@
 /** Pixel-level operations shared by Color Key and AI background removal. */
+import { applyChromaKeyToImageData, detectSolidBackground } from './chromaKey.ts';
 
 export type EdgeStyle = 'soft' | 'pixel';
 
@@ -88,4 +89,50 @@ export function applyForegroundMask(
   }
 
   return output;
+}
+
+export interface SafeMaskResult {
+  pixels: Uint8ClampedArray;
+  fallback: 'none' | 'color-key';
+}
+
+/**
+ * Never return an all-transparent AI result for a source that visibly contains
+ * content. Recover only if the opaque bounds have a confident solid-color
+ * border; otherwise fail closed and let the user try another method/backend.
+ */
+export function applySafeForegroundMask(
+  source: Uint8ClampedArray,
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  refinement: MaskRefinement,
+): SafeMaskResult {
+  const output = applyForegroundMask(source, mask, width, height, refinement);
+  let sourceVisible = false;
+  let outputVisible = false;
+  for (let i = 3; i < source.length; i += 4) {
+    if (source[i] > 16) sourceVisible = true;
+    if (output[i] > 16) outputVisible = true;
+    if (sourceVisible && outputVisible) break;
+  }
+  if (!sourceVisible || outputVisible) return { pixels: output, fallback: 'none' };
+
+  const color = detectSolidBackground({ data: source, width, height });
+  if (color) {
+    const recovered = new Uint8ClampedArray(source);
+    applyChromaKeyToImageData({ data: recovered, width, height }, {
+      targetColor: color,
+      tolerance: 12,
+      edgeSoftness: refinement.edgeStyle === 'pixel' ? 0 : 6,
+      spillSuppression: refinement.edgeStyle !== 'pixel',
+      spillMethod: 'cap',
+      spillAmount: 65,
+    });
+    for (let i = 3; i < recovered.length; i += 4) {
+      if (recovered[i] > 16) return { pixels: recovered, fallback: 'color-key' };
+    }
+  }
+
+  throw new Error('The AI returned an empty foreground mask. Nothing was applied. Try CPU fallback or Color Key.');
 }

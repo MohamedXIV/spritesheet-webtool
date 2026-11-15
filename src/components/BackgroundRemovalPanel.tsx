@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FrameData } from '@/types';
 import { removeBackgroundByColor, autoDetectBackgroundColor } from '@/lib/chromaKey';
-import { removeBackgroundAI, probeWebGPU, AI_MODEL_ESTIMATES, type AiProgress } from '@/lib/aiBackgroundRemoval';
+import { removeBackgroundAI, probeWebGPU, AI_MODEL_ESTIMATES, type AiBackend, type AiProgress } from '@/lib/aiBackgroundRemoval';
 import { addOutline } from '@/lib/outlineGenerator';
 import type { EdgeStyle } from '@/lib/backgroundMask';
 import styles from './BackgroundRemovalPanel.module.css';
@@ -21,6 +21,7 @@ type PreviewBatch = {
   originals: Map<string, ImageBitmap>;
   elapsedMs: number;
   frameMs: number[];
+  recoveredCount: number;
 };
 
 function imageUrl(bitmap: ImageBitmap): Promise<string> {
@@ -42,6 +43,7 @@ const stageLabels: Record<AiProgress['stage'], string> = {
   initializing: 'Loading AI engine',
   inference: 'Removing background',
   compositing: 'Finishing the sprite',
+  fallback: 'AI mask was empty; using Color Key on the flat background',
 };
 
 export function BackgroundRemovalPanel({ frames, selectedIds, onFramesProcessed, onProcessingChange }: Props) {
@@ -54,6 +56,7 @@ export function BackgroundRemovalPanel({ frames, selectedIds, onFramesProcessed,
   const [erosion, setErosion] = useState(0);
   const [decontaminate, setDecontaminate] = useState(false);
   const [forceCpu, setForceCpu] = useState(false);
+  const [authorizedBackend, setAuthorizedBackend] = useState<AiBackend | null>(null);
   const [gpuAvailable, setGpuAvailable] = useState(false);
   const [outlineEnabled, setOutlineEnabled] = useState(false);
   const [outlineThickness, setOutlineThickness] = useState(2);
@@ -131,6 +134,7 @@ export function BackgroundRemovalPanel({ frames, selectedIds, onFramesProcessed,
     const results = new Map<string, ImageBitmap>();
     const originals = new Map<string, ImageBitmap>();
     const frameMs: number[] = [];
+    let recoveredCount = 0;
     const batchStart = performance.now();
     const backend = gpuAvailable && !forceCpu ? 'gpu' : 'cpu';
 
@@ -156,6 +160,7 @@ export function BackgroundRemovalPanel({ frames, selectedIds, onFramesProcessed,
             backend,
             refinement: { edgeStyle, erosion, decontaminate },
             progress: ({ stage: aiStage, fraction }) => {
+              if (aiStage === 'fallback') recoveredCount++;
               setStage(`${stageLabels[aiStage]}${aiStage === 'download' && fraction !== undefined ? ` (${Math.round(fraction * 100)}% of current file)` : ''} · Frame ${index + 1}/${chosenFrames.length}`);
               setResourceProgress(aiStage === 'download' ? fraction : undefined);
             },
@@ -185,11 +190,11 @@ export function BackgroundRemovalPanel({ frames, selectedIds, onFramesProcessed,
       }
 
       if (controller.signal.aborted) throw new DOMException('Cancelled', 'AbortError');
-      const batch = { results, originals, elapsedMs: performance.now() - batchStart, frameMs };
+      const batch = { results, originals, elapsedMs: performance.now() - batchStart, frameMs, recoveredCount };
       batchRef.current = batch;
       setPreviewBatch(batch);
       setPreviewId(chosenFrames[0].id);
-      setStage('Preview ready. No project frames have changed.');
+      setStage(recoveredCount ? `Preview ready; ${recoveredCount} frame(s) recovered using Color Key. Originals unchanged.` : 'Preview ready. No project frames have changed.');
     } catch (cause) {
       results.forEach(bitmap => bitmap.close());
       if (controller.signal.aborted || (cause instanceof DOMException && cause.name === 'AbortError')) {
@@ -259,7 +264,8 @@ export function BackgroundRemovalPanel({ frames, selectedIds, onFramesProcessed,
           <p className={styles.help}>For illustrated characters, photographs, and complex backgrounds. Processing stays in your browser.</p>
           <div className={styles.infoBox}>
             <strong>{backend === 'gpu' ? 'WebGPU acceleration' : 'CPU / WebAssembly fallback'}</strong>
-            <span>First use downloads {AI_MODEL_ESTIMATES[backend]}; browser caching usually avoids downloading it again.</span>
+            <span>Model required: {AI_MODEL_ESTIMATES[backend]}. It separates the foreground from complex backgrounds locally.</span>
+            <span>Usually downloaded only once per browser and model version. Refresh/reopening reuses the browser cache while retained. Clearing site data, cache eviction, model updates, or switching CPU/GPU can require another download.</span>
             {!gpuAvailable && <span>WebGPU is not available in this browser or context.</span>}
           </div>
           {gpuAvailable && <label className={styles.checkbox}><input type="checkbox" checked={forceCpu} disabled={busy} onChange={e => { discard(); setForceCpu(e.target.checked); }} /> Use CPU fallback (smaller download, usually slower)</label>}
@@ -304,6 +310,7 @@ export function BackgroundRemovalPanel({ frames, selectedIds, onFramesProcessed,
 
       {previewBatch && <div className={styles.previewSection}>
         <div className={styles.previewHeading}>Review before applying</div>
+        {previewBatch.recoveredCount > 0 && <p className={styles.notice} role="status">The AI returned an empty mask on {previewBatch.recoveredCount} frame(s). Those previews use Color Key because a uniform background was detected. Review the edges carefully before applying.</p>}
         <p className={styles.help}>
           {`Batch ${(previewBatch.elapsedMs / 1000).toFixed(2)}s · First frame ${(previewBatch.frameMs[0] / 1000).toFixed(2)}s`}
           {previewBatch.frameMs.length > 1 && ` · Subsequent avg ${(previewBatch.frameMs.slice(1).reduce((sum, ms) => sum + ms, 0) / (previewBatch.frameMs.length - 1) / 1000).toFixed(2)}s`}
@@ -323,7 +330,14 @@ export function BackgroundRemovalPanel({ frames, selectedIds, onFramesProcessed,
         </div>
       </div>}
 
-      {!previewBatch && <button type="button" className={styles.primaryButton} onClick={start} disabled={busy || chosenFrames.length === 0}>
+      {!previewBatch && !busy && method === 'ai' && authorizedBackend !== backend && <div className={styles.consentBox}>
+        <strong>Before loading the AI model</strong>
+        <p>Spritecraft needs to load {AI_MODEL_ESTIMATES[backend]} plus supporting runtime files. The model runs locally to identify your character and remove complex backgrounds; your image is not uploaded for processing.</p>
+        <p>The first use normally downloads these files. Your browser usually caches them across refreshes and later visits, but clearing site data, cache eviction, an update, or changing the AI backend may require a new download.</p>
+        <button type="button" className={styles.primaryButton} disabled={!chosenFrames.length} onClick={() => { setAuthorizedBackend(backend); void start(); }}>Continue: load or reuse {backend === 'gpu' ? '~80 MB WebGPU' : '~40 MB CPU'} model</button>
+        <button type="button" className={styles.secondaryButton} onClick={() => setMethod('color')}>Use Color Key instead — no download</button>
+      </div>}
+      {!previewBatch && (busy || method === 'color' || authorizedBackend === backend) && <button type="button" className={styles.primaryButton} onClick={start} disabled={busy || chosenFrames.length === 0}>
         {busy ? `Processing ${doneCount}/${totalCount} frames` : `Preview ${chosenFrames.length} frame(s)`}
       </button>}
       <p className={styles.hint}>{selectedIds.size ? `${chosenFrames.length} selected frame(s)` : 'All frames'} · Changes apply only after confirmation. Undo remains available.</p>
