@@ -6,12 +6,23 @@ export interface ChangelogItem {
 export interface ChangelogVersion {
   version: string;
   date: string;
-  toolScope: 'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet' | 'stylizer';
+  toolScope: 'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet' | 'stylizer' | 'character-creator';
   toolName: string;
   items: ChangelogItem[];
 }
 
 export const changelogData: ChangelogVersion[] = [
+  {
+    version: '0.11.0-alpha',
+    date: '2026-11-16',
+    toolScope: 'character-creator',
+    toolName: 'Character Creator',
+    items: [
+      { category: 'Added', detail: 'New modular LPC Character Creator with male and female body bases, facial expressions, hair, facial hair and clothing overlays.' },
+      { category: 'Added', detail: 'Layer colors, live directional animation preview for idle, walk, run and slash, and local character settings.' },
+      { category: 'Added', detail: 'Export animation PNGs or a ZIP containing all four sheets, character JSON metadata and per-asset artwork credits.' },
+    ],
+  },
   {
     version: '0.10.0-beta',
     date: '2026-07-06',

@@ -1,25 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Clock, Calendar, Info, Layers } from 'lucide-react';
-import { changelogData, ChangelogVersion } from '@/data/changelog';
+import { X, Clock, Calendar, Info } from 'lucide-react';
+import { changelogData, type ChangelogVersion } from '@/data/changelog';
 import styles from './ChangelogDrawer.module.css';
 
 interface ChangelogDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  initialFilter?: 'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet';
+  initialFilter?: ChangelogVersion['toolScope'];
 }
 
 export default function ChangelogDrawer({ isOpen, onClose, initialFilter = 'All' }: ChangelogDrawerProps) {
-  const [activeFilter, setActiveFilter] = useState<'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet'>('All');
-
-  // Sync initial filter when drawer opens
-  useEffect(() => {
-    if (isOpen) {
-      setActiveFilter(initialFilter);
-    }
-  }, [isOpen, initialFilter]);
+  const [activeFilter, setActiveFilter] = useState<ChangelogVersion['toolScope']>(initialFilter);
 
   // Handle escape key to close
   useEffect(() => {
@@ -83,6 +76,12 @@ export default function ChangelogDrawer({ isOpen, onClose, initialFilter = 'All'
             onClick={() => setActiveFilter('3d-painter')}
           >
             3D Painter
+          </button>
+          <button
+            className={`${styles.filterBtn} ${activeFilter === 'character-creator' ? styles.filterBtnActive : ''}`}
+            onClick={() => setActiveFilter('character-creator')}
+          >
+            Characters
           </button>
         </div>
 

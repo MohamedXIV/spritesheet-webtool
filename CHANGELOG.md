@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0-alpha] - 2026-11-16
+
+### Added
+- **Character Creator**: New modular LPC Character Creator with male and female body bases, facial expressions, hair, facial hair and clothing overlays.
+- **Character Preview**: Layer colors, live directional animation preview for idle, walk, run and slash, and local character settings.
+- **Character Export**: Export animation PNGs or a ZIP containing all four sheets, character JSON metadata and per-asset artwork credits.
+
+---
+
 ## [0.10.0-beta] - 2026-07-06
 
 ### Added
