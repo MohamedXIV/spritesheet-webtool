@@ -45,6 +45,31 @@ function randomCharacter(current: CharacterConfig): CharacterConfig {
   return next;
 }
 
+function OptionThumbnail({ config, slot, optionId, gender }: {
+  config: CharacterConfig;
+  slot: Slot;
+  optionId?: string | null;
+  gender?: Gender;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    let active = true;
+    const previewConfig = gender
+      ? selectGender(config, gender)
+      : { ...config, selected: { ...config.selected, [slot]: optionId ?? null } };
+    composeSheet(previewConfig, 'idle').then((sheet) => {
+      if (!active) return;
+      const context = canvasRef.current?.getContext('2d');
+      if (!context) return;
+      context.imageSmoothingEnabled = false;
+      context.clearRect(0, 0, FRAME_SIZE, FRAME_SIZE);
+      context.drawImage(sheet, 0, 2 * FRAME_SIZE, FRAME_SIZE, FRAME_SIZE, 0, 0, FRAME_SIZE, FRAME_SIZE);
+    }).catch(() => { /* The main preview displays image-load failures. */ });
+    return () => { active = false; };
+  }, [config, slot, optionId, gender]);
+  return <canvas ref={canvasRef} width={FRAME_SIZE} height={FRAME_SIZE} className={styles.optionSprite} aria-hidden="true" />;
+}
+
 export default function CharacterCreator() {
   const [config, setConfig] = useState<CharacterConfig>(() => createCharacter());
   const [ready, setReady] = useState(false);
@@ -214,7 +239,7 @@ export default function CharacterCreator() {
                 {(['male', 'female'] as const).map((gender) => (
                   <button type="button" className={`${styles.choice} ${config.gender === gender ? styles.choiceActive : ''}`}
                     key={gender} onClick={() => changeGender(gender)} aria-pressed={config.gender === gender}>
-                    <span className={styles.choicePreview}>{gender === 'male' ? '♂' : '♀'}</span>
+                    <span className={styles.choicePreview}><OptionThumbnail config={config} slot="body" gender={gender} /></span>
                     <span>{gender === 'male' ? 'Male base' : 'Female base'}</span>
                   </button>
                 ))}
@@ -226,12 +251,12 @@ export default function CharacterCreator() {
               <div className={styles.choiceGrid}>
                 {tab !== 'eyes' && <button className={`${styles.choice} ${config.selected[tab] === null ? styles.choiceActive : ''}`}
                   onClick={() => changeSelected(tab, null)} aria-pressed={config.selected[tab] === null}>
-                  <span className={styles.choicePreview}>—</span><span>None</span>
+                  <span className={styles.choicePreview}><OptionThumbnail config={config} slot={tab} optionId={null} /></span><span>None</span>
                 </button>}
                 {options.map((option) => (
                   <button key={option.id} className={`${styles.choice} ${config.selected[tab] === option.id ? styles.choiceActive : ''}`}
                     onClick={() => changeSelected(tab, option.id)} aria-pressed={config.selected[tab] === option.id}>
-                    <span className={styles.choicePreview}>{option.label.slice(0, 1)}</span><span>{option.label}</span>
+                    <span className={styles.choicePreview}><OptionThumbnail config={config} slot={tab} optionId={option.id} /></span><span>{option.label}</span>
                   </button>
                 ))}
               </div>
