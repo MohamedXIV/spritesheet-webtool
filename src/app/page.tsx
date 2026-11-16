@@ -6,6 +6,7 @@ import { Trash2, Edit2, FolderOpen, Clock, Layout } from 'lucide-react';
 import { getAllProjectsSummary, deleteProject, renameProject, ProjectSummary } from '@/lib/projectDatabase';
 import { projectToolHref } from '@/lib/spriteProjectCompatibility';
 import ChangelogDrawer from '@/components/ChangelogDrawer';
+import type { ChangelogVersion } from '@/data/changelog';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import styles from './page.module.css';
 
@@ -17,7 +18,7 @@ export default function Home() {
   
   // Interactive Changelog Drawer States
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
-  const [changelogFilter, setChangelogFilter] = useState<'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet' | 'stylizer'>('All');
+  const [changelogFilter, setChangelogFilter] = useState<ChangelogVersion['toolScope']>('All');
 
   // Fetch projects from IndexedDB on mount
   const loadProjects = async () => {
@@ -74,7 +75,7 @@ export default function Home() {
     });
   };
 
-  const openChangelog = (filter: 'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet' | 'stylizer') => {
+  const openChangelog = (filter: ChangelogVersion['toolScope']) => {
     setChangelogFilter(filter);
     setIsChangelogOpen(true);
   };
@@ -97,6 +98,9 @@ export default function Home() {
             </Link>
             <Link href="/tools/sprite-editor" className={styles.navItem}>
               🎨 Sprite Editor
+            </Link>
+            <Link href="/tools/character-creator" className={styles.navItem}>
+              🧍 Character Creator
             </Link>
             <Link href="/tools/3d-pixelator" className={styles.navItem}>
               📦 3D Pixel-Painter
@@ -143,6 +147,29 @@ export default function Home() {
 
         {/* Tools Portal Cards */}
         <section className={styles.toolsSuite}>
+          <div className={styles.toolCard}>
+            <div className={styles.toolHeader}>
+              <div className={styles.toolIcon}>🧍</div>
+              <span className={styles.toolBadge}>v0.11.0-alpha</span>
+            </div>
+            <div className={styles.toolTitleRow}>
+              <h2 className={styles.toolTitle}>Character Creator</h2>
+              <button onClick={() => openChangelog('character-creator')} className={styles.toolChangelogBtn} title="View character creator updates">
+                <Clock size={12} />
+              </button>
+            </div>
+            <p className={styles.toolDesc}>
+              Build animated 2D characters by combining male and female LPC body bases with interchangeable hair,
+              facial features, clothing and colors. Preview four directions, then export spritesheets with credits.
+            </p>
+            <ul className={styles.toolFeatures}>
+              <li>► Base bodies with modular sprite layers</li>
+              <li>► Customize colors, faces, hair and clothes</li>
+              <li>► Animated preview and multi-action export</li>
+              <li>► Offline-ready starter assets and attribution</li>
+            </ul>
+            <Link href="/tools/character-creator" className={styles.toolCta}>Open Character Creator</Link>
+          </div>
           <div className={styles.toolCard}>
             <div className={styles.toolHeader}>
               <div className={styles.toolIcon}>🎬</div>
@@ -415,9 +442,10 @@ export default function Home() {
 
       {/* Interactive Operations Drawer */}
       <ChangelogDrawer 
+        key={`${isChangelogOpen}-${changelogFilter}`}
         isOpen={isChangelogOpen} 
         onClose={() => setIsChangelogOpen(false)} 
-        initialFilter={changelogFilter as 'All' | 'spritesheet' | 'pixelator' | '3d-painter' | 'trimsheet'}
+        initialFilter={changelogFilter}
       />
     </main>
   );

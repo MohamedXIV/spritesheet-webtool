@@ -1,0 +1,151 @@
+{
+  "sourceRevision": "04140673ec02906f8233523639733c83690df750",
+  "actions": [
+    "idle",
+    "walk",
+    "run",
+    "slash"
+  ],
+  "assets": [
+    {
+      "id": "body-male",
+      "slot": "body",
+      "gender": "male",
+      "label": "Male base",
+      "sourceDir": "body/bodies/male"
+    },
+    {
+      "id": "body-female",
+      "slot": "body",
+      "gender": "female",
+      "label": "Female base",
+      "sourceDir": "body/bodies/female"
+    },
+    {
+      "id": "head-male",
+      "slot": "head",
+      "gender": "male",
+      "label": "Human head",
+      "sourceDir": "head/heads/human/male"
+    },
+    {
+      "id": "head-female",
+      "slot": "head",
+      "gender": "female",
+      "label": "Human head",
+      "sourceDir": "head/heads/human/female"
+    },
+    {
+      "id": "eyes-neutral",
+      "slot": "eyes",
+      "gender": "all",
+      "label": "Neutral",
+      "sourceDir": "eyes/human/adult/neutral"
+    },
+    {
+      "id": "eyes-angry",
+      "slot": "eyes",
+      "gender": "all",
+      "label": "Angry",
+      "sourceDir": "eyes/human/adult/anger"
+    },
+    {
+      "id": "eyes-sad",
+      "slot": "eyes",
+      "gender": "all",
+      "label": "Sad",
+      "sourceDir": "eyes/human/adult/sad"
+    },
+    {
+      "id": "hair-buzzcut",
+      "slot": "hair",
+      "gender": "all",
+      "label": "Buzzcut",
+      "sourceDir": "hair/buzzcut/adult"
+    },
+    {
+      "id": "hair-bob",
+      "slot": "hair",
+      "gender": "all",
+      "label": "Bob",
+      "sourceDir": "hair/bob/adult"
+    },
+    {
+      "id": "hair-long",
+      "slot": "hair",
+      "gender": "all",
+      "label": "Long",
+      "sourceDir": "hair/long/adult"
+    },
+    {
+      "id": "beard-basic",
+      "slot": "beard",
+      "gender": "male",
+      "label": "Full beard",
+      "sourceDir": "beards/beard/basic"
+    },
+    {
+      "id": "beard-trimmed",
+      "slot": "beard",
+      "gender": "male",
+      "label": "Trimmed beard",
+      "sourceDir": "beards/beard/trimmed"
+    },
+    {
+      "id": "top-tee-male",
+      "slot": "top",
+      "gender": "male",
+      "label": "T-shirt",
+      "sourceDir": "torso/clothes/shortsleeve/tshirt/male"
+    },
+    {
+      "id": "top-tee-female",
+      "slot": "top",
+      "gender": "female",
+      "label": "T-shirt",
+      "sourceDir": "torso/clothes/shortsleeve/tshirt/female"
+    },
+    {
+      "id": "top-long-male",
+      "slot": "top",
+      "gender": "male",
+      "label": "Long sleeves",
+      "sourceDir": "torso/clothes/longsleeve/longsleeve/male"
+    },
+    {
+      "id": "top-long-female",
+      "slot": "top",
+      "gender": "female",
+      "label": "Long sleeves",
+      "sourceDir": "torso/clothes/longsleeve/longsleeve/female"
+    },
+    {
+      "id": "bottom-pants",
+      "slot": "bottom",
+      "gender": "male",
+      "label": "Trousers",
+      "sourceDir": "legs/pants/male"
+    },
+    {
+      "id": "bottom-leggings",
+      "slot": "bottom",
+      "gender": "female",
+      "label": "Leggings",
+      "sourceDir": "legs/leggings/thin"
+    },
+    {
+      "id": "shoes-male",
+      "slot": "shoes",
+      "gender": "male",
+      "label": "Shoes",
+      "sourceDir": "feet/shoes/basic/male"
+    },
+    {
+      "id": "shoes-female",
+      "slot": "shoes",
+      "gender": "female",
+      "label": "Shoes",
+      "sourceDir": "feet/shoes/basic/thin"
+    }
+  ]
+}
