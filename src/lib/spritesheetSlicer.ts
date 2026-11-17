@@ -3,6 +3,7 @@
  */
 
 import { FrameData } from '@/types';
+import { sourceCropForCell } from './sourceCrop';
 
 // Counter to ensure unique IDs
 let sliceIdCounter = 0;
@@ -56,6 +57,7 @@ export async function sliceSpritesheetByGrid(
               index,
               timestamp: index,
               bitmap,
+              sourceCrop: sourceCropForCell(sourceId, c, r, cellWidth, cellHeight),
               sourceId,
               sourceColor,
             });
@@ -127,6 +129,7 @@ export async function sliceSpritesheetByDimensions(
               index,
               timestamp: index,
               bitmap,
+              sourceCrop: sourceCropForCell(sourceId, c, r, cellWidth, cellHeight),
               sourceId,
               sourceColor,
             });
