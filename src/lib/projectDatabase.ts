@@ -5,6 +5,7 @@
 import type { StylizerOptions } from '@/lib/stylizer';
 import type { SourceInfo } from '@/types';
 import type { SourceSheetAsset } from '@/lib/sourceSheetAssets';
+import type { SourceCrop } from '@/lib/sourceCrop';
 
 export interface ProjectMetadata {
   folders: any[];
@@ -84,6 +85,7 @@ export interface DbProjectFrameLayer {
 }
 
 export interface DbProjectFrame {
+  sourceCrop?: SourceCrop;
   id: string;
   index: number;
   timestamp: number;

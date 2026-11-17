@@ -46,7 +46,8 @@ import { useWorkspaceShortcuts } from '@/hooks/useWorkspaceShortcuts';
 import { useAppDialog } from '@/components/AppDialogProvider';
 import { updateFrameDurations as withFrameDurations } from '@/lib/timelineFrameTiming';
 import { prepareSpriteProjectRestore, restoreSpriteSources, type SpriteProjectType } from '@/lib/spriteProjectCompatibility';
-import { replaceSourceSheetFrames, restoreSourceSheetAssets, type SourceSheetAsset } from '@/lib/sourceSheetAssets';
+import { restoreSourceSheetAssets, type SourceSheetAsset } from '@/lib/sourceSheetAssets';
+import { editSourceCrop, reframeFromOriginal, renderSourceCrop } from '@/lib/sourceCrop';
 
 type EditorState = 'idle' | 'extracting' | 'ready';
 
@@ -303,6 +304,7 @@ export default function EditorPage() {
             index: f.index,
             timestamp: f.timestamp,
             durationMs: f.durationMs,
+            sourceCrop: f.sourceCrop,
             layerContents,
             bitmap,
             sourceId: f.sourceId,
@@ -444,25 +446,14 @@ export default function EditorPage() {
       return;
     }
 
-    const previousAsset = sourceSheetAssets.find(item => item.sourceId === editingSheetSourceId);
-    const replacing = !!previousAsset;
-    const affectedCount = replacing
-      ? (frameState?.frames.filter(frame => frame.sourceId === previousAsset.sourceId).length ?? 0)
-      : 0;
-    if (affectedCount > 0 && !(await confirmAction({
-      title: 'Replace existing slices?',
-      message: `Re-slice ${affectedCount} frames from "${previousAsset!.name}"? This replaces edits and paint layers on those frames. Undo can restore them; other sources are untouched.`,
-      confirmLabel: 'Re-slice frames',
-      danger: true,
-    }))) return;
+    // Re-slicing a saved sheet always creates a NEW source variant. Never
+    // overwrite edited frames, paint layers or the original source geometry.
 
     setIsSlicingSheet(true);
     let imported: FrameData[] = [];
     try {
-      const sourceId = previousAsset?.sourceId ??
-        `source-sheet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      const sourceColor = loadedSources.find(source => source.id === sourceId)?.color ??
-        SOURCE_COLORS[sourceColorIndexRef.current++ % SOURCE_COLORS.length];
+      const sourceId = `source-sheet-${crypto.randomUUID()}`;
+      const sourceColor = SOURCE_COLORS[sourceColorIndexRef.current++ % SOURCE_COLORS.length];
       const result = sliceType === 'grid'
         ? await sliceSpritesheetByGrid(sheetFile, sliceCols, sliceRows, sourceId, sourceColor)
         : await sliceSpritesheetByDimensions(sheetFile, sliceCellWidth, sliceCellHeight, sourceId, sourceColor);
@@ -478,8 +469,7 @@ export default function EditorPage() {
         frame.layerContents = layerContents;
       }
 
-      const folderId = previousAsset?.folderId ??
-        `folder-sheet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const folderId = `folder-sheet-${crypto.randomUUID()}`;
       const folder: Folder = {
         id: folderId,
         name: sheetFile.name.replace(/\.[^.]+$/, ''),
@@ -489,19 +479,13 @@ export default function EditorPage() {
         color: sourceColor,
       };
 
-      setFrameState(previous => previous && replacing
-        ? replaceSourceSheetFrames(previous, sourceId, folder, imported)
-        : appendSourceFrames(previous, imported, folder));
+      setFrameState(previous => appendSourceFrames(previous, imported, folder));
 
-      setLoadedSources(previous => {
-        const next: SourceInfo = {
-          id: sourceId, name: sheetFile.name, type: 'image',
-          frameCount: imported.length, color: sourceColor,
-        };
-        return previous.some(item => item.id === sourceId)
-          ? previous.map(item => item.id === sourceId ? next : item)
-          : [...previous, next];
-      });
+      setLoadedSources(previous => [
+        ...previous,
+        { id: sourceId, name: sheetFile.name, type: 'image',
+          frameCount: imported.length, color: sourceColor },
+      ]);
 
       const asset: SourceSheetAsset = {
         sourceId,
@@ -515,10 +499,10 @@ export default function EditorPage() {
           cellWidth: sliceCellWidth, cellHeight: sliceCellHeight,
         },
       };
-      setSourceSheetAssets(previous =>
-        [...previous.filter(item => item.sourceId !== sourceId), asset]);
+      setSourceSheetAssets(previous => [...previous, asset]);
       setEditingSheetSourceId(sourceId);
-      setCurrentFrame(0);
+      // Select the first newly appended frame in the animation preview.
+      setCurrentFrame(frameState ? getOrderedFrames(frameState).length : 0);
       setEditorState('ready');
       setShowFrameWarning(previous =>
         previous || (frameState?.frames.length || 0) + imported.length > FRAME_WARNING_THRESHOLD);
@@ -653,7 +637,9 @@ export default function EditorPage() {
         return {
           ...f,
           layerContents: nextContents,
-          bitmap: nextCompositedBmp
+          bitmap: nextCompositedBmp,
+          sourceCrop: layerId === 'layer-base' && f.sourceCrop
+            ? { ...f.sourceCrop, baseModified: true } : f.sourceCrop
         };
       }
       return f;
@@ -664,6 +650,47 @@ export default function EditorPage() {
       frames: updatedFrames
     });
   }, [frameState, globalLayers]);
+
+  // A crop correction never reuses the last clipped bitmap as its source.
+  // Only the immutable uploaded spritesheet Blob is decoded. Paint layers
+  // remain untouched; unsafe base edits / canvas expansion are refused.
+  const adjustFrameSourceCrop = useCallback(async (
+    frameId: string, changes: { x: number; y: number; width: number; height: number }
+  ) => {
+    const frame = frameState?.frames.find(item => item.id === frameId);
+    if (!frame?.sourceCrop) return;
+    const asset = sourceSheetAssets.find(item => item.sourceId === frame.sourceCrop?.sourceId);
+    if (!asset) {
+      void showMessage({
+        title: 'Original source unavailable',
+        message: 'This frame cannot be re-cropped because its original spritesheet was not saved.',
+      });
+      return;
+    }
+    try {
+      const crop = editSourceCrop(frame.sourceCrop, changes, asset.width, asset.height);
+      if (crop.x === frame.sourceCrop.x && crop.y === frame.sourceCrop.y &&
+          crop.width === frame.sourceCrop.width && crop.height === frame.sourceCrop.height) return;
+      const updated = await reframeFromOriginal(frame, asset, crop, globalLayers);
+      if (frameStateRef.current?.frames.find(item => item.id === frameId) !== frame) {
+        updated.bitmap.close();
+        updated.layerContents?.['layer-base']?.close();
+        void showMessage({
+          title: 'Frame changed',
+          message: 'The frame changed during crop rendering. Try applying the crop again.',
+        });
+        return;
+      }
+      setFrameState(previous => previous
+        ? { ...previous, frames: previous.frames.map(item => item.id === frameId ? updated : item) }
+        : previous);
+    } catch (error) {
+      void showMessage({
+        title: 'Cannot adjust this crop',
+        message: error instanceof Error ? error.message : 'Unable to edit the original crop.',
+      });
+    }
+  }, [frameState, sourceSheetAssets, globalLayers, setFrameState, showMessage]);
 
   // Folder helper actions
   const folders = frameState ? frameState.folders : [];
@@ -1104,7 +1131,12 @@ export default function EditorPage() {
           }
         }
           // Old frame bitmap is kept alive in the 'past' stack for Undo, closed automatically when evicted!
-          return { ...frame, bitmap: processed };
+          return {
+            ...frame,
+            bitmap: processed,
+            sourceCrop: frame.sourceCrop
+              ? { ...frame.sourceCrop, baseModified: true } : undefined,
+          };
       }
       return frame;
     });
@@ -1117,47 +1149,69 @@ export default function EditorPage() {
 
   const handleRevertSelected = useCallback(async () => {
     if (!frameState) return;
-    
-    const framesToRevert = frameState.selectedIds.size > 0
-      ? frameState.frames.filter(f => frameState.selectedIds.has(f.id))
+    const framesToRevert = frameState.selectedIds.size
+      ? frameState.frames.filter(frame => frameState.selectedIds.has(frame.id))
       : frameState.frames;
-    
-    const revertedFrames = new Map<string, ImageBitmap>();
-    
-    for (const frame of framesToRevert) {
-      const original = originalFramesRef.current.get(frame.id);
-      if (original) {
-        const canvas = document.createElement('canvas');
-        canvas.width = original.width;
-        canvas.height = original.height;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(original, 0, 0);
-        const restored = await createImageBitmap(canvas);
-        revertedFrames.set(frame.id, restored);
-      }
-    }
-    
-    if (revertedFrames.size === 0) {
-      void showMessage({ title: 'Nothing to revert', message: 'No original frames to revert to.' });
-      return;
-    }
-    
-    const updatedFrames = frameState.frames.map(frame => {
-      const reverted = revertedFrames.get(frame.id);
-      if (reverted) {
-        // Old frame bitmap is kept alive in the 'past' stack for Undo, closed automatically when evicted!
-        return { ...frame, bitmap: reverted };
-      }
-      return frame;
-    });
-    
-    setFrameState({
-      ...frameState,
-      frames: updatedFrames
-    });
-  }, [frameState]);
 
-  const canRevert = !!(frameState && originalFramesRef.current.size > 0);
+    const restoredFrames = new Map<string, FrameData>();
+    try {
+      for (const frame of framesToRevert) {
+        const asset = frame.sourceCrop
+          ? sourceSheetAssets.find(item => item.sourceId === frame.sourceCrop?.sourceId)
+          : undefined;
+        if (asset && frame.sourceCrop) {
+          // Revert source-backed frames from their CURRENT source-space crop.
+          // A cached pre-crop screenshot could contain the wrong region.
+          const crop = { ...frame.sourceCrop, baseModified: false };
+          const base = await renderSourceCrop(asset.blob, crop);
+          try {
+            const contents = { ...frame.layerContents, 'layer-base': base };
+            const bitmap = await compositeFrameLayers(contents, globalLayers, crop.width, crop.height);
+            restoredFrames.set(frame.id, { ...frame, bitmap, layerContents: contents, sourceCrop: crop });
+          } catch (error) {
+            base.close();
+            throw error;
+          }
+          continue;
+        }
+        const original = originalFramesRef.current.get(frame.id);
+        if (!original) continue;
+        const bitmap = await createImageBitmap(original);
+        restoredFrames.set(frame.id, { ...frame, bitmap });
+      }
+
+      if (restoredFrames.size === 0) {
+        void showMessage({ title: 'Nothing to revert', message: 'No original frames to revert to.' });
+        return;
+      }
+      if (frameStateRef.current !== frameState) {
+        // Avoid applying asynchronous renders to a document edited meanwhile.
+        for (const [id, restored] of restoredFrames) {
+          restored.bitmap.close();
+          if (restored.layerContents?.['layer-base'] !==
+              frameState.frames.find(item => item.id === id)?.layerContents?.['layer-base']) {
+            restored.layerContents?.['layer-base']?.close();
+          }
+        }
+        return;
+      }
+      setFrameState(previous => previous
+        ? { ...previous, frames: previous.frames.map(frame => restoredFrames.get(frame.id) || frame) }
+        : previous);
+    } catch (error) {
+      void showMessage({
+        title: 'Revert failed',
+        message: error instanceof Error ? error.message : 'Could not restore the original frame.',
+      });
+    }
+  }, [frameState, sourceSheetAssets, globalLayers, setFrameState, showMessage]);
+
+  const canRevert = !!(frameState && (
+    originalFramesRef.current.size > 0 ||
+    frameState.frames.some(frame => frame.sourceCrop &&
+      sourceSheetAssets.some(asset => asset.sourceId === frame.sourceCrop?.sourceId))
+  ));
+
   const orderedFrames = frameState ? getOrderedFrames(frameState) : [];
   const selectedFrames = frameState ? getSelectedFrames(frameState) : [];
 
@@ -1333,6 +1387,8 @@ export default function EditorPage() {
     reorderGlobalLayers,
     updateGlobalLayer,
     updateFrameLayer,
+    sourceSheetAssets,
+    adjustFrameSourceCrop,
 
     // Brush Settings
     activeTool,
@@ -1441,6 +1497,8 @@ export default function EditorPage() {
     reorderGlobalLayers,
     updateGlobalLayer,
     updateFrameLayer,
+    sourceSheetAssets,
+    adjustFrameSourceCrop,
     activeTool,
     setActiveTool,
     brushColor,

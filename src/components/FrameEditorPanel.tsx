@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Paintbrush, Eraser, Pipette, PaintBucket, Layers, Eye } from 'lucide-react';
 import { useEditorContext } from '@/contexts/EditorContext';
 import styles from './FrameEditorPanel.module.css';
+import { SourceCropControls } from './SourceCropControls';
 
 // Hex to RGBA helper for flood fill
 function hexToRgba(hex: string, alphaPercent: number = 100): { r: number; g: number; b: number; a: number } {
@@ -96,6 +97,8 @@ export function FrameEditorPanel() {
     globalLayers = [],
     activeLayerId = '',
     updateFrameLayer = async () => {},
+    sourceSheetAssets = [],
+    adjustFrameSourceCrop = async () => {},
     
     // Brush Settings
     activeTool = 'brush',
@@ -478,6 +481,14 @@ export function FrameEditorPanel() {
           Clear
         </button>
       </div>
+
+      {activeFrameData?.sourceCrop && (
+        <SourceCropControls
+          frame={activeFrameData}
+          asset={sourceSheetAssets.find(asset => asset.sourceId === activeFrameData.sourceCrop?.sourceId)}
+          onApply={adjustFrameSourceCrop}
+        />
+      )}
 
       {/* Editor Canvas Canvas Viewport */}
       <div className={styles.viewport}>

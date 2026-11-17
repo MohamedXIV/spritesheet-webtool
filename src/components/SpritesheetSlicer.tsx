@@ -87,8 +87,8 @@ export function SpritesheetSlicer() {
             ))}
           </select>
           <p className={styles.description}>
-            Choose a saved original to adjust its grid and replace only its own extracted frames.
-            Other sources stay untouched; Undo can restore the previous slices.
+            Choose a saved original to create a new slicing variant. Previous frames,
+            paint layers and the original image stay intact.
           </p>
         </div>
       )}
@@ -133,7 +133,7 @@ export function SpritesheetSlicer() {
           <h3 className={styles.title}>Slice Your Spritesheet</h3>
           <p className={styles.description}>
             {editingSourceId
-              ? 'Re-slicing replaces the previous frames from this saved source (including their edits), while keeping the rest of the project. You can Undo the change.'
+              ? 'Re-slicing creates a NEW set of frames. The previous animation, its paint layers and saved original remain unchanged.'
               : 'New slices are added to your current frames without replacing existing work. The original image will be kept locally for later re-slicing.'}
           </p>
 
@@ -220,7 +220,7 @@ export function SpritesheetSlicer() {
                   <div className={styles.spinner} />
                   <span>Slicing grid...</span>
                 </div>
-              ) : editingSourceId ? 'Re-slice & Replace Frames' : appendMode ? 'Slice & Add Frames' : 'Slice & Load Workspace'}
+              ) : editingSourceId ? 'Create Slice Variant' : appendMode ? 'Slice & Add Frames' : 'Slice & Load Workspace'}
             </button>
           </div>
         </div>
