@@ -45,21 +45,23 @@ export function isSourceCrop(value: unknown): value is SourceCrop {
  * moving a crop can expose lost pixels without resampling or clipping any
  * existing paint layers. Canvas expansion will require cel-space transforms.
  */
-export function moveSourceCrop(
+export function editSourceCrop(
   current: SourceCrop,
-  x: number, y: number,
+  changes: Pick<SourceCrop, 'x' | 'y' | 'width' | 'height'>,
   sourceWidth: number, sourceHeight: number
 ): SourceCrop {
   if (!isSourceCrop(current)) throw new Error('Invalid source crop');
   if (current.baseModified) {
     throw new Error('This frame has edits on its source layer. Make a new slice variant to preserve the edits.');
   }
-  if (![x, y, sourceWidth, sourceHeight].every(Number.isSafeInteger) ||
+  const next: SourceCrop = { ...current, ...changes };
+  if (!isSourceCrop(next) ||
+      !Number.isSafeInteger(sourceWidth) || !Number.isSafeInteger(sourceHeight) ||
       sourceWidth < 1 || sourceHeight < 1 ||
-      x < 0 || y < 0 || x >= sourceWidth || y >= sourceHeight) {
-    throw new RangeError('Crop position must stay inside the original spritesheet');
+      next.x >= sourceWidth || next.y >= sourceHeight) {
+    throw new RangeError('Crop bounds must be valid and begin inside the original spritesheet');
   }
-  return { ...current, x, y };
+  return next;
 }
 
 export async function renderSourceCrop(blob: Blob, crop: SourceCrop): Promise<ImageBitmap> {
@@ -81,5 +83,61 @@ export async function renderSourceCrop(blob: Blob, crop: SourceCrop): Promise<Im
     return await createImageBitmap(canvas);
   } finally {
     original.close();
+  }
+}
+
+/**
+ * Rebuild only the immutable source/base layer, preserving other paint-layer
+ * ImageBitmaps by reference. Changing canvas size is allowed only when there
+ * are no raster paint layers to clip. Painted source layers must be corrected
+ * by creating a fresh slice variant, never overwritten.
+ */
+import type { FrameData, ProjectLayer } from '@/types';
+import type { SourceSheetAsset } from './sourceSheetAssets';
+
+export async function reframeFromOriginal(
+  frame: FrameData,
+  asset: SourceSheetAsset,
+  nextCrop: SourceCrop,
+  layers: readonly ProjectLayer[]
+): Promise<FrameData> {
+  const previous = frame.sourceCrop;
+  if (!previous || previous.sourceId !== asset.sourceId ||
+      nextCrop.sourceId !== previous.sourceId) {
+    throw new Error('Frame is not linked to this original spritesheet');
+  }
+  if (previous.baseModified) {
+    throw new Error('The source/base layer was edited. Create a new slice variant to keep those changes intact.');
+  }
+  const resized = nextCrop.width !== previous.width || nextCrop.height !== previous.height;
+  const hasPaint = Object.entries(frame.layerContents || {})
+    .some(([id, bitmap]) => id !== 'layer-base' && bitmap !== null);
+  if (resized && hasPaint) {
+    throw new Error('Canvas expansion with painted layers needs cel transforms. Create a slice variant instead.');
+  }
+
+  const newBase = await renderSourceCrop(asset.blob, nextCrop);
+  try {
+    const contents = { ...(frame.layerContents || {}), 'layer-base': newBase };
+    const canvas = document.createElement('canvas');
+    canvas.width = nextCrop.width;
+    canvas.height = nextCrop.height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('2D canvas is unavailable');
+    for (const layer of layers) {
+      const bitmap = contents[layer.id];
+      if (!bitmap || !layer.visible) continue;
+      context.globalAlpha = layer.opacity;
+      context.globalCompositeOperation =
+        layer.blendMode === 'normal' ? 'source-over' : layer.blendMode;
+      context.drawImage(bitmap, 0, 0);
+    }
+    context.globalAlpha = 1;
+    context.globalCompositeOperation = 'source-over';
+    const composited = await createImageBitmap(canvas);
+    return { ...frame, bitmap: composited, layerContents: contents, sourceCrop: nextCrop };
+  } catch (error) {
+    newBase.close();
+    throw error;
   }
 }
