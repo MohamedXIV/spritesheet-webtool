@@ -47,7 +47,7 @@ import { useAppDialog } from '@/components/AppDialogProvider';
 import { updateFrameDurations as withFrameDurations } from '@/lib/timelineFrameTiming';
 import { prepareSpriteProjectRestore, restoreSpriteSources, type SpriteProjectType } from '@/lib/spriteProjectCompatibility';
 import { restoreSourceSheetAssets, type SourceSheetAsset } from '@/lib/sourceSheetAssets';
-import { editSourceCrop, reframeFromOriginal } from '@/lib/sourceCrop';
+import { editSourceCrop, reframeFromOriginal, renderSourceCrop } from '@/lib/sourceCrop';
 
 type EditorState = 'idle' | 'extracting' | 'ready';
 
@@ -1148,52 +1148,69 @@ export default function EditorPage() {
 
   const handleRevertSelected = useCallback(async () => {
     if (!frameState) return;
-    
-    const framesToRevert = frameState.selectedIds.size > 0
-      ? frameState.frames.filter(f => frameState.selectedIds.has(f.id))
+    const framesToRevert = frameState.selectedIds.size
+      ? frameState.frames.filter(frame => frameState.selectedIds.has(frame.id))
       : frameState.frames;
-    
-    const revertedFrames = new Map<string, ImageBitmap>();
-    
-    for (const frame of framesToRevert) {
-      const original = originalFramesRef.current.get(frame.id);
-      if (original) {
-        const canvas = document.createElement('canvas');
-        canvas.width = original.width;
-        canvas.height = original.height;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(original, 0, 0);
-        const restored = await createImageBitmap(canvas);
-        revertedFrames.set(frame.id, restored);
-      }
-    }
-    
-    if (revertedFrames.size === 0) {
-      void showMessage({ title: 'Nothing to revert', message: 'No original frames to revert to.' });
-      return;
-    }
-    
-    const updatedFrames = frameState.frames.map(frame => {
-      const reverted = revertedFrames.get(frame.id);
-      if (reverted) {
-        // Old frame bitmap is kept alive in the 'past' stack for Undo, closed automatically when evicted!
-        return {
-          ...frame,
-          bitmap: reverted,
-          sourceCrop: frame.sourceCrop
-            ? { ...frame.sourceCrop, baseModified: true } : undefined,
-        };
-      }
-      return frame;
-    });
-    
-    setFrameState({
-      ...frameState,
-      frames: updatedFrames
-    });
-  }, [frameState]);
 
-  const canRevert = !!(frameState && originalFramesRef.current.size > 0);
+    const restoredFrames = new Map<string, FrameData>();
+    try {
+      for (const frame of framesToRevert) {
+        const asset = frame.sourceCrop
+          ? sourceSheetAssets.find(item => item.sourceId === frame.sourceCrop?.sourceId)
+          : undefined;
+        if (asset && frame.sourceCrop) {
+          // Revert source-backed frames from their CURRENT source-space crop.
+          // A cached pre-crop screenshot could contain the wrong region.
+          const crop = { ...frame.sourceCrop, baseModified: false };
+          const base = await renderSourceCrop(asset.blob, crop);
+          try {
+            const contents = { ...frame.layerContents, 'layer-base': base };
+            const bitmap = await compositeFrameLayers(contents, globalLayers, crop.width, crop.height);
+            restoredFrames.set(frame.id, { ...frame, bitmap, layerContents: contents, sourceCrop: crop });
+          } catch (error) {
+            base.close();
+            throw error;
+          }
+          continue;
+        }
+        const original = originalFramesRef.current.get(frame.id);
+        if (!original) continue;
+        const bitmap = await createImageBitmap(original);
+        restoredFrames.set(frame.id, { ...frame, bitmap });
+      }
+
+      if (restoredFrames.size === 0) {
+        void showMessage({ title: 'Nothing to revert', message: 'No original frames to revert to.' });
+        return;
+      }
+      if (frameStateRef.current !== frameState) {
+        // Avoid applying asynchronous renders to a document edited meanwhile.
+        for (const [id, restored] of restoredFrames) {
+          restored.bitmap.close();
+          if (restored.layerContents?.['layer-base'] !==
+              frameState.frames.find(item => item.id === id)?.layerContents?.['layer-base']) {
+            restored.layerContents?.['layer-base']?.close();
+          }
+        }
+        return;
+      }
+      setFrameState(previous => previous
+        ? { ...previous, frames: previous.frames.map(frame => restoredFrames.get(frame.id) || frame) }
+        : previous);
+    } catch (error) {
+      void showMessage({
+        title: 'Revert failed',
+        message: error instanceof Error ? error.message : 'Could not restore the original frame.',
+      });
+    }
+  }, [frameState, sourceSheetAssets, globalLayers, setFrameState, showMessage]);
+
+  const canRevert = !!(frameState && (
+    originalFramesRef.current.size > 0 ||
+    frameState.frames.some(frame => frame.sourceCrop &&
+      sourceSheetAssets.some(asset => asset.sourceId === frame.sourceCrop?.sourceId))
+  ));
+
   const orderedFrames = frameState ? getOrderedFrames(frameState) : [];
   const selectedFrames = frameState ? getSelectedFrames(frameState) : [];
 
