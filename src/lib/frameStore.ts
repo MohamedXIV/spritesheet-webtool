@@ -3,6 +3,7 @@
  */
 
 import type { FrameData, Folder } from '@/types';
+import type { SourceCrop } from '@/lib/sourceCrop';
 
 export interface FrameState {
   frames: FrameData[];
@@ -355,6 +356,7 @@ export interface SerializedFrameLayer {
 }
 
 export interface SerializedFrame {
+  sourceCrop?: SourceCrop;
   id: string;
   index: number;
   timestamp: number;
@@ -425,6 +427,7 @@ export async function serializeProject(
         index: frame.index,
         timestamp: frame.timestamp,
         durationMs: frame.durationMs,
+        sourceCrop: frame.sourceCrop,
         sourceId: frame.sourceId,
         sourceColor: frame.sourceColor,
         blob,
