@@ -45,7 +45,7 @@ test('crop renderer refuses canvas expansion when painted overlay bitmaps exist'
     sourceCrop:crop,
     layerContents: {'layer-base':{width:32,height:32}, 'layer-paint':{width:32,height:32}},
   };
-  await assert.rejects(reframeFromOriginal(frame,asset,{...crop,width:48},[]),/cel transforms/);
+  await assert.rejects(reframeFromOriginal(frame,asset,{...crop,width:48},[]),/painted overlays/);
   assert.deepEqual(frame.sourceCrop,crop);
   assert.equal(frame.layerContents['layer-paint'].width,32);
   await assert.rejects(reframeFromOriginal(frame,{...asset,sourceId:'different'},crop,[]),/not linked/);
