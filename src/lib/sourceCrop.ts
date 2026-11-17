@@ -109,11 +109,15 @@ export async function reframeFromOriginal(
   if (previous.baseModified) {
     throw new Error('The source/base layer was edited. Create a new slice variant to keep those changes intact.');
   }
-  const resized = nextCrop.width !== previous.width || nextCrop.height !== previous.height;
+  const changed = nextCrop.x !== previous.x || nextCrop.y !== previous.y ||
+    nextCrop.width !== previous.width || nextCrop.height !== previous.height;
   const hasPaint = Object.entries(frame.layerContents || {})
     .some(([id, bitmap]) => id !== 'layer-base' && bitmap !== null);
-  if (resized && hasPaint) {
-    throw new Error('Canvas expansion with painted layers needs cel transforms. Create a slice variant instead.');
+  if (changed && hasPaint) {
+    // Paint overlays have frame-local coordinates today. Moving the source
+    // underneath them would silently misalign the artwork. Until cel-space
+    // transforms exist, generate a variant instead of rewriting this frame.
+    throw new Error('This frame has painted overlays. Create a slice variant to preserve their alignment.');
   }
 
   const newBase = await renderSourceCrop(asset.blob, nextCrop);
