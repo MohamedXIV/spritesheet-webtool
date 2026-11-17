@@ -303,6 +303,7 @@ export default function EditorPage() {
             index: f.index,
             timestamp: f.timestamp,
             durationMs: f.durationMs,
+            sourceCrop: f.sourceCrop,
             layerContents,
             bitmap,
             sourceId: f.sourceId,
