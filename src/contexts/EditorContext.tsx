@@ -153,6 +153,9 @@ interface EditorContextValue {
   reorderGlobalLayers?: (fromIndex: number, toIndex: number) => void;
   updateGlobalLayer?: (id: string, updates: Partial<ProjectLayer>) => void;
   updateFrameLayer?: (frameId: string, layerId: string, canvas: HTMLCanvasElement) => Promise<void>;
+  /** Lossless source-space editing for frames linked to original spritesheets. */
+  sourceSheetAssets?: import('@/lib/sourceSheetAssets').SourceSheetAsset[];
+  adjustFrameSourceCrop?: (frameId: string, crop: { x: number; y: number; width: number; height: number }) => Promise<void>;
 
   // Brush settings
   activeTool?: BrushTool;
