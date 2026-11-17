@@ -501,7 +501,8 @@ export default function EditorPage() {
       };
       setSourceSheetAssets(previous => [...previous, asset]);
       setEditingSheetSourceId(sourceId);
-      setCurrentFrame(0);
+      // Select the first newly appended frame in the animation preview.
+      setCurrentFrame(frameState ? getOrderedFrames(frameState).length : 0);
       setEditorState('ready');
       setShowFrameWarning(previous =>
         previous || (frameState?.frames.length || 0) + imported.length > FRAME_WARNING_THRESHOLD);
