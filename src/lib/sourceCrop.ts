@@ -122,7 +122,10 @@ export async function reframeFromOriginal(
 
   const newBase = await renderSourceCrop(asset.blob, nextCrop);
   try {
-    const contents = { ...(frame.layerContents || {}), 'layer-base': newBase };
+    const contents: Record<string, ImageBitmap | null> = {
+      ...(frame.layerContents || {}),
+      'layer-base': newBase,
+    };
     const canvas = document.createElement('canvas');
     canvas.width = nextCrop.width;
     canvas.height = nextCrop.height;
