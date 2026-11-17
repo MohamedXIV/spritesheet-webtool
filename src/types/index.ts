@@ -20,11 +20,14 @@ export interface ProjectLayer {
   blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
 }
 
+import type { SourceCrop } from '@/lib/sourceCrop';
+
 export interface FrameData {
   id: string;
   index: number;
   timestamp: number;
   durationMs?: number; // Exact source frame hold time (animated GIF), in milliseconds
+  sourceCrop?: SourceCrop; // Coordinates relative to the immutable original image
   layerContents?: Record<string, ImageBitmap | null>; // Maps globalLayerId -> ImageBitmap
   bitmap: ImageBitmap;
   thumbnailUrl?: string;
