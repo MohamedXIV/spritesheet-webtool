@@ -46,7 +46,8 @@ import { useWorkspaceShortcuts } from '@/hooks/useWorkspaceShortcuts';
 import { useAppDialog } from '@/components/AppDialogProvider';
 import { updateFrameDurations as withFrameDurations } from '@/lib/timelineFrameTiming';
 import { prepareSpriteProjectRestore, restoreSpriteSources, type SpriteProjectType } from '@/lib/spriteProjectCompatibility';
-import { replaceSourceSheetFrames, restoreSourceSheetAssets, type SourceSheetAsset } from '@/lib/sourceSheetAssets';
+import { restoreSourceSheetAssets, type SourceSheetAsset } from '@/lib/sourceSheetAssets';
+import { editSourceCrop, reframeFromOriginal } from '@/lib/sourceCrop';
 
 type EditorState = 'idle' | 'extracting' | 'ready';
 
@@ -445,25 +446,14 @@ export default function EditorPage() {
       return;
     }
 
-    const previousAsset = sourceSheetAssets.find(item => item.sourceId === editingSheetSourceId);
-    const replacing = !!previousAsset;
-    const affectedCount = replacing
-      ? (frameState?.frames.filter(frame => frame.sourceId === previousAsset.sourceId).length ?? 0)
-      : 0;
-    if (affectedCount > 0 && !(await confirmAction({
-      title: 'Replace existing slices?',
-      message: `Re-slice ${affectedCount} frames from "${previousAsset!.name}"? This replaces edits and paint layers on those frames. Undo can restore them; other sources are untouched.`,
-      confirmLabel: 'Re-slice frames',
-      danger: true,
-    }))) return;
+    // Re-slicing a saved sheet always creates a NEW source variant. Never
+    // overwrite edited frames, paint layers or the original source geometry.
 
     setIsSlicingSheet(true);
     let imported: FrameData[] = [];
     try {
-      const sourceId = previousAsset?.sourceId ??
-        `source-sheet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      const sourceColor = loadedSources.find(source => source.id === sourceId)?.color ??
-        SOURCE_COLORS[sourceColorIndexRef.current++ % SOURCE_COLORS.length];
+      const sourceId = `source-sheet-${crypto.randomUUID()}`;
+      const sourceColor = SOURCE_COLORS[sourceColorIndexRef.current++ % SOURCE_COLORS.length];
       const result = sliceType === 'grid'
         ? await sliceSpritesheetByGrid(sheetFile, sliceCols, sliceRows, sourceId, sourceColor)
         : await sliceSpritesheetByDimensions(sheetFile, sliceCellWidth, sliceCellHeight, sourceId, sourceColor);
@@ -479,8 +469,7 @@ export default function EditorPage() {
         frame.layerContents = layerContents;
       }
 
-      const folderId = previousAsset?.folderId ??
-        `folder-sheet-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      const folderId = `folder-sheet-${crypto.randomUUID()}`;
       const folder: Folder = {
         id: folderId,
         name: sheetFile.name.replace(/\.[^.]+$/, ''),
@@ -490,19 +479,13 @@ export default function EditorPage() {
         color: sourceColor,
       };
 
-      setFrameState(previous => previous && replacing
-        ? replaceSourceSheetFrames(previous, sourceId, folder, imported)
-        : appendSourceFrames(previous, imported, folder));
+      setFrameState(previous => appendSourceFrames(previous, imported, folder));
 
-      setLoadedSources(previous => {
-        const next: SourceInfo = {
-          id: sourceId, name: sheetFile.name, type: 'image',
-          frameCount: imported.length, color: sourceColor,
-        };
-        return previous.some(item => item.id === sourceId)
-          ? previous.map(item => item.id === sourceId ? next : item)
-          : [...previous, next];
-      });
+      setLoadedSources(previous => [
+        ...previous,
+        { id: sourceId, name: sheetFile.name, type: 'image',
+          frameCount: imported.length, color: sourceColor },
+      ]);
 
       const asset: SourceSheetAsset = {
         sourceId,
@@ -516,8 +499,7 @@ export default function EditorPage() {
           cellWidth: sliceCellWidth, cellHeight: sliceCellHeight,
         },
       };
-      setSourceSheetAssets(previous =>
-        [...previous.filter(item => item.sourceId !== sourceId), asset]);
+      setSourceSheetAssets(previous => [...previous, asset]);
       setEditingSheetSourceId(sourceId);
       setCurrentFrame(0);
       setEditorState('ready');
