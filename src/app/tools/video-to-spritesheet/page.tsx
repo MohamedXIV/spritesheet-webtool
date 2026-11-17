@@ -636,7 +636,9 @@ export default function EditorPage() {
         return {
           ...f,
           layerContents: nextContents,
-          bitmap: nextCompositedBmp
+          bitmap: nextCompositedBmp,
+          sourceCrop: layerId === 'layer-base' && f.sourceCrop
+            ? { ...f.sourceCrop, baseModified: true } : f.sourceCrop
         };
       }
       return f;
@@ -647,6 +649,47 @@ export default function EditorPage() {
       frames: updatedFrames
     });
   }, [frameState, globalLayers]);
+
+  // A crop correction never reuses the last clipped bitmap as its source.
+  // Only the immutable uploaded spritesheet Blob is decoded. Paint layers
+  // remain untouched; unsafe base edits / canvas expansion are refused.
+  const adjustFrameSourceCrop = useCallback(async (
+    frameId: string, changes: { x: number; y: number; width: number; height: number }
+  ) => {
+    const frame = frameState?.frames.find(item => item.id === frameId);
+    if (!frame?.sourceCrop) return;
+    const asset = sourceSheetAssets.find(item => item.sourceId === frame.sourceCrop?.sourceId);
+    if (!asset) {
+      void showMessage({
+        title: 'Original source unavailable',
+        message: 'This frame cannot be re-cropped because its original spritesheet was not saved.',
+      });
+      return;
+    }
+    try {
+      const crop = editSourceCrop(frame.sourceCrop, changes, asset.width, asset.height);
+      if (crop.x === frame.sourceCrop.x && crop.y === frame.sourceCrop.y &&
+          crop.width === frame.sourceCrop.width && crop.height === frame.sourceCrop.height) return;
+      const updated = await reframeFromOriginal(frame, asset, crop, globalLayers);
+      if (frameStateRef.current?.frames.find(item => item.id === frameId) !== frame) {
+        updated.bitmap.close();
+        updated.layerContents?.['layer-base']?.close();
+        void showMessage({
+          title: 'Frame changed',
+          message: 'The frame changed during crop rendering. Try applying the crop again.',
+        });
+        return;
+      }
+      setFrameState(previous => previous
+        ? { ...previous, frames: previous.frames.map(item => item.id === frameId ? updated : item) }
+        : previous);
+    } catch (error) {
+      void showMessage({
+        title: 'Cannot adjust this crop',
+        message: error instanceof Error ? error.message : 'Unable to edit the original crop.',
+      });
+    }
+  }, [frameState, sourceSheetAssets, globalLayers, setFrameState, showMessage]);
 
   // Folder helper actions
   const folders = frameState ? frameState.folders : [];
@@ -1087,7 +1130,12 @@ export default function EditorPage() {
           }
         }
           // Old frame bitmap is kept alive in the 'past' stack for Undo, closed automatically when evicted!
-          return { ...frame, bitmap: processed };
+          return {
+            ...frame,
+            bitmap: processed,
+            sourceCrop: frame.sourceCrop
+              ? { ...frame.sourceCrop, baseModified: true } : undefined,
+          };
       }
       return frame;
     });
@@ -1129,7 +1177,12 @@ export default function EditorPage() {
       const reverted = revertedFrames.get(frame.id);
       if (reverted) {
         // Old frame bitmap is kept alive in the 'past' stack for Undo, closed automatically when evicted!
-        return { ...frame, bitmap: reverted };
+        return {
+          ...frame,
+          bitmap: reverted,
+          sourceCrop: frame.sourceCrop
+            ? { ...frame.sourceCrop, baseModified: true } : undefined,
+        };
       }
       return frame;
     });
@@ -1316,6 +1369,8 @@ export default function EditorPage() {
     reorderGlobalLayers,
     updateGlobalLayer,
     updateFrameLayer,
+    sourceSheetAssets,
+    adjustFrameSourceCrop,
 
     // Brush Settings
     activeTool,
@@ -1424,6 +1479,8 @@ export default function EditorPage() {
     reorderGlobalLayers,
     updateGlobalLayer,
     updateFrameLayer,
+    sourceSheetAssets,
+    adjustFrameSourceCrop,
     activeTool,
     setActiveTool,
     brushColor,
