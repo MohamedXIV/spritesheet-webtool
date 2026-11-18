@@ -12,12 +12,72 @@ export const SOURCE_COLORS = [
   '#ef4444', // Red
 ] as const;
 
+export type LayerBlendMode =
+  | 'normal'
+  | 'multiply'
+  | 'screen'
+  | 'overlay'
+  | 'darken'
+  | 'lighten'
+  | 'color-dodge'
+  | 'color-burn'
+  | 'hard-light'
+  | 'soft-light'
+  | 'difference'
+  | 'exclusion'
+  | 'hue'
+  | 'saturation'
+  | 'color'
+  | 'luminosity';
+
+export interface LayerPixelData {
+  bitmap: ImageBitmap | null;
+  maskBitmap?: ImageBitmap | null;
+  offsetX?: number;
+  offsetY?: number;
+}
+
+export interface LayerFillConfig {
+  kind: 'solid' | 'gradient';
+  color: string;
+  gradientEnd?: string;
+  gradientType?: 'linear' | 'radial';
+  angle?: number;
+}
+
+export interface LayerAdjustmentConfig {
+  hue: number;          // -180 to 180
+  saturation: number;   // -100 to 100
+  brightness: number;   // -100 to 100
+  contrast: number;     // -100 to 100
+  invert?: boolean;
+  posterize?: number;   // 0 = off, or 2..32
+  levels?: {
+    black: number;      // 0..254
+    gamma: number;      // 0.1..3.0
+    white: number;      // 1..255
+  };
+  curvesPoints?: [number, number, number, number]; // [y0, x1, y1, y2]
+}
+
 export interface ProjectLayer {
   id: string;
   name: string;
+  type: 'raster' | 'fill' | 'adjustment' | 'group';
+  parentId: string | null;
+  collapsed?: boolean;
+  scope: 'per-frame' | 'shared';
   visible: boolean;
   opacity: number; // 0 to 1
-  blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
+  blendMode: LayerBlendMode;
+  locked?: boolean;
+  alphaLocked?: boolean;
+  clipped?: boolean;
+  maskEnabled?: boolean;
+  maskInverted?: boolean;
+  fillConfig?: LayerFillConfig;
+  adjustmentConfig?: LayerAdjustmentConfig;
+  sharedData?: LayerPixelData;
 }
 
 export interface FrameData {
@@ -25,7 +85,9 @@ export interface FrameData {
   index: number;
   timestamp: number;
   durationMs?: number; // Exact source frame hold time (animated GIF), in milliseconds
-  layerContents?: Record<string, ImageBitmap | null>; // Maps globalLayerId -> ImageBitmap
+  layers?: Record<string, LayerPixelData>; // Maps layerId -> LayerPixelData
+  /** @deprecated Legacy alias kept only while migrating old helpers */
+  layerContents?: Record<string, ImageBitmap | null>;
   bitmap: ImageBitmap;
   thumbnailUrl?: string;
   sourceId: string;      // ID of source video/image

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { appendSourceFrames, deleteFolder, deleteSelectedFrames } from '../src/lib/frameStore.ts';
+import { appendSourceFrames, deleteFolder, deleteSelectedFrames, disposeFrames } from '../src/lib/frameStore.ts';
 
 function makeState() {
   const bitmap = { closeCalled: 0, close() { this.closeCalled++; } };
@@ -57,4 +57,37 @@ test('sliced spritesheets can create the first document', () => {
   assert.equal(next.frames.length, 1);
   assert.deepEqual([...next.selectedIds], ['first']);
   assert.equal(next.folders[0], folder);
+});
+
+test('disposeFrames closes shared layer bitmaps once and projectLayers survives mutations', () => {
+  const sharedSheetBmp = { closeCalled: 0, close() { this.closeCalled++; } };
+  const maskA = { closeCalled: 0, close() { this.closeCalled++; } };
+  const maskB = { closeCalled: 0, close() { this.closeCalled++; } };
+  const f1 = {
+    id: 'f1', index: 0, timestamp: 0,
+    bitmap: { close() {} },
+    layers: { 'layer-base': { bitmap: sharedSheetBmp, maskBitmap: maskA, offsetX: 0, offsetY: 0 } },
+    sourceId: 's', sourceColor: '#fff',
+  };
+  const f2 = {
+    id: 'f2', index: 1, timestamp: 1,
+    bitmap: { close() {} },
+    layers: { 'layer-base': { bitmap: sharedSheetBmp, maskBitmap: maskB, offsetX: -16, offsetY: 0 } },
+    sourceId: 's', sourceColor: '#fff',
+  };
+  const layersMeta = [{ id: 'layer-base', name: 'Base Frame', visible: true, opacity: 1, blendMode: 'normal' }];
+  const state = {
+    frames: [f1, f2],
+    folders: [{ id: 'fld', name: 'F', frameIds: ['f1', 'f2'], visible: true, collapsed: false, color: '#fff' }],
+    selectedIds: new Set(['f1']),
+    projectLayers: layersMeta,
+  };
+
+  const afterDel = deleteSelectedFrames(state);
+  assert.equal(afterDel.projectLayers, layersMeta);
+
+  disposeFrames(state);
+  assert.equal(sharedSheetBmp.closeCalled, 1);
+  assert.equal(maskA.closeCalled, 1);
+  assert.equal(maskB.closeCalled, 1);
 });

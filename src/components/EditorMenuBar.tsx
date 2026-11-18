@@ -17,13 +17,12 @@ import styles from './EditorMenuBar.module.css';
 const PANELS = [
   { id: 'media-loader', name: 'Import Assets' },
   { id: 'frame-grid', name: 'Frames' },
-  { id: 'preview', name: 'Preview' },
+  { id: 'preview', name: 'Preview & Edit' },
   { id: 'timeline', name: 'Timeline' },
   { id: 'bg-removal', name: 'Background Removal' },
   { id: 'outline', name: 'Outline' },
   { id: 'pixelate', name: 'Pixelation' },
-  { id: 'frame-editor', name: 'Frame Editor' },
-  { id: 'frame-layers', name: 'Paint Layers' },
+  { id: 'frame-layers', name: 'Layers & Masks' },
   { id: 'watermark', name: 'Watermark' },
   { id: 'export', name: 'Export' },
 ] as const;
@@ -159,7 +158,7 @@ export function EditorMenuBar() {
               closeMenu();
               void dialog.alert({
                 title: 'Keyboard shortcuts',
-                message: 'Ctrl/Cmd + S: Save project\nCtrl/Cmd + Z: Undo\nCtrl/Cmd + Y or Ctrl/Cmd + Shift + Z: Redo\nFocus a frame: Arrow keys move between frames\nShift + Arrow: Extend selection\nCtrl/Cmd + A: Select all frames\nDelete or Backspace: Delete selected frames (with confirmation)\nEscape: Deselect frames',
+                message: 'Workspace:\nCtrl/Cmd + S: Save project\nCtrl/Cmd + Z: Undo\nCtrl/Cmd + Y or Ctrl/Cmd + Shift + Z: Redo\nArrow keys: Move between frames\n\nEdit Canvas Tools:\nV: Move/Transform • M: Marquee • L: Lasso • W: Magic Wand\nB: Brush • E: Eraser • S: Clone Stamp (Alt+Click source)\nG: Bucket • Shift+G: Gradient • I: Eyedropper • U: Shape • T: Text\nH / Space+Drag: Hand Pan • Z / Wheel: Zoom • Ctrl+0: Fit\nX: Swap FG/BG • D: Default B&W • [ / ]: Brush Size • Ctrl+D: Deselect',
               });
             }}>Keyboard Shortcuts…</button>
             <div className={styles.separator} />

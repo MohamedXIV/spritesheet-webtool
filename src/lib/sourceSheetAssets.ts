@@ -5,14 +5,9 @@
  */
 import type { FrameData, Folder } from '@/types';
 import type { FrameState } from './frameStore';
+import { normalizeSliceSettings, type SheetSliceSettings } from './slicerGuides.ts';
 
-export interface SheetSliceSettings {
-  sliceType: 'grid' | 'dimensions';
-  cols: number;
-  rows: number;
-  cellWidth: number;
-  cellHeight: number;
-}
+export type { SheetSliceSettings } from './slicerGuides.ts';
 
 export interface SourceSheetAsset {
   sourceId: string;
@@ -27,17 +22,22 @@ export interface SourceSheetAsset {
 export function restoreSourceSheetAssets(value: unknown): SourceSheetAsset[] {
   if (!Array.isArray(value)) return [];
   const seen = new Set<string>();
-  return value.filter((asset): asset is SourceSheetAsset => {
-    if (!asset || typeof asset.sourceId !== 'string' ||
-        typeof asset.folderId !== 'string' || typeof asset.name !== 'string' ||
-        !(asset.blob instanceof Blob) ||
-        !Number.isSafeInteger(asset.width) || asset.width < 1 ||
-        !Number.isSafeInteger(asset.height) || asset.height < 1 ||
-        !asset.slice || !['grid', 'dimensions'].includes(asset.slice.sliceType) ||
-        seen.has(asset.sourceId)) return false;
-    seen.add(asset.sourceId);
-    return true;
-  });
+  return value
+    .filter((asset): asset is SourceSheetAsset => {
+      if (!asset || typeof asset.sourceId !== 'string' ||
+          typeof asset.folderId !== 'string' || typeof asset.name !== 'string' ||
+          !(asset.blob instanceof Blob) ||
+          !Number.isSafeInteger(asset.width) || asset.width < 1 ||
+          !Number.isSafeInteger(asset.height) || asset.height < 1 ||
+          !asset.slice || !['grid', 'dimensions', 'custom'].includes(asset.slice.sliceType) ||
+          seen.has(asset.sourceId)) return false;
+      seen.add(asset.sourceId);
+      return true;
+    })
+    .map(asset => ({
+      ...asset,
+      slice: normalizeSliceSettings(asset.slice, asset.width, asset.height),
+    }));
 }
 
 /**
@@ -80,6 +80,7 @@ export function replaceSourceSheetFrames(
     nextFolders.push({ ...folder, frameIds: frames.map(frame => frame.id) });
   }
   return {
+    ...state,
     frames: otherFrames,
     folders: nextFolders,
     selectedIds: new Set(frames.map(frame => frame.id)),

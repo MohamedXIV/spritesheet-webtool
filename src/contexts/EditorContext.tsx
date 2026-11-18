@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * EditorContext - Shared state for all dock panels
+ * EditorContext - Shared state for all dock panels, unified Preview Editor,
+ * Photoshop-grade Layers & Masks, and Interactive Spritesheet Slicer.
  */
 
 import React, { createContext, useContext, ReactNode } from 'react';
@@ -10,6 +11,8 @@ import { FrameState } from '@/lib/frameStore';
 import { LoopMode } from '@/components/Timeline';
 import { BackgroundMode } from '@/components/PreviewPlayer';
 import { OutlineOptions } from '@/lib/outlineGenerator';
+import type { SelectionMask, ToolSettings } from '@/lib/canvasTools';
+import type { SheetSliceSettings } from '@/lib/slicerGuides';
 
 export type BrushTool = 'brush' | 'eraser' | 'eyedropper' | 'bucket';
 
@@ -17,13 +20,13 @@ interface EditorContextValue {
   // Editor state
   editorState: 'idle' | 'extracting' | 'ready';
   extractionProgress: { current: number; total: number; percentage: number } | null;
-  
+
   // Frames
   frameState: FrameState | null;
   orderedFrames: FrameData[];
   selectedFrames: FrameData[];
   processingFrameIds: Set<string>;
-  
+
   // Folders
   folders: Folder[];
   createFolder: (name: string, color?: string) => void;
@@ -36,17 +39,17 @@ interface EditorContextValue {
   copyFramesToFolder: (frameIds: string[], folderId: string) => Promise<void>;
   reorderFolders: (fromIndex: number, toIndex: number) => void;
   reorderFramesInFolder: (folderId: string, fromIndex: number, toIndex: number) => void;
-  
+
   // Playback
   fps: number;
   currentFrame: number;
   loopMode: LoopMode;
-  
+
   // Preview settings
   previewBgMode: BackgroundMode;
   previewBgColor: string;
   previewOutline: Partial<OutlineOptions>;
-  
+
   // Callbacks
   setFps: (fps: number) => void;
   setCurrentFrame: (frame: number) => void;
@@ -55,9 +58,10 @@ interface EditorContextValue {
   setPreviewBgColor: (color: string) => void;
   setPreviewOutline: (opts: Partial<OutlineOptions>) => void;
   setProcessingFrameIds: (ids: Set<string>) => void;
-  
+
   // Frame operations
-  handleFramesProcessed: (processedFrames: Map<string, ImageBitmap>) => void;
+  handleFramesProcessed: (processedFrames: Map<string, ImageBitmap>) => Promise<void> | void;
+  handleBackgroundMasksApplied?: (masks: Map<string, ImageBitmap>) => Promise<void>;
   handleSelectionChange: (ids: Set<string>) => void;
   handleOrderChange: (ids: string[]) => void;
   handleDeleteSelected: (ids?: ReadonlySet<string>) => Promise<void>;
@@ -65,18 +69,18 @@ interface EditorContextValue {
   /** Apply a timing change to frame IDs; null clears overrides (uses FPS). */
   updateFrameDurations: (frameIds: ReadonlySet<string>, durationMs: number | null) => void;
   canRevert: boolean;
-  
+
   // Media loading
   handleMediaLoad: (files: File[]) => void;
   handleRemoveSource: (sourceId: string) => void;
   loadedSources: SourceInfo[];
-  
+
   // Panel visibility
   visiblePanels: Set<string>;
   togglePanel: (panelId: string) => void;
   resetLayout: () => void;
 
-  // Standalone Pixelator slicing state (optional)
+  // Interactive Spritesheet Slicer state
   pixelatorSlicer?: {
     appendToWorkspace?: boolean;
     savedSheets?: Array<{ id: string; name: string }>;
@@ -85,18 +89,12 @@ interface EditorContextValue {
     file: File | null;
     originalImgSrc: string | null;
     imgDimensions: { width: number; height: number } | null;
-    sliceType: 'grid' | 'dimensions';
-    cols: number;
-    rows: number;
-    cellWidth: number;
-    cellHeight: number;
+    sliceSettings: SheetSliceSettings;
+    setSliceSettings: React.Dispatch<React.SetStateAction<SheetSliceSettings>>;
+    isSlicerModalOpen: boolean;
+    setIsSlicerModalOpen: (open: boolean) => void;
     isSlicing: boolean;
-    setSliceType: (type: 'grid' | 'dimensions') => void;
-    setCols: (val: number) => void;
-    setRows: (val: number) => void;
-    setCellWidth: (val: number) => void;
-    setCellHeight: (val: number) => void;
-    handleSliceSpritesheet: () => void;
+    handleSliceSpritesheet: (settingsOverride?: SheetSliceSettings) => Promise<void> | void;
     loadNewFile: (file: File) => void;
     handleResetImage: () => void;
   };
@@ -144,27 +142,49 @@ interface EditorContextValue {
   isSaving?: boolean;
   autosaveNotification?: string | null;
 
-  // --- NEW PAINT LAYERS & BRUSH STATE ---
+  // --- UNIFIED PREVIEW EDIT MODE & TOOL STATE ---
+  editMode?: boolean;
+  setEditMode?: (enabled: boolean) => void;
+  toolSettings?: ToolSettings;
+  setToolSettings?: React.Dispatch<React.SetStateAction<ToolSettings>>;
+  selectionMask?: SelectionMask | null;
+  setSelectionMask?: (sel: SelectionMask | null) => void;
+  editTarget?: 'layer' | 'mask';
+  setEditTarget?: (target: 'layer' | 'mask') => void;
+  maskSoloLayerId?: string | null;
+  setMaskSoloLayerId?: (id: string | null) => void;
+
+  // --- PHOTOSHOP-GRADE LAYERS & MASKS ---
   globalLayers?: ProjectLayer[];
   activeLayerId?: string;
   setActiveLayerId?: (id: string) => void;
-  addGlobalLayer?: (name?: string) => void;
-  deleteGlobalLayer?: (id: string) => void;
-  reorderGlobalLayers?: (fromIndex: number, toIndex: number) => void;
-  updateGlobalLayer?: (id: string, updates: Partial<ProjectLayer>) => void;
-  updateFrameLayer?: (frameId: string, layerId: string, canvas: HTMLCanvasElement) => Promise<void>;
-
-  // Brush settings
-  activeTool?: BrushTool;
-  setActiveTool?: (tool: BrushTool) => void;
-  brushColor?: string;
-  setBrushColor?: (color: string) => void;
-  brushSize?: number;
-  setBrushSize?: (size: number) => void;
-  brushOpacity?: number;
-  setBrushOpacity?: (opacity: number) => void;
-  brushHardness?: number;
-  setBrushHardness?: (hardness: number) => void;
+  addGlobalLayer?: (type?: ProjectLayer['type'], name?: string) => void;
+  duplicateGlobalLayer?: (id: string) => Promise<void>;
+  deleteGlobalLayer?: (id: string) => Promise<void>;
+  reorderGlobalLayers?: (fromIndex: number, toIndex: number, targetParentId?: string | null) => Promise<void>;
+  updateGlobalLayer?: (id: string, updates: Partial<ProjectLayer>) => Promise<void>;
+  mergeLayerDown?: (id: string) => Promise<void>;
+  mergeVisibleLayers?: () => Promise<void>;
+  flattenLayers?: () => Promise<void>;
+  addLayerMask?: (layerId: string, fill?: 'white' | 'black') => Promise<void>;
+  maskFromSelection?: (layerId: string) => Promise<void>;
+  invertLayerMask?: (layerId: string) => Promise<void>;
+  applyLayerMask?: (layerId: string) => Promise<void>;
+  deleteLayerMask?: (layerId: string) => Promise<void>;
+  commitFrameLayerEdit?: (
+    frameId: string,
+    layerId: string,
+    target: 'layer' | 'mask',
+    canvas: HTMLCanvasElement,
+    offsetX?: number,
+    offsetY?: number
+  ) => Promise<void>;
+  commitLayerOffset?: (
+    frameId: string,
+    layerId: string,
+    offsetX: number,
+    offsetY: number
+  ) => Promise<void>;
 
   // Onion Skinning settings
   onionSkinEnabled?: boolean;
@@ -190,7 +210,6 @@ export function useEditorContext() {
 export function useOptionalEditorContext() {
   return useContext(EditorContext);
 }
-
 
 interface EditorProviderProps {
   value: EditorContextValue;

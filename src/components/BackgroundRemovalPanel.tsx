@@ -18,6 +18,7 @@ interface BackgroundRemovalPanelProps {
   frames: FrameData[];
   selectedIds: Set<string>;
   onFramesProcessed: (processedFrames: Map<string, ImageBitmap>) => void;
+  onMasksApplied?: (masks: Map<string, ImageBitmap>) => Promise<void> | void;
   onProcessingChange?: (processingIds: Set<string>) => void;
 }
 
@@ -28,9 +29,11 @@ export function BackgroundRemovalPanel({
   frames,
   selectedIds,
   onFramesProcessed,
+  onMasksApplied,
   onProcessingChange,
 }: BackgroundRemovalPanelProps) {
   const [method, setMethod] = useState<RemovalMethod>('chromakey');
+  const [applyAsMask, setApplyAsMask] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [statusMessage, setStatusMessage] = useState('');
@@ -175,7 +178,11 @@ export function BackgroundRemovalPanel({
         currentlyProcessing.delete(frame.id);
       }
       
-      onFramesProcessed(processedFrames);
+      if (applyAsMask && onMasksApplied) {
+        await onMasksApplied(processedFrames);
+      } else {
+        onFramesProcessed(processedFrames);
+      }
       setStatusMessage('Done!');
     } catch (error) {
       console.error('Processing failed:', error);
@@ -189,7 +196,7 @@ export function BackgroundRemovalPanel({
     spillSuppression, spillMethod, spillAmount,
     postProcessEnabled, erosion, decontaminate,
     outlineEnabled, outlineThickness, outlineColor, outlinePosition,
-    onFramesProcessed
+    applyAsMask, onMasksApplied, onFramesProcessed
   ]);
 
   const colorHex = `#${targetColor.r.toString(16).padStart(2, '0')}${targetColor.g.toString(16).padStart(2, '0')}${targetColor.b.toString(16).padStart(2, '0')}`;
@@ -512,6 +519,21 @@ export function BackgroundRemovalPanel({
             />
           </div>
           <div className={styles.progressText}>{statusMessage}</div>
+        </div>
+      )}
+
+      {onMasksApplied && (
+        <div className={styles.checkboxRow} style={{ marginTop: '10px', marginBottom: '4px' }}>
+          <input
+            type="checkbox"
+            id="bg-apply-as-mask"
+            checked={applyAsMask}
+            onChange={(e) => setApplyAsMask(e.target.checked)}
+            disabled={isProcessing}
+          />
+          <label htmlFor="bg-apply-as-mask" style={{ cursor: 'pointer', fontSize: '0.78rem' }}>
+            Apply as Non-destructive Layer Mask
+          </label>
         </div>
       )}
 

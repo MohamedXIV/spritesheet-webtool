@@ -17,11 +17,19 @@ export interface ProjectMetadata {
   previewBgColor?: string;
   pixelatorOptions?: any; // Options for stand-alone pixelator
   slicerOptions?: {
-    sliceType: 'grid' | 'dimensions';
+    sliceType: 'grid' | 'dimensions' | 'custom';
     cols: number;
     rows: number;
     cellWidth: number;
     cellHeight: number;
+    offsetX?: number;
+    offsetY?: number;
+    spacingX?: number;
+    spacingY?: number;
+    innerPadding?: number;
+    customColGuides?: number[];
+    customRowGuides?: number[];
+    sliceAsMasks?: boolean;
   };
   threePainterOptions?: {
     loadedModelName: string | null;
@@ -49,13 +57,7 @@ export interface ProjectMetadata {
       };
     }[];
   };
-  globalLayers?: {
-    id: string;
-    name: string;
-    visible: boolean;
-    opacity: number;
-    blendMode: 'normal' | 'multiply' | 'screen' | 'overlay';
-  }[];
+  globalLayers?: any[];
   trimsheetOptions?: {
     resolution: number;
     regions: any[];
@@ -81,6 +83,9 @@ export interface ProjectMetadata {
 export interface DbProjectFrameLayer {
   layerId: string;
   blob: Blob | null; // Compressed PNG layer image
+  maskBlob?: Blob | null;
+  offsetX?: number;
+  offsetY?: number;
 }
 
 export interface DbProjectFrame {

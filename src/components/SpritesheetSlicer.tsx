@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useMemo } from 'react';
+import { Maximize2, Grid } from 'lucide-react';
 import { useEditorContext } from '@/contexts/EditorContext';
 import { useAppDialog } from '@/components/AppDialogProvider';
+import { computeSliceLayout, DEFAULT_SLICE_SETTINGS } from '@/lib/slicerGuides';
+import { InteractiveSlicerModal } from '@/components/InteractiveSlicerModal';
 import styles from './SpritesheetSlicer.module.css';
 
 export function SpritesheetSlicer() {
@@ -10,7 +13,37 @@ export function SpritesheetSlicer() {
   const { alert: showMessage } = useAppDialog();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!ctx.pixelatorSlicer) {
+  const slicer = ctx.pixelatorSlicer;
+  const imgDimensions = slicer?.imgDimensions ?? null;
+  const sliceSettings = slicer?.sliceSettings ?? DEFAULT_SLICE_SETTINGS;
+
+  const layout = useMemo(() => {
+    if (!imgDimensions) return null;
+    return computeSliceLayout(imgDimensions.width, imgDimensions.height, sliceSettings);
+  }, [imgDimensions, sliceSettings]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
+
+  const handleFileDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile && droppedFile.type.startsWith('image/')) {
+      slicer?.loadNewFile(droppedFile);
+    } else {
+      void showMessage({ title: 'Invalid spritesheet', message: 'Please upload a static PNG, WebP or JPEG image.' });
+    }
+  }, [slicer, showMessage]);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      slicer?.loadNewFile(selectedFile);
+    }
+  }, [slicer]);
+
+  if (!slicer) {
     return (
       <div className={styles.errorContainer}>
         <p>Slicer context not initialized.</p>
@@ -21,56 +54,25 @@ export function SpritesheetSlicer() {
   const {
     file,
     originalImgSrc,
-    imgDimensions,
-    sliceType,
-    cols,
-    rows,
-    cellWidth,
-    cellHeight,
+    setSliceSettings,
+    isSlicerModalOpen,
+    setIsSlicerModalOpen,
     isSlicing,
-    setSliceType,
-    setCols,
-    setRows,
-    setCellWidth,
-    setCellHeight,
     handleSliceSpritesheet,
-    loadNewFile,
     handleResetImage,
     savedSheets = [],
     editingSourceId = null,
     selectSavedSheet,
-  } = ctx.pixelatorSlicer;
+  } = slicer;
 
-  const totalFramesCount = ctx.orderedFrames.length;
-  const appendMode = ctx.pixelatorSlicer.appendToWorkspace === true;
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-  }, []);
-
-  const handleFileDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile && droppedFile.type.startsWith('image/')) {
-      loadNewFile(droppedFile);
-    } else {
-      void showMessage({ title: 'Invalid spritesheet', message: 'Please upload a static PNG, WebP or JPEG image.' });
-    }
-  }, [loadNewFile, showMessage]);
-
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      loadNewFile(selectedFile);
-    }
-  }, [loadNewFile]);
+  const appendMode = slicer.appendToWorkspace === true;
 
   return (
     <div className={styles.container}>
       {appendMode && savedSheets.length > 0 && (
-        <div className={styles.slicerBox}>
+        <div className={styles.slicerBox} style={{ marginBottom: 12 }}>
           <label className={styles.inputLabel} htmlFor="saved-spritesheet-source">
-            Original spritesheets saved with this project
+            Saved Spritesheets in Project
           </label>
           <select
             id="saved-spritesheet-source"
@@ -86,188 +88,149 @@ export function SpritesheetSlicer() {
               <option key={source.id} value={source.id}>{source.name}</option>
             ))}
           </select>
-          <p className={styles.description}>
-            Choose a saved original to adjust its grid and replace only its own extracted frames.
-            Other sources stay untouched; Undo can restore the previous slices.
+          <p className={styles.description} style={{ marginBottom: 0, marginTop: 6 }}>
+            Select a saved sheet to adjust its guides or re-slice its frames non-destructively.
           </p>
         </div>
       )}
 
-      {/* 1. File Upload Dragzone */}
       {!file && (
         <div className={styles.uploaderBox}>
           <div className={styles.introHeader}>
-            <h3 className={styles.title}>Import a Spritesheet</h3>
+            <h3 className={styles.title}>Import & Slice Spritesheet</h3>
             <p className={styles.description}>
-              Upload your high-definition sheet, segment it into animation frames,
-              edit, pixelate, preview, and export the extracted frames in one workspace.
-              Runs locally in your browser.
+              Drop a spritesheet image to open the Interactive Slicer Stage with draggable guides,
+              padding/spacing controls, and optional Slice-as-Masks.
             </p>
           </div>
-          <div 
+          <div
             className={styles.dropzone}
             onDragOver={handleDragOver}
             onDrop={handleFileDrop}
             onClick={() => fileInputRef.current?.click()}
           >
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={styles.uploadIcon}>
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-            </svg>
+            <Grid size={36} className={styles.uploadIcon} />
             <span className={styles.dropzoneText}>Drag and drop spritesheet image, or click to browse</span>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleFileSelect} 
-              accept="image/png,image/webp,image/jpeg,image/bmp" 
-              className={styles.fileInput} 
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              accept="image/png,image/webp,image/jpeg,image/bmp"
+              className={styles.fileInput}
             />
           </div>
         </div>
       )}
 
-      {/* Configure a sheet any time in the unified workspace. */}
-      {file && (appendMode || totalFramesCount === 0) && (
+      {file && imgDimensions && originalImgSrc && (
         <div className={styles.slicerBox}>
-          <h3 className={styles.title}>Slice Your Spritesheet</h3>
-          <p className={styles.description}>
-            {editingSourceId
-              ? 'Re-slicing replaces the previous frames from this saved source (including their edits), while keeping the rest of the project. You can Undo the change.'
-              : 'New slices are added to your current frames without replacing existing work. The original image will be kept locally for later re-slicing.'}
-          </p>
-
-          {originalImgSrc && (
-            <div className={styles.imagePreviewWrapper}>
-              <img src={originalImgSrc} className={styles.imagePreview} alt="Original Preview" />
-            </div>
-          )}
-
-          <div className={styles.sliceSettings}>
-            <div className={styles.tabsRow}>
-              <button 
-                onClick={() => setSliceType('grid')}
-                className={`${styles.tabBtn} ${sliceType === 'grid' ? styles.tabBtnActive : ''}`}
-              >
-                Grid Count (Cols/Rows)
-              </button>
-              <button 
-                onClick={() => setSliceType('dimensions')}
-                className={`${styles.tabBtn} ${sliceType === 'dimensions' ? styles.tabBtnActive : ''}`}
-              >
-                Dimensions (Width/Height px)
-              </button>
-            </div>
-
-            {sliceType === 'grid' ? (
-              <div className={styles.inputsRow}>
-                <div className={styles.inputField}>
-                  <label className={styles.inputLabel}>Columns</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max="100" 
-                    value={cols} 
-                    onChange={e => setCols(Math.max(1, Number(e.target.value)))} 
-                    className={styles.inputControl} 
-                  />
-                </div>
-                <div className={styles.inputField}>
-                  <label className={styles.inputLabel}>Rows</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max="100" 
-                    value={rows} 
-                    onChange={e => setRows(Math.max(1, Number(e.target.value)))} 
-                    className={styles.inputControl} 
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className={styles.inputsRow}>
-                <div className={styles.inputField}>
-                  <label className={styles.inputLabel}>Cell Width (px)</label>
-                  <input 
-                    type="number" 
-                    min="4" 
-                    value={cellWidth} 
-                    onChange={e => setCellWidth(Math.max(4, Number(e.target.value)))} 
-                    className={styles.inputControl} 
-                  />
-                </div>
-                <div className={styles.inputField}>
-                  <label className={styles.inputLabel}>Cell Height (px)</label>
-                  <input 
-                    type="number" 
-                    min="4" 
-                    value={cellHeight} 
-                    onChange={e => setCellHeight(Math.max(4, Number(e.target.value)))} 
-                    className={styles.inputControl} 
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className={styles.actionsRow}>
-            <button onClick={handleResetImage} className={styles.cancelBtn}>
-              Choose New Image
-            </button>
-            <button onClick={handleSliceSpritesheet} className={styles.sliceBtn} disabled={isSlicing}>
-              {isSlicing ? (
-                <div className={styles.loadingSpinner}>
-                  <div className={styles.spinner} />
-                  <span>Slicing grid...</span>
-                </div>
-              ) : editingSourceId ? 'Re-slice & Replace Frames' : appendMode ? 'Slice & Add Frames' : 'Slice & Load Workspace'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Loaded Metadata View */}
-      {file && totalFramesCount > 0 && !appendMode && (
-        <div className={styles.metaBox}>
           <div className={styles.metaHeader}>
-            <h4 className={styles.metaTitle}>Source Spritesheet</h4>
+            <h4 className={styles.metaTitle} style={{ margin: 0 }}>{file.name}</h4>
             <button onClick={handleResetImage} className={styles.changeFileBtn}>
               Change File
             </button>
           </div>
 
-          <div className={styles.detailsList}>
-            <div className={styles.detailItem}>
-              <span className={styles.detailLabel}>Filename:</span>
-              <span className={styles.detailVal}>{file.name}</span>
-            </div>
-            {imgDimensions && (
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>Full Size:</span>
-                <span className={styles.detailVal}>{imgDimensions.width} × {imgDimensions.height} px</span>
-              </div>
-            )}
-            <div className={styles.detailItem}>
-              <span className={styles.detailLabel}>Total Slices:</span>
-              <span className={styles.detailVal}>{totalFramesCount} frames</span>
-            </div>
-            {ctx.orderedFrames[0] && (
-              <div className={styles.detailItem}>
-                <span className={styles.detailLabel}>Frame Size:</span>
-                <span className={styles.detailVal}>{ctx.orderedFrames[0].bitmap.width} × {ctx.orderedFrames[0].bitmap.height} px</span>
-              </div>
+          <div
+            className={styles.imagePreviewWrapper}
+            style={{ position: 'relative', cursor: 'pointer' }}
+            onClick={() => setIsSlicerModalOpen(true)}
+            title="Click to open Interactive Slicer Stage"
+          >
+            <img src={originalImgSrc} className={styles.imagePreview} alt="Spritesheet Preview" />
+            {layout && (
+              <svg
+                viewBox={`0 0 ${imgDimensions.width} ${imgDimensions.height}`}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  pointerEvents: 'none',
+                }}
+                preserveAspectRatio="xMidYMid meet"
+              >
+                {layout.rects.map(r => (
+                  <rect
+                    key={r.index}
+                    x={r.x}
+                    y={r.y}
+                    width={r.w}
+                    height={r.h}
+                    fill="none"
+                    stroke="rgba(56, 189, 248, 0.85)"
+                    strokeWidth={Math.max(1, imgDimensions.width / 220)}
+                  />
+                ))}
+              </svg>
             )}
           </div>
 
-          {originalImgSrc && (
-            <div className={styles.miniSheetPreview}>
-              <div className={styles.miniPreviewLabel}>Slices Grid Gridline</div>
-              <div className={styles.miniImageWrapper}>
-                <img src={originalImgSrc} className={styles.miniImg} alt="Source sheet miniature" />
-              </div>
+          <div className={styles.detailsList}>
+            <div className={styles.detailItem}>
+              <span className={styles.detailLabel}>Sheet Size:</span>
+              <span className={styles.detailVal}>{imgDimensions.width} × {imgDimensions.height} px</span>
             </div>
-          )}
+            <div className={styles.detailItem}>
+              <span className={styles.detailLabel}>Slices:</span>
+              <span className={styles.detailVal}>
+                {layout ? `${layout.cols} × ${layout.rows} (${layout.rects.length} frames)` : '—'}
+              </span>
+            </div>
+            <div className={styles.detailItem}>
+              <span className={styles.detailLabel}>Offset / Spacing:</span>
+              <span className={styles.detailVal}>
+                {sliceSettings.offsetX},{sliceSettings.offsetY}px / {sliceSettings.spacingX},{sliceSettings.spacingY}px
+              </span>
+            </div>
+            <div className={styles.detailItem}>
+              <span className={styles.detailLabel}>Slice as Masks:</span>
+              <span className={styles.detailVal}>{sliceSettings.sliceAsMasks ? 'Enabled' : 'Standard Crop'}</span>
+            </div>
+          </div>
+
+          <div className={styles.actionsRow}>
+            <button
+              type="button"
+              onClick={() => setIsSlicerModalOpen(true)}
+              className={styles.cancelBtn}
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+            >
+              <Maximize2 size={14} /> Edit Guides
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSliceSpritesheet(sliceSettings)}
+              className={styles.sliceBtn}
+              disabled={isSlicing}
+            >
+              {isSlicing
+                ? 'Slicing...'
+                : editingSourceId
+                  ? 'Re-slice Frames'
+                  : 'Slice & Add Frames'}
+            </button>
+          </div>
         </div>
+      )}
+
+      {file && imgDimensions && originalImgSrc && (
+        <InteractiveSlicerModal
+          isOpen={isSlicerModalOpen}
+          onClose={() => setIsSlicerModalOpen(false)}
+          imageSrc={originalImgSrc}
+          fileName={file.name}
+          imgDimensions={imgDimensions}
+          settings={sliceSettings}
+          onSettingsChange={setSliceSettings}
+          onApplySlice={(nextSettings) => {
+            setSliceSettings(nextSettings);
+            setIsSlicerModalOpen(false);
+            void handleSliceSpritesheet(nextSettings);
+          }}
+          isSlicing={isSlicing}
+          isReslicing={Boolean(editingSourceId)}
+        />
       )}
     </div>
   );

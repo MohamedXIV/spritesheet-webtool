@@ -1,153 +1,157 @@
 /**
- * spritesheetSlicer.ts - Slices packed spritesheet images into individual frames
+ * spritesheetSlicer.ts - Slices packed spritesheet images into individual frames,
+ * supporting Offset/Margin, Spacing/Gutter, Inner Padding, Custom Guides,
+ * and Non-destructive Slice-as-Masks (shared source bitmap + offset + cell mask).
  */
 
-import { FrameData } from '@/types';
+import type { FrameData, LayerPixelData, ProjectLayer } from '@/types';
+import { computeSliceLayout, type SheetSliceSettings } from './slicerGuides';
+import { compositeFrameLayers, createBaseProjectLayer } from './layerCompositor';
 
-// Counter to ensure unique IDs
 let sliceIdCounter = 0;
 function generateSliceId(): string {
   return `frame-slice-${Date.now()}-${sliceIdCounter++}`;
 }
 
-/**
- * Slice a spritesheet image file into frames by grid (cols, rows)
- */
-export async function sliceSpritesheetByGrid(
-  file: File,
-  cols: number,
-  rows: number,
-  sourceId: string,
-  sourceColor: string
-): Promise<{ frames: FrameData[]; width: number; height: number; cellWidth: number; cellHeight: number }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    
-    img.onload = async () => {
-      try {
-        const width = img.width;
-        const height = img.height;
-        
-        const cellWidth = Math.max(1, Math.floor(width / cols));
-        const cellHeight = Math.max(1, Math.floor(height / rows));
-        
-        const frames: FrameData[] = [];
-        let index = 0;
-        
-        for (let r = 0; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
-            const canvas = document.createElement('canvas');
-            canvas.width = cellWidth;
-            canvas.height = cellHeight;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) continue;
-            
-            // Draw grid cell segment
-            ctx.drawImage(
-              img,
-              c * cellWidth, r * cellHeight, cellWidth, cellHeight, // Source
-              0, 0, cellWidth, cellHeight                          // Destination
-            );
-            
-            const bitmap = await createImageBitmap(canvas);
-            
-            frames.push({
-              id: generateSliceId(),
-              index,
-              timestamp: index,
-              bitmap,
-              sourceId,
-              sourceColor,
-            });
-            
-            index++;
-          }
-        }
-        
-        URL.revokeObjectURL(img.src);
-        resolve({ frames, width, height, cellWidth, cellHeight });
-      } catch (error) {
-        URL.revokeObjectURL(img.src);
-        reject(error);
-      }
-    };
-    
-    img.onerror = () => {
-      URL.revokeObjectURL(img.src);
-      reject(new Error('Failed to load spritesheet image file.'));
-    };
-    
-    img.src = URL.createObjectURL(file);
-  });
+export interface SliceResult {
+  frames: FrameData[];
+  width: number;
+  height: number;
+  cellWidth: number;
+  cellHeight: number;
+  cols: number;
+  rows: number;
 }
 
 /**
- * Slice a spritesheet image file into frames by specific cell size (dimensions)
+ * Slice a spritesheet image using unified SheetSliceSettings.
  */
-export async function sliceSpritesheetByDimensions(
-  file: File,
-  cellWidth: number,
-  cellHeight: number,
+export async function sliceSpritesheet(
+  fileOrBlob: Blob,
+  settings: SheetSliceSettings,
   sourceId: string,
-  sourceColor: string
-): Promise<{ frames: FrameData[]; width: number; height: number; cols: number; rows: number }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    
-    img.onload = async () => {
-      try {
-        const width = img.width;
-        const height = img.height;
-        
-        const cols = Math.max(1, Math.floor(width / cellWidth));
-        const rows = Math.max(1, Math.floor(height / cellHeight));
-        
-        const frames: FrameData[] = [];
-        let index = 0;
-        
-        for (let r = 0; r < rows; r++) {
-          for (let c = 0; c < cols; c++) {
-            const canvas = document.createElement('canvas');
-            canvas.width = cellWidth;
-            canvas.height = cellHeight;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) continue;
-            
-            // Draw grid cell segment
-            ctx.drawImage(
-              img,
-              c * cellWidth, r * cellHeight, cellWidth, cellHeight,
-              0, 0, cellWidth, cellHeight
-            );
-            
-            const bitmap = await createImageBitmap(canvas);
-            
-            frames.push({
-              id: generateSliceId(),
-              index,
-              timestamp: index,
-              bitmap,
-              sourceId,
-              sourceColor,
-            });
-            
-            index++;
+  sourceColor: string,
+  globalLayers: readonly ProjectLayer[] = [createBaseProjectLayer()]
+): Promise<SliceResult> {
+  const sheetBitmap = await createImageBitmap(fileOrBlob);
+  try {
+    const width = sheetBitmap.width;
+    const height = sheetBitmap.height;
+    const layout = computeSliceLayout(width, height, settings);
+
+    if (layout.rects.length === 0) {
+      throw new Error('No valid slice cells fit inside the spritesheet dimensions.');
+    }
+
+    const frames: FrameData[] = [];
+
+    for (const rect of layout.rects) {
+      const frameLayers: Record<string, LayerPixelData> = {};
+
+      if (settings.sliceAsMasks) {
+        // Frame canvas stays at exact cell dimensions (rect.w x rect.h).
+        // Base layer holds the shared full sheet bitmap positioned at (-rect.x, -rect.y),
+        // with a grayscale cell mask revealing the inner area (excluding innerPadding).
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = rect.w;
+        maskCanvas.height = rect.h;
+        const mCtx = maskCanvas.getContext('2d')!;
+        mCtx.fillStyle = '#000000';
+        mCtx.fillRect(0, 0, rect.w, rect.h);
+        mCtx.fillStyle = '#ffffff';
+        mCtx.fillRect(rect.innerX, rect.innerY, rect.innerW, rect.innerH);
+        const maskBitmap = await createImageBitmap(maskCanvas);
+
+        for (const layer of globalLayers) {
+          if (layer.id === 'layer-base') {
+            frameLayers[layer.id] = {
+              bitmap: sheetBitmap,
+              maskBitmap,
+              offsetX: -rect.x,
+              offsetY: -rect.y,
+            };
+          } else if (layer.scope === 'per-frame' && layer.type === 'raster') {
+            frameLayers[layer.id] = { bitmap: null, maskBitmap: null, offsetX: 0, offsetY: 0 };
           }
         }
-        
-        URL.revokeObjectURL(img.src);
-        resolve({ frames, width, height, cols, rows });
-      } catch (error) {
-        URL.revokeObjectURL(img.src);
-        reject(error);
+
+        const composited = await compositeFrameLayers(frameLayers, globalLayers, rect.w, rect.h);
+        frames.push({
+          id: generateSliceId(),
+          index: rect.index,
+          timestamp: rect.index,
+          bitmap: composited,
+          layers: frameLayers,
+          sourceId,
+          sourceColor,
+        });
+      } else {
+        // Standard destructive slice: extract inner region (trimmed by innerPadding)
+        const outW = rect.innerW;
+        const outH = rect.innerH;
+        const canvas = document.createElement('canvas');
+        canvas.width = outW;
+        canvas.height = outH;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(
+          sheetBitmap,
+          rect.x + rect.innerX,
+          rect.y + rect.innerY,
+          outW,
+          outH,
+          0,
+          0,
+          outW,
+          outH
+        );
+        const cellBitmap = await createImageBitmap(canvas);
+
+        for (const layer of globalLayers) {
+          if (layer.id === 'layer-base') {
+            frameLayers[layer.id] = {
+              bitmap: await createImageBitmap(cellBitmap),
+              maskBitmap: null,
+              offsetX: 0,
+              offsetY: 0,
+            };
+          } else if (layer.scope === 'per-frame' && layer.type === 'raster') {
+            frameLayers[layer.id] = { bitmap: null, maskBitmap: null, offsetX: 0, offsetY: 0 };
+          }
+        }
+
+        frames.push({
+          id: generateSliceId(),
+          index: rect.index,
+          timestamp: rect.index,
+          bitmap: cellBitmap,
+          layers: frameLayers,
+          sourceId,
+          sourceColor,
+        });
       }
+    }
+
+    if (!settings.sliceAsMasks) {
+      sheetBitmap.close();
+    }
+
+    return {
+      frames,
+      width,
+      height,
+      cellWidth: settings.sliceAsMasks
+        ? layout.effectiveCellWidth
+        : Math.max(1, layout.effectiveCellWidth - settings.innerPadding * 2),
+      cellHeight: settings.sliceAsMasks
+        ? layout.effectiveCellHeight
+        : Math.max(1, layout.effectiveCellHeight - settings.innerPadding * 2),
+      cols: layout.cols,
+      rows: layout.rows,
     };
-    
-    img.onerror = () => {
-      URL.revokeObjectURL(img.src);
-      reject(new Error('Failed to load spritesheet image file.'));
-    };
-    
-    img.src = URL.createObjectURL(file);
-  });
+  } catch (err) {
+    try {
+      sheetBitmap.close();
+    } catch {}
+    throw err;
+  }
 }
