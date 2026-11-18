@@ -1,0 +1,123 @@
+.rail {
+  width: 44px;
+  flex-shrink: 0;
+  background: var(--surface-color);
+  border-right: 1px solid var(--border-color-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px;
+  gap: 3px;
+  overflow-y: auto;
+  user-select: none;
+}
+
+.toolBtn {
+  position: relative;
+  width: 32px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.toolBtn:hover {
+  background: var(--surface-hover);
+  color: var(--text-color);
+}
+
+.toolBtnActive {
+  background: var(--primary-color);
+  color: var(--primary-foreground);
+  border-color: var(--border-color);
+}
+
+.separator {
+  width: 24px;
+  height: 1px;
+  background: var(--border-color-muted);
+  margin: 3px 0;
+  flex-shrink: 0;
+}
+
+.swatchesArea {
+  margin-top: auto;
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.swatchStack {
+  position: relative;
+  width: 32px;
+  height: 32px;
+}
+
+.bgSwatch {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 19px;
+  height: 19px;
+  border-radius: 3px;
+  border: 1.5px solid var(--border-color);
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+}
+
+.fgSwatch {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px var(--border-color);
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.hiddenColorInput {
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.swatchMiniActions {
+  display: flex;
+  gap: 3px;
+}
+
+.miniActionBtn {
+  width: 15px;
+  height: 15px;
+  border-radius: 2px;
+  border: 1px solid var(--border-color-muted);
+  background: var(--background-color);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.miniActionBtn:hover {
+  color: var(--text-color);
+  border-color: var(--border-color);
+}

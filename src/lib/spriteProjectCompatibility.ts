@@ -26,9 +26,17 @@ export function projectToolHref(project: Pick<DbProject, 'id' | 'type'>): string
 const baseLayer: ProjectLayer = {
   id: 'layer-base',
   name: 'Base Frame',
+  type: 'raster',
+  parentId: null,
+  scope: 'per-frame',
   visible: true,
   opacity: 1,
   blendMode: 'normal',
+  locked: false,
+  alphaLocked: false,
+  clipped: false,
+  maskEnabled: true,
+  maskInverted: false,
 };
 
 export interface SpriteProjectRestorePlan {
@@ -83,7 +91,13 @@ export function prepareSpriteProjectRestore(project: DbProject): SpriteProjectRe
   const storedLayers = project.metadata.globalLayers;
   const globalLayers: ProjectLayer[] =
     Array.isArray(storedLayers) && storedLayers.length
-      ? storedLayers.map(layer => ({ ...layer }))
+      ? storedLayers.map(layer => ({
+          type: 'raster' as const,
+          parentId: null,
+          scope: 'per-frame' as const,
+          maskEnabled: true,
+          ...layer,
+        }))
       : [{ ...baseLayer }];
 
   if (!globalLayers.some(layer => layer.id === 'layer-base')) {

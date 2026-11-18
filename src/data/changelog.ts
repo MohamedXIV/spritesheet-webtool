@@ -13,6 +13,18 @@ export interface ChangelogVersion {
 
 export const changelogData: ChangelogVersion[] = [
   {
+    version: '0.11.0-beta',
+    date: '2026-11-18',
+    toolScope: 'spritesheet',
+    toolName: 'Sprite Editor',
+    items: [
+      { category: 'Changed', detail: 'Unified Preview & Edit Canvas: replaced the standalone Frame Editor tab with an in-place Preview | Edit workspace featuring Move/Transform, Marquee, Lasso, Magic Wand, Brush (with Pixel-Crisp mode), Eraser, Clone Stamp, Bucket, Gradient, Eyedropper, Shapes, Text, Hand, Zoom, Pixel Grid, Onion Skinning, and 30-step Undo/Redo.' },
+      { category: 'Added', detail: 'Photoshop-Grade Layer & Mask Stack: added Raster, Solid/Gradient Fill, Non-destructive Adjustment, and Group layers; per-frame vs shared layer scope; Raster Masks with Alt+Click solo view; Clipping Masks; Alpha Lock; 16 blend modes; Duplicate, Merge Down, Merge Visible, and Flatten.' },
+      { category: 'Added', detail: 'Non-Destructive Background Removal: BackgroundRemovalPanel defaults to outputting editable grayscale layer masks.' },
+      { category: 'Added', detail: 'Interactive Spritesheet Slicer: spacious zoom/pan modal with Offset, Spacing, Inner Padding, two-way linked draggable guides (Grid, Cell Size, Custom), and a Slice as Masks toggle with Copy-on-Write editing.' }
+    ]
+  },
+  {
     version: '0.10.0-beta',
     date: '2026-07-06',
     toolScope: 'stylizer',

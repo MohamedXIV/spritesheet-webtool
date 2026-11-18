@@ -19,7 +19,6 @@ import { BackgroundRemovalPanel } from '@/components/BackgroundRemovalPanel';
 import { OutlinePanel } from '@/components/OutlinePanel';
 import { WatermarkRemovalPanel } from '@/components/WatermarkRemovalPanel';
 import { PixelationPanel } from '@/components/PixelationPanel';
-import { FrameEditorPanel } from '@/components/FrameEditorPanel';
 import { FrameLayersPanel } from '@/components/FrameLayersPanel';
 
 import styles from './DockLayout.module.css';
@@ -30,14 +29,13 @@ const STORAGE_KEY = 'editor-dock-layout';
 const PANEL_INFO: Record<string, { name: string }> = {
   'media-loader': { name: 'Import Assets' },
   'frame-grid': { name: 'Frames' },
-  'preview': { name: 'Preview' },
+  'preview': { name: 'Preview & Edit' },
   'timeline': { name: 'Timeline' },
   'bg-removal': { name: 'Background Removal' },
   'outline': { name: 'Outline' },
   'pixelate': { name: 'Pixelation' },
   'watermark': { name: 'Watermark' },
   'export': { name: 'Export' },
-  'frame-editor': { name: 'Frame Editor' },
   'frame-layers': { name: 'Layers' },
 };
 
@@ -80,8 +78,7 @@ const defaultLayout = {
             type: 'tabset',
             weight: 70,
             children: [
-              { type: 'tab', name: 'Preview', component: 'preview' },
-              { type: 'tab', name: 'Frame Editor', component: 'frame-editor' },
+              { type: 'tab', name: 'Preview & Edit', component: 'preview' },
             ],
           },
           {
@@ -131,28 +128,38 @@ export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function Do
     }
     
     const restoredModel = Model.fromJson(layoutJson);
-    // Migrate older personal dock layouts without resetting any other tabs:
-    // a standalone slicer is now a mode within Import Assets.
-    const oldSlicerTabs: string[] = [];
+    // Migrate older personal dock layouts without resetting other tabs:
+    // remove deprecated standalone slicer and frame-editor tabs.
+    const deprecatedTabs: string[] = [];
     let hasImporter = false;
+    let hasPreview = false;
     let firstTabsetId: string | null = null;
     restoredModel.visitNodes(node => {
       if (node.getType() === 'tab') {
         const component = (node as TabNode).getComponent();
-        if (component === 'spritesheet-slicer') oldSlicerTabs.push(node.getId());
+        if (component === 'spritesheet-slicer' || component === 'frame-editor') {
+          deprecatedTabs.push(node.getId());
+        }
         if (component === 'media-loader') hasImporter = true;
+        if (component === 'preview') hasPreview = true;
       }
       if (!firstTabsetId && node.getType() === 'tabset') firstTabsetId = node.getId();
     });
-    // Ensure the unified import tab exists BEFORE removing the legacy slicer.
     if (!hasImporter && firstTabsetId) {
       restoredModel.doAction(Actions.addNode(
         { type: 'tab', name: 'Import Assets', component: 'media-loader' },
         firstTabsetId, DockLocation.CENTER, -1, false
       ));
     }
-    for (const tabId of oldSlicerTabs) restoredModel.doAction(Actions.deleteTab(tabId));
-    setModel(restoredModel);
+    if (!hasPreview && firstTabsetId) {
+      restoredModel.doAction(Actions.addNode(
+        { type: 'tab', name: 'Preview & Edit', component: 'preview' },
+        firstTabsetId, DockLocation.CENTER, -1, false
+      ));
+    }
+    for (const tabId of deprecatedTabs) restoredModel.doAction(Actions.deleteTab(tabId));
+    const timer = setTimeout(() => setModel(restoredModel), 0);
+    return () => clearTimeout(timer);
   }, []);
 
   // Save layout on change and update visible panels
@@ -181,13 +188,6 @@ export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function Do
     const component = node.getComponent();
     
     switch (component) {
-      case 'frame-editor':
-        return (
-          <div className={styles.panelContent}>
-            <FrameEditorPanel />
-          </div>
-        );
-        
       case 'frame-layers':
         return (
           <div className={styles.panelContent}>
@@ -273,6 +273,7 @@ export const DockLayout = forwardRef<DockLayoutRef, DockLayoutProps>(function Do
               frames={ctx.orderedFrames}
               selectedIds={ctx.frameState.selectedIds}
               onFramesProcessed={ctx.handleFramesProcessed}
+              onMasksApplied={ctx.handleBackgroundMasksApplied}
               onProcessingChange={ctx.setProcessingFrameIds}
             />
           </div>

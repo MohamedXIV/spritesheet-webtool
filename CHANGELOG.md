@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0-beta] - 2026-11-18
+
+### Added
+- **Unified Preview & Edit Canvas**: Replaced the standalone Frame Editor tab with an in-place Preview | Edit toggle inside `PreviewPlayer`, complete with tool rail (Move/Transform, Marquee, Lasso, Magic Wand, Brush with Pixel-Crisp mode, Eraser, Clone Stamp, Bucket, Gradient, Eyedropper, Shapes, Text, Hand, Zoom), contextual options bar, FG/BG color swatches, pixel grid, onion skinning, and 30-step Undo/Redo.
+- **Photoshop-Grade Layer & Mask System**: Added Raster, Solid/Gradient Fill, Non-destructive Adjustment (Hue/Sat, Brightness/Contrast, Levels, Curves, Invert, Posterize), and Group layers; per-frame vs shared-across-frames layer scope; Raster Masks (add/paint/invert/apply/from-selection/Alt+Click solo view); Clipping Masks; Alpha Lock & Layer Lock; 16 blend modes; Duplicate, Merge Down, Merge Visible, and Flatten Image.
+- **Non-Destructive Background Removal Masks**: `BackgroundRemovalPanel` now defaults to generating non-destructive grayscale layer masks instead of overwriting layer pixels.
+- **Interactive Spritesheet Slicer**: New zoomable/pannable slicer modal supporting Offset/Margin X/Y, Spacing/Gutter X/Y, Inner Padding, two-way linked draggable guides (`Grid`, `Cell Size`, and per-line `Custom Guides`), and a **Slice as Masks** option that shares a single source bitmap with cell masks and Copy-on-Write editing.
+
+---
+
 ## [0.10.0-beta] - 2026-07-06
 
 ### Added

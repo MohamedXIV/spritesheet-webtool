@@ -54,4 +54,18 @@ test('restore original Blob attachments for multiple sheets without cloning or l
   assert.equal(restoreSourceSheetAssets(undefined).length,0);
   assert.equal(restoreSourceSheetAssets([...values,values[0]]).length,2);
   assert.equal(restoreSourceSheetAssets([{...values[0],blob:null}]).length,0);
+  assert.equal(restored[0].slice.offsetX, 0);
+  assert.equal(restored[0].slice.innerPadding, 0);
+  assert.equal(restored[0].slice.sliceAsMasks, false);
+
+  const customRestored = restoreSourceSheetAssets([{
+    sourceId: 'c', folderId: 'fc', name: 'c.png', blob: blobA, width: 64, height: 64,
+    slice: { sliceType: 'custom', cols: 2, rows: 2, cellWidth: 32, cellHeight: 32,
+      offsetX: 2, offsetY: 4, spacingX: 3, spacingY: 1, innerPadding: 2,
+      customColGuides: [0, 20, 64], customRowGuides: [0, 32, 64], sliceAsMasks: true },
+  }]);
+  assert.equal(customRestored[0].slice.sliceType, 'custom');
+  assert.equal(customRestored[0].slice.sliceAsMasks, true);
+  assert.equal(customRestored[0].slice.innerPadding, 2);
+  assert.deepEqual(customRestored[0].slice.customColGuides, [0, 20, 64]);
 });

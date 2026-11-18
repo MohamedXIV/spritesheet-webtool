@@ -2,12 +2,13 @@
  * Frame Store - Manages extracted frames, folders, and selection state
  */
 
-import type { FrameData, Folder } from '@/types';
+import type { FrameData, Folder, ProjectLayer } from '@/types';
 
 export interface FrameState {
   frames: FrameData[];
   folders: Folder[];
   selectedIds: Set<string>;
+  projectLayers?: ProjectLayer[];
 }
 
 /**
@@ -159,6 +160,7 @@ export function deleteSelectedFrames(state: FrameState): FrameState {
   }));
   
   return {
+    ...state,
     frames: remainingFrames,
     folders: newFolders,
     selectedIds: new Set()
@@ -209,6 +211,7 @@ export function deleteFolder(state: FrameState, folderId: string): FrameState {
   const newSelected = new Set(Array.from(state.selectedIds).filter(id => remainingIds.has(id)));
   
   return {
+    ...state,
     frames: remainingFrames,
     folders: newFolders,
     selectedIds: newSelected
@@ -333,25 +336,37 @@ export function reorderFramesInFolder(
  * Clean up all frame bitmaps (call when unmounting)
  */
 export function disposeFrames(state: FrameState): void {
+  const closed = new Set<ImageBitmap>();
+  const safeClose = (bmp: ImageBitmap | null | undefined) => {
+    if (!bmp || closed.has(bmp)) return;
+    closed.add(bmp);
+    try { bmp.close(); } catch {}
+  };
+
   state.frames.forEach(f => {
-    try {
-      f.bitmap.close();
-    } catch {}
-    if (f.layerContents) {
-      Object.values(f.layerContents).forEach(bmp => {
-        if (bmp) {
-          try {
-            bmp.close();
-          } catch {}
-        }
+    safeClose(f.bitmap);
+    if (f.layers) {
+      Object.values(f.layers).forEach(layerData => {
+        safeClose(layerData?.bitmap);
+        safeClose(layerData?.maskBitmap);
       });
     }
+    if (f.layerContents) {
+      Object.values(f.layerContents).forEach(bmp => safeClose(bmp));
+    }
+  });
+  state.projectLayers?.forEach(l => {
+    safeClose(l.sharedData?.bitmap);
+    safeClose(l.sharedData?.maskBitmap);
   });
 }
 
 export interface SerializedFrameLayer {
   layerId: string;
   blob: Blob | null;
+  maskBlob?: Blob | null;
+  offsetX?: number;
+  offsetY?: number;
 }
 
 export interface SerializedFrame {
@@ -375,6 +390,20 @@ export interface SerializedProject {
   frames: SerializedFrame[];
 }
 
+async function bitmapToPngBlob(
+  bmp: ImageBitmap,
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D | null
+): Promise<Blob | null> {
+  canvas.width = bmp.width;
+  canvas.height = bmp.height;
+  ctx?.clearRect(0, 0, canvas.width, canvas.height);
+  ctx?.drawImage(bmp, 0, 0);
+  return await new Promise<Blob | null>(resolve => {
+    canvas.toBlob(b => resolve(b), 'image/png');
+  });
+}
+
 /**
  * Compiles and serializes the current frame state (metadata + frame bitmaps converted to blobs)
  * to prepare for local storage, zip packaging, or IndexedDB storage.
@@ -387,35 +416,41 @@ export async function serializeProject(
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   const serializedFrames: SerializedFrame[] = [];
+  const encodedBitmapCache = new Map<ImageBitmap, Blob | null>();
+
+  const encodeCached = async (bmp: ImageBitmap | null | undefined): Promise<Blob | null> => {
+    if (!bmp) return null;
+    if (encodedBitmapCache.has(bmp)) return encodedBitmapCache.get(bmp) ?? null;
+    const blob = await bitmapToPngBlob(bmp, canvas, ctx);
+    encodedBitmapCache.set(bmp, blob);
+    return blob;
+  };
 
   for (const frame of state.frames) {
-    canvas.width = frame.bitmap.width;
-    canvas.height = frame.bitmap.height;
-    ctx?.clearRect(0, 0, canvas.width, canvas.height);
-    ctx?.drawImage(frame.bitmap, 0, 0);
-
-    const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((b) => resolve(b), 'image/png');
-    });
+    const blob = await bitmapToPngBlob(frame.bitmap, canvas, ctx);
 
     if (blob) {
       const serializedLayers: SerializedFrameLayer[] = [];
-      if (frame.layerContents) {
-        for (const [layerId, bmp] of Object.entries(frame.layerContents)) {
-          if (bmp) {
-            canvas.width = bmp.width;
-            canvas.height = bmp.height;
-            ctx?.clearRect(0, 0, canvas.width, canvas.height);
-            ctx?.drawImage(bmp, 0, 0);
-            
-            const layerBlob = await new Promise<Blob | null>((resolve) => {
-              canvas.toBlob((b) => resolve(b), 'image/png');
-            });
-            
+      if (frame.layers) {
+        for (const [layerId, data] of Object.entries(frame.layers)) {
+          if (!data) continue;
+          const layerBlob = await encodeCached(data.bitmap);
+          const maskBlob = await encodeCached(data.maskBitmap);
+          if (layerBlob || maskBlob || data.offsetX || data.offsetY) {
             serializedLayers.push({
               layerId,
               blob: layerBlob,
+              maskBlob: maskBlob ?? undefined,
+              offsetX: data.offsetX,
+              offsetY: data.offsetY,
             });
+          }
+        }
+      } else if (frame.layerContents) {
+        for (const [layerId, bmp] of Object.entries(frame.layerContents)) {
+          if (bmp) {
+            const layerBlob = await encodeCached(bmp);
+            serializedLayers.push({ layerId, blob: layerBlob });
           }
         }
       }
@@ -438,7 +473,7 @@ export async function serializeProject(
       folders: state.folders,
       selectedIds: Array.from(state.selectedIds),
       fps,
-      globalLayers,
+      globalLayers: globalLayers ?? state.projectLayers,
     },
     frames: serializedFrames,
   };

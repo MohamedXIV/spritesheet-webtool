@@ -22,7 +22,7 @@ export interface UseFrameHistoryReturn {
  * Bounded Undo/Redo history transaction hook with an embedded reference-counting
  * garbage collector to release unused ImageBitmap VRAM memory.
  */
-export function useFrameHistory(maxDepth: number = 8): UseFrameHistoryReturn {
+export function useFrameHistory(maxDepth: number = 30): UseFrameHistoryReturn {
   const [activeState, setActiveState] = useState<FrameState | null>(null);
   // Keep a stable way to inspect the active state from restore/save callbacks.
   const activeStateRef = useRef<FrameState | null>(null);
@@ -61,49 +61,56 @@ export function useFrameHistory(maxDepth: number = 8): UseFrameHistoryReturn {
     // Gather all currently reachable/alive ImageBitmaps
     const aliveBitmaps = new Set<ImageBitmap>();
     
-    const addFrameBitmaps = (frames: any[]) => {
-      frames.forEach(f => {
+    const addStateBitmaps = (state: FrameState) => {
+      state.frames.forEach(f => {
         if (f.bitmap) aliveBitmaps.add(f.bitmap);
+        if (f.layers) {
+          Object.values(f.layers).forEach(ld => {
+            if (ld?.bitmap && ld.bitmap instanceof ImageBitmap) aliveBitmaps.add(ld.bitmap);
+            if (ld?.maskBitmap && ld.maskBitmap instanceof ImageBitmap) aliveBitmaps.add(ld.maskBitmap);
+          });
+        }
         if (f.layerContents) {
           Object.values(f.layerContents).forEach(bmp => {
-            if (bmp && bmp instanceof ImageBitmap) {
-              aliveBitmaps.add(bmp);
-            }
+            if (bmp && bmp instanceof ImageBitmap) aliveBitmaps.add(bmp);
           });
+        }
+      });
+      state.projectLayers?.forEach(l => {
+        if (l.sharedData?.bitmap && l.sharedData.bitmap instanceof ImageBitmap) {
+          aliveBitmaps.add(l.sharedData.bitmap);
+        }
+        if (l.sharedData?.maskBitmap && l.sharedData.maskBitmap instanceof ImageBitmap) {
+          aliveBitmaps.add(l.sharedData.maskBitmap);
         }
       });
     };
 
-    if (currentState) {
-      addFrameBitmaps(currentState.frames);
-    }
-    pastStack.forEach(state => {
-      addFrameBitmaps(state.frames);
-    });
-    futureStack.forEach(state => {
-      addFrameBitmaps(state.frames);
-    });
- 
-    // Close any bitmap in the discarded state that is no longer reachable
-    discardedState.frames.forEach(f => {
-      if (f.bitmap && !aliveBitmaps.has(f.bitmap)) {
-        try {
-          f.bitmap.close();
-        } catch (err) {
-          console.debug('FrameHistory GC: could not close evicted bitmap', f.id, err);
-        }
+    if (currentState) addStateBitmaps(currentState);
+    pastStack.forEach(addStateBitmaps);
+    futureStack.forEach(addStateBitmaps);
+
+    const closeIfUnreferenced = (bmp: unknown) => {
+      if (bmp && bmp instanceof ImageBitmap && !aliveBitmaps.has(bmp)) {
+        try { bmp.close(); } catch {}
       }
-      if (f.layerContents) {
-        Object.values(f.layerContents).forEach(bmp => {
-          if (bmp && bmp instanceof ImageBitmap && !aliveBitmaps.has(bmp)) {
-            try {
-              bmp.close();
-            } catch (err) {
-              console.debug('FrameHistory GC: could not close evicted layer bitmap', f.id, err);
-            }
-          }
+    };
+
+    discardedState.frames.forEach(f => {
+      closeIfUnreferenced(f.bitmap);
+      if (f.layers) {
+        Object.values(f.layers).forEach(ld => {
+          closeIfUnreferenced(ld?.bitmap);
+          closeIfUnreferenced(ld?.maskBitmap);
         });
       }
+      if (f.layerContents) {
+        Object.values(f.layerContents).forEach(closeIfUnreferenced);
+      }
+    });
+    discardedState.projectLayers?.forEach(l => {
+      closeIfUnreferenced(l.sharedData?.bitmap);
+      closeIfUnreferenced(l.sharedData?.maskBitmap);
     });
   }, []);
 
